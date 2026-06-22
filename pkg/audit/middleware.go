@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/redhands-sec/redhands/pkg/mcp"
+	"github.com/yasindce1998/redhands/pkg/mcp"
 )
 
 func Middleware(logger Logger) mcp.Middleware {

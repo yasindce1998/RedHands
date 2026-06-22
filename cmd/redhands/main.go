@@ -7,10 +7,10 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/redhands-sec/redhands/pkg/audit"
-	"github.com/redhands-sec/redhands/pkg/executor"
-	"github.com/redhands-sec/redhands/pkg/mcp"
-	nmaptools "github.com/redhands-sec/redhands/tools/nmap"
+	"github.com/yasindce1998/redhands/pkg/audit"
+	"github.com/yasindce1998/redhands/pkg/executor"
+	"github.com/yasindce1998/redhands/pkg/mcp"
+	nmaptools "github.com/yasindce1998/redhands/tools/nmap"
 )
 
 func main() {

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/redhands-sec/redhands/pkg/executor"
-	"github.com/redhands-sec/redhands/pkg/mcp"
-	nmapparser "github.com/redhands-sec/redhands/pkg/nmap"
+	"github.com/yasindce1998/redhands/pkg/executor"
+	"github.com/yasindce1998/redhands/pkg/mcp"
+	nmapparser "github.com/yasindce1998/redhands/pkg/nmap"
 )
 
 type OSDetectInput struct {

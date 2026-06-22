@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialize audit logger: %v", err)
 	}
-	defer auditLogger.Close()
+	defer func() { _ = auditLogger.Close() }()
 
 	srv := mcp.NewServer("redhands", "0.1.0")
 	srv.Use(audit.Middleware(auditLogger))

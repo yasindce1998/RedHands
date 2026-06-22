@@ -19,7 +19,9 @@ func (m *mockTool) Execute(_ context.Context, params json.RawMessage) (*ToolResu
 	var input struct {
 		Msg string `json:"msg"`
 	}
-	json.Unmarshal(params, &input)
+	if err := json.Unmarshal(params, &input); err != nil {
+		return nil, err
+	}
 	return &ToolResult{
 		Content: []ContentBlock{{Type: "text", Text: "echo: " + input.Msg}},
 	}, nil
@@ -54,7 +56,9 @@ func TestInitializeHandshake(t *testing.T) {
 
 	resultBytes, _ := json.Marshal(resp.Result)
 	var initResult InitializeResult
-	json.Unmarshal(resultBytes, &initResult)
+	if err := json.Unmarshal(resultBytes, &initResult); err != nil {
+		t.Fatalf("unmarshalling init result: %v", err)
+	}
 
 	if initResult.ServerInfo.Name != "test-server" {
 		t.Errorf("expected server name test-server, got %s", initResult.ServerInfo.Name)
@@ -71,10 +75,14 @@ func TestToolsList(t *testing.T) {
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` + "\n"
 
 	var out bytes.Buffer
-	srv.serve(context.Background(), strings.NewReader(input), &out)
+	if err := srv.serve(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("serve error: %v", err)
+	}
 
 	var resp JSONRPCResponse
-	json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp)
+	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
+		t.Fatalf("parsing response: %v", err)
+	}
 
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %+v", resp.Error)
@@ -82,7 +90,9 @@ func TestToolsList(t *testing.T) {
 
 	resultBytes, _ := json.Marshal(resp.Result)
 	var toolsList ToolsListResult
-	json.Unmarshal(resultBytes, &toolsList)
+	if err := json.Unmarshal(resultBytes, &toolsList); err != nil {
+		t.Fatalf("unmarshalling tools list: %v", err)
+	}
 
 	if len(toolsList.Tools) != 1 {
 		t.Fatalf("expected 1 tool, got %d", len(toolsList.Tools))
@@ -99,10 +109,14 @@ func TestToolsCall(t *testing.T) {
 	input := `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_tool","arguments":{"msg":"hello"}}}` + "\n"
 
 	var out bytes.Buffer
-	srv.serve(context.Background(), strings.NewReader(input), &out)
+	if err := srv.serve(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("serve error: %v", err)
+	}
 
 	var resp JSONRPCResponse
-	json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp)
+	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
+		t.Fatalf("parsing response: %v", err)
+	}
 
 	if resp.Error != nil {
 		t.Fatalf("unexpected error: %+v", resp.Error)
@@ -110,7 +124,9 @@ func TestToolsCall(t *testing.T) {
 
 	resultBytes, _ := json.Marshal(resp.Result)
 	var toolResult ToolResult
-	json.Unmarshal(resultBytes, &toolResult)
+	if err := json.Unmarshal(resultBytes, &toolResult); err != nil {
+		t.Fatalf("unmarshalling tool result: %v", err)
+	}
 
 	if len(toolResult.Content) != 1 || toolResult.Content[0].Text != "echo: hello" {
 		t.Errorf("unexpected result: %+v", toolResult)
@@ -123,10 +139,14 @@ func TestUnknownMethod(t *testing.T) {
 	input := `{"jsonrpc":"2.0","id":1,"method":"nonexistent/method"}` + "\n"
 
 	var out bytes.Buffer
-	srv.serve(context.Background(), strings.NewReader(input), &out)
+	if err := srv.serve(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("serve error: %v", err)
+	}
 
 	var resp JSONRPCResponse
-	json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp)
+	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
+		t.Fatalf("parsing response: %v", err)
+	}
 
 	if resp.Error == nil {
 		t.Fatal("expected error response")
@@ -142,10 +162,14 @@ func TestUnknownTool(t *testing.T) {
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"nonexistent"}}` + "\n"
 
 	var out bytes.Buffer
-	srv.serve(context.Background(), strings.NewReader(input), &out)
+	if err := srv.serve(context.Background(), strings.NewReader(input), &out); err != nil {
+		t.Fatalf("serve error: %v", err)
+	}
 
 	var resp JSONRPCResponse
-	json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp)
+	if err := json.Unmarshal([]byte(strings.TrimSpace(out.String())), &resp); err != nil {
+		t.Fatalf("parsing response: %v", err)
+	}
 
 	if resp.Error == nil {
 		t.Fatal("expected error response")

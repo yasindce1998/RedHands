@@ -10,7 +10,7 @@ func TestParseBasicScan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("opening test fixture: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	run, err := Parse(f)
 	if err != nil {
@@ -53,7 +53,7 @@ func TestParseVulnScan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("opening test fixture: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	run, err := Parse(f)
 	if err != nil {
@@ -87,7 +87,7 @@ func TestSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("opening test fixture: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	run, err := Parse(f)
 	if err != nil {

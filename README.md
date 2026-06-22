@@ -1,6 +1,12 @@
 # RedHands
 
+[![CI](https://github.com/yasindce1998/redhands/actions/workflows/ci.yml/badge.svg)](https://github.com/yasindce1998/redhands/actions/workflows/ci.yml)
+
 MCP server that exposes offensive security tools to AI agents. Built in Go, follows the same patterns as GitHub's MCP server — single binary, stdio transport, toolset grouping, env-var configuration.
+
+```
+go install github.com/yasindce1998/redhands/cmd/redhands@latest
+```
 
 ## Quick Start
 
@@ -21,7 +27,7 @@ make build
 
 ## Requirements
 
-- Go 1.23+
+- Go 1.26+
 - Nmap installed and on PATH
 
 ## Available Tools

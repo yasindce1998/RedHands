@@ -29,6 +29,6 @@ func ParseFile(path string) (*NmapRun, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening nmap XML file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return Parse(f)
 }

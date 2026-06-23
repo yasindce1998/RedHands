@@ -49,6 +49,8 @@ make build
 | `amass_enum` | Network mapping and ASN discovery (OWASP Amass) |
 | `dns_lookup` | DNS record queries via dig (A, AAAA, MX, NS, TXT, etc.) |
 | `waybackurls` | Fetch archived URLs from the Wayback Machine |
+| `gau_urls` | Fetch URLs from AlienVault OTX, Wayback, CommonCrawl, URLScan |
+| `arjun_discover` | HTTP parameter discovery (hidden GET/POST params) |
 
 ### Web (toolset: `web`)
 
@@ -66,6 +68,20 @@ make build
 |------|-------------|
 | `ffuf_fuzz` | Web fuzzing (dirs, params, vhosts) |
 | `gobuster_dir` | Directory/file brute-forcing |
+| `feroxbuster_scan` | Recursive content discovery (forced browsing) |
+
+### Scanning (toolset: `scan`)
+
+| Tool | Description |
+|------|-------------|
+| `masscan_scan` | Internet-scale port scanning (10M pps) |
+| `rustscan_scan` | Modern fast port scanner (all 65535 ports in seconds) |
+
+### Exploit (toolset: `exploit`)
+
+| Tool | Description |
+|------|-------------|
+| `sqlmap_scan` | Automatic SQL injection detection and exploitation |
 
 ### Vulnerability (toolset: `vuln`)
 
@@ -85,7 +101,7 @@ All settings via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `REDHANDS_TOOLSETS` | (all) | Comma-separated toolsets to enable (e.g., `nmap,recon,web`) |
+| `REDHANDS_TOOLSETS` | (all) | Comma-separated toolsets to enable (e.g., `nmap,recon,web,scan,exploit`) |
 | `REDHANDS_TIMEOUT` | `5m` | Execution timeout per tool call |
 | `REDHANDS_MAX_OUTPUT` | `10485760` | Max output bytes per execution (10MB) |
 | `REDHANDS_RATE_LIMIT` | `10` | Token bucket refill rate (requests/sec) |
@@ -101,6 +117,9 @@ Enable only specific toolsets:
 ```bash
 # Only Nmap and recon tools
 export REDHANDS_TOOLSETS=nmap,recon
+
+# Enable exploitation tools
+export REDHANDS_TOOLSETS=nmap,recon,web,fuzz,scan,exploit,vuln
 
 # All tools (default when unset)
 export REDHANDS_TOOLSETS=
@@ -155,6 +174,12 @@ tools/nuclei/       Template-based vuln scanning
 tools/testssl/      TLS/SSL testing
 tools/whatweb/      Web fingerprinting
 tools/wayback/      Wayback Machine URL retrieval
+tools/gau/          URL fetching from multiple sources
+tools/arjun/        HTTP parameter discovery
+tools/masscan/      Internet-scale port scanning
+tools/rustscan/     Modern fast port scanner
+tools/feroxbuster/  Recursive content discovery
+tools/sqlmap/       SQL injection testing
 tools/health/       Server health check
 ```
 

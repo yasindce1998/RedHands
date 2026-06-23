@@ -13,15 +13,21 @@ import (
 	"github.com/yasindce1998/redhands/pkg/mcp"
 	"github.com/yasindce1998/redhands/pkg/ratelimit"
 	"github.com/yasindce1998/redhands/tools/amass"
+	"github.com/yasindce1998/redhands/tools/arjun"
 	"github.com/yasindce1998/redhands/tools/dns"
+	"github.com/yasindce1998/redhands/tools/feroxbuster"
 	"github.com/yasindce1998/redhands/tools/ffuf"
+	"github.com/yasindce1998/redhands/tools/gau"
 	"github.com/yasindce1998/redhands/tools/gobuster"
 	"github.com/yasindce1998/redhands/tools/health"
 	"github.com/yasindce1998/redhands/tools/httpx"
 	"github.com/yasindce1998/redhands/tools/katana"
+	"github.com/yasindce1998/redhands/tools/masscan"
 	"github.com/yasindce1998/redhands/tools/nikto"
 	nmaptools "github.com/yasindce1998/redhands/tools/nmap"
 	"github.com/yasindce1998/redhands/tools/nuclei"
+	"github.com/yasindce1998/redhands/tools/rustscan"
+	"github.com/yasindce1998/redhands/tools/sqlmap"
 	"github.com/yasindce1998/redhands/tools/subfinder"
 	"github.com/yasindce1998/redhands/tools/testssl"
 	"github.com/yasindce1998/redhands/tools/wayback"
@@ -31,7 +37,8 @@ import (
 var allBinaries = []string{
 	"nmap", "subfinder", "httpx", "nuclei", "ffuf",
 	"dig", "amass", "katana", "nikto", "gobuster",
-	"waybackurls", "testssl.sh", "whatweb",
+	"waybackurls", "testssl.sh", "whatweb", "sqlmap",
+	"masscan", "rustscan", "feroxbuster", "arjun", "gau",
 }
 
 func main() {
@@ -55,7 +62,7 @@ func main() {
 	limiter := ratelimit.New(cfg.RateLimit, cfg.RateBurst)
 	resultCache := cache.New(cfg.CacheMaxSize, cfg.CacheTTL)
 
-	srv := mcp.NewServer("redhands", "0.2.0")
+	srv := mcp.NewServer("redhands", "0.3.0")
 	srv.Use(audit.Middleware(auditLogger))
 	srv.Use(ratelimit.Middleware(limiter))
 	srv.Use(cache.Middleware(resultCache))
@@ -74,6 +81,8 @@ func main() {
 		srv.RegisterTool(amass.NewASNEnum(execr))
 		srv.RegisterTool(dns.NewDNSLookup(execr))
 		srv.RegisterTool(wayback.NewWayback(execr))
+		srv.RegisterTool(gau.NewGAU(execr))
+		srv.RegisterTool(arjun.NewArjun(execr))
 	}
 
 	// Web toolset
@@ -89,6 +98,18 @@ func main() {
 	if cfg.ToolsetEnabled("fuzz") {
 		srv.RegisterTool(ffuf.NewWebFuzz(execr))
 		srv.RegisterTool(gobuster.NewDirBust(execr))
+		srv.RegisterTool(feroxbuster.NewFeroxbuster(execr))
+	}
+
+	// Scanning toolset
+	if cfg.ToolsetEnabled("scan") {
+		srv.RegisterTool(masscan.NewMasscan(execr))
+		srv.RegisterTool(rustscan.NewRustScan(execr))
+	}
+
+	// Exploit toolset
+	if cfg.ToolsetEnabled("exploit") {
+		srv.RegisterTool(sqlmap.NewSQLMap(execr))
 	}
 
 	// Vuln toolset

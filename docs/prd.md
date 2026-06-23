@@ -4,7 +4,7 @@
 
 RedHands is an MCP (Model Context Protocol) server that exposes offensive security tools to AI agents. It follows the same architecture patterns used by GitHub's MCP server and Atlassian's MCP server — a single-binary Go server that starts with stdio transport, groups tools into logical toolsets, and delegates auth to the MCP host via environment variables.
 
-**Current state:** v0.3.0 shipped with stdio transport, 23 tools across 7 toolsets, secure binary execution, rate limiting, result caching, and structured audit logging.
+**Current state:** v0.1.0 — first release with stdio transport, 23 tools across 7 toolsets, secure binary execution, rate limiting, result caching, and structured audit logging.
 
 ---
 
@@ -191,34 +191,24 @@ export REDHANDS_TOOLSETS=
 
 ## Release History
 
-### v0.1.0 — Foundation (shipped)
+### v0.1.0 — Full Suite (current)
 
 - MCP protocol core (JSON-RPC 2.0, stdio transport)
-- 4 Nmap tools (port_scan, service_detect, os_detect, vuln_scan)
+- 23 tools across 7 toolsets (nmap, scan, recon, web, fuzz, exploit, vuln) + system
+- Category-based directory layout (tools organized by domain)
 - Secure binary execution with allowlist + sandbox
 - Structured audit logging (JSONL)
 - Input validation and shell metacharacter rejection
-
-### v0.2.0 — Tool Expansion (shipped)
-
 - Toolset filtering via `REDHANDS_TOOLSETS` env var
-- Added 13 tools: subfinder, httpx, nuclei, ffuf, dns, amass, katana, nikto, gobuster, wayback, testssl, whatweb, health
 - Token bucket rate limiting middleware
 - LRU result cache with TTL
 - Binary auto-discovery
-
-### v0.3.0 — Full Suite (shipped, current)
-
-- Added 6 more tools: sqlmap, masscan, rustscan, feroxbuster, arjun, gau
-- New toolset categories: scan, exploit
-- Category-based directory layout (tools organized by domain)
-- 23 tools total across 7 toolsets + system
 
 ---
 
 ## Release Plan
 
-### v0.4.0 — HTTP/SSE Transport (Next)
+### v0.2.0 — HTTP/SSE Transport (Next)
 
 **Goal:** Remote access for team use — one server, multiple agents connect.
 
@@ -231,7 +221,7 @@ export REDHANDS_TOOLSETS=
 | Health endpoint | `GET /health` for load balancers and monitoring |
 | Concurrent sessions | Multiple agents connected simultaneously |
 
-### v0.5.0 — Observability & Deployment
+### v0.3.0 — Observability & Deployment
 
 **Goal:** Production-ready deployment with full observability.
 
@@ -243,7 +233,7 @@ export REDHANDS_TOOLSETS=
 | Helm chart | Kubernetes deployment with configurable resources |
 | Docker Compose | Local multi-container setup |
 
-### v0.6.0 — Advanced Features
+### v0.4.0 — Advanced Features
 
 **Goal:** Workflow support and expanded tool coverage.
 
@@ -288,13 +278,13 @@ export REDHANDS_TOOLSETS=
 │ Layer 3: OS / Container                     │
 │ • Non-root execution                        │
 │ • Pdeathsig (Linux)                         │
-│ • Network policy (K8s, v0.4+)              │
+│ • Network policy (K8s, v0.2+)              │
 │ • Minimal container image                   │
 ├─────────────────────────────────────────────┤
 │ Layer 4: Audit Trail                        │
 │ • Every tool call logged                    │
 │ • Params sanitized (secrets redacted)       │
-│ • OTLP export (v0.4+)                      │
+│ • OTLP export (v0.3+)                      │
 │ • Immutable append-only log                 │
 └─────────────────────────────────────────────┘
 ```
@@ -326,7 +316,7 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 | Concurrent scans supported | 10+ simultaneous without degradation |
 | Binary startup time | <100ms to first `tools/list` response |
 | Test coverage | >80% on pkg/ packages |
-| Supported tools | 23 shipped (v0.3.0), expanding |
+| Supported tools | 23 shipped (v0.1.0), expanding |
 | Container image size | <100MB with tools installed |
 
 ---

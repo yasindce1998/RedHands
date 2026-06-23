@@ -62,7 +62,7 @@ func main() {
 	limiter := ratelimit.New(cfg.RateLimit, cfg.RateBurst)
 	resultCache := cache.New(cfg.CacheMaxSize, cfg.CacheTTL)
 
-	srv := mcp.NewServer("redhands", "0.3.0")
+	srv := mcp.NewServer("redhands", "0.1.0")
 	srv.Use(audit.Middleware(auditLogger))
 	srv.Use(ratelimit.Middleware(limiter))
 	srv.Use(cache.Middleware(resultCache))

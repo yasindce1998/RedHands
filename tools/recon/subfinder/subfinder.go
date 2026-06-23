@@ -16,20 +16,26 @@ type SubdomainEnumInput struct {
 	MaxDepth   int    `json:"max_depth,omitempty"`
 	Sources    string `json:"sources,omitempty"`
 	ExcludeSrc string `json:"exclude_sources,omitempty"`
+	All        bool   `json:"all,omitempty"`
+	RateLimit  int    `json:"rate_limit,omitempty"`
+	Resolvers  string `json:"resolvers,omitempty"`
+	Timeout    int    `json:"timeout,omitempty"`
+	Config     string `json:"config,omitempty"`
+	OutputJSON bool   `json:"output_json,omitempty"`
 }
 
 type SubdomainEnumTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewSubdomainEnum(exec *executor.BinaryExecutor) *SubdomainEnumTool {
+func NewSubdomainEnum(exec executor.Executor) *SubdomainEnumTool {
 	return &SubdomainEnumTool{exec: exec}
 }
 
 func (t *SubdomainEnumTool) Name() string { return "subfinder_enum" }
 
 func (t *SubdomainEnumTool) Description() string {
-	return "Enumerate subdomains of a target domain using multiple passive sources (certificate logs, search engines, DNS datasets)."
+	return "Enumerate subdomains of a target domain using multiple passive sources (certificate logs, search engines, DNS datasets). Supports recursive enumeration, custom resolvers, and all-sources mode."
 }
 
 func (t *SubdomainEnumTool) InputSchema() json.RawMessage {
@@ -55,6 +61,30 @@ func (t *SubdomainEnumTool) InputSchema() json.RawMessage {
 			"exclude_sources": {
 				"type": "string",
 				"description": "Comma-separated list of sources to exclude"
+			},
+			"all": {
+				"type": "boolean",
+				"description": "Use all sources (including slow/rate-limited ones)"
+			},
+			"rate_limit": {
+				"type": "integer",
+				"description": "Maximum number of HTTP requests per second"
+			},
+			"resolvers": {
+				"type": "string",
+				"description": "Comma-separated list of custom resolvers (e.g., '8.8.8.8,1.1.1.1')"
+			},
+			"timeout": {
+				"type": "integer",
+				"description": "Timeout in seconds for enumeration (default: 30)"
+			},
+			"config": {
+				"type": "string",
+				"description": "Path to subfinder provider configuration file"
+			},
+			"output_json": {
+				"type": "boolean",
+				"description": "Output in JSON lines format (includes source information)"
 			}
 		},
 		"required": ["domain"]
@@ -84,6 +114,24 @@ func (t *SubdomainEnumTool) Execute(ctx context.Context, params json.RawMessage)
 	}
 	if input.ExcludeSrc != "" {
 		args = append(args, "-exclude-sources", input.ExcludeSrc)
+	}
+	if input.All {
+		args = append(args, "-all")
+	}
+	if input.RateLimit > 0 {
+		args = append(args, "-rL", fmt.Sprintf("%d", input.RateLimit))
+	}
+	if input.Resolvers != "" {
+		args = append(args, "-r", input.Resolvers)
+	}
+	if input.Timeout > 0 {
+		args = append(args, "-timeout", fmt.Sprintf("%d", input.Timeout))
+	}
+	if input.Config != "" {
+		args = append(args, "-config", input.Config)
+	}
+	if input.OutputJSON {
+		args = append(args, "-oJ", "-")
 	}
 
 	result, err := t.exec.Run(ctx, "subfinder", args...)

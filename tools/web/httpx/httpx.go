@@ -11,27 +11,41 @@ import (
 )
 
 type HTTPProbeInput struct {
-	Targets    string `json:"targets"`
-	Ports      string `json:"ports,omitempty"`
-	StatusCode bool   `json:"status_code,omitempty"`
-	Title      bool   `json:"title,omitempty"`
-	TechDetect bool   `json:"tech_detect,omitempty"`
-	FollowRedir bool  `json:"follow_redirects,omitempty"`
-	Threads    int    `json:"threads,omitempty"`
+	Targets      string `json:"targets"`
+	Ports        string `json:"ports,omitempty"`
+	StatusCode   bool   `json:"status_code,omitempty"`
+	Title        bool   `json:"title,omitempty"`
+	TechDetect   bool   `json:"tech_detect,omitempty"`
+	FollowRedir  bool   `json:"follow_redirects,omitempty"`
+	Threads      int    `json:"threads,omitempty"`
+	CDN          bool   `json:"cdn,omitempty"`
+	Hash         string `json:"hash,omitempty"`
+	JARM         bool   `json:"jarm,omitempty"`
+	ResponseBody bool   `json:"response_body,omitempty"`
+	ContentLen   bool   `json:"content_length,omitempty"`
+	Method       string `json:"method,omitempty"`
+	MatchCodes   string `json:"match_codes,omitempty"`
+	FilterCodes  string `json:"filter_codes,omitempty"`
+	JSONOutput   bool   `json:"json_output,omitempty"`
+	WebServer    bool   `json:"web_server,omitempty"`
+	IP           bool   `json:"ip,omitempty"`
+	CNAME        bool   `json:"cname,omitempty"`
+	ExtractRegex string `json:"extract_regex,omitempty"`
+	ProbeAllIPs  bool   `json:"probe_all_ips,omitempty"`
 }
 
 type HTTPProbeTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewHTTPProbe(exec *executor.BinaryExecutor) *HTTPProbeTool {
+func NewHTTPProbe(exec executor.Executor) *HTTPProbeTool {
 	return &HTTPProbeTool{exec: exec}
 }
 
 func (t *HTTPProbeTool) Name() string { return "httpx_probe" }
 
 func (t *HTTPProbeTool) Description() string {
-	return "Probe HTTP services on targets to detect live web servers, extract titles, status codes, and technologies."
+	return "Probe HTTP services on targets to detect live web servers, extract titles, status codes, technologies, CDN detection, JARM fingerprints, and more."
 }
 
 func (t *HTTPProbeTool) InputSchema() json.RawMessage {
@@ -65,6 +79,63 @@ func (t *HTTPProbeTool) InputSchema() json.RawMessage {
 			"threads": {
 				"type": "integer",
 				"description": "Number of concurrent threads (default: 50)"
+			},
+			"cdn": {
+				"type": "boolean",
+				"description": "Detect CDN/WAF in use"
+			},
+			"hash": {
+				"type": "string",
+				"description": "Hash algorithm to use for response body (md5, sha256, etc.)"
+			},
+			"jarm": {
+				"type": "boolean",
+				"description": "Enable JARM TLS fingerprinting"
+			},
+			"response_body": {
+				"type": "boolean",
+				"description": "Include response body in output"
+			},
+			"content_length": {
+				"type": "boolean",
+				"description": "Include content length in output"
+			},
+			"method": {
+				"type": "string",
+				"enum": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"],
+				"description": "HTTP method to use for probing"
+			},
+			"match_codes": {
+				"type": "string",
+				"description": "Match only these status codes (e.g., '200,301,302')"
+			},
+			"filter_codes": {
+				"type": "string",
+				"description": "Filter/exclude these status codes (e.g., '404,500')"
+			},
+			"json_output": {
+				"type": "boolean",
+				"description": "Output results in JSON format"
+			},
+			"web_server": {
+				"type": "boolean",
+				"description": "Include web server name in output"
+			},
+			"ip": {
+				"type": "boolean",
+				"description": "Include resolved IP address in output"
+			},
+			"cname": {
+				"type": "boolean",
+				"description": "Include CNAME record in output"
+			},
+			"extract_regex": {
+				"type": "string",
+				"description": "Regex pattern to extract from response body"
+			},
+			"probe_all_ips": {
+				"type": "boolean",
+				"description": "Probe all IPs associated with a domain"
 			}
 		},
 		"required": ["targets"]
@@ -101,6 +172,48 @@ func (t *HTTPProbeTool) Execute(ctx context.Context, params json.RawMessage) (*m
 	}
 	if input.Threads > 0 {
 		args = append(args, "-threads", fmt.Sprintf("%d", input.Threads))
+	}
+	if input.CDN {
+		args = append(args, "-cdn")
+	}
+	if input.Hash != "" {
+		args = append(args, "-hash", input.Hash)
+	}
+	if input.JARM {
+		args = append(args, "-jarm")
+	}
+	if input.ResponseBody {
+		args = append(args, "-include-response")
+	}
+	if input.ContentLen {
+		args = append(args, "-content-length")
+	}
+	if input.Method != "" {
+		args = append(args, "-x", input.Method)
+	}
+	if input.MatchCodes != "" {
+		args = append(args, "-mc", input.MatchCodes)
+	}
+	if input.FilterCodes != "" {
+		args = append(args, "-fc", input.FilterCodes)
+	}
+	if input.JSONOutput {
+		args = append(args, "-json")
+	}
+	if input.WebServer {
+		args = append(args, "-web-server")
+	}
+	if input.IP {
+		args = append(args, "-ip")
+	}
+	if input.CNAME {
+		args = append(args, "-cname")
+	}
+	if input.ExtractRegex != "" {
+		args = append(args, "-extract-regex", input.ExtractRegex)
+	}
+	if input.ProbeAllIPs {
+		args = append(args, "-probe-all-ips")
 	}
 
 	for _, target := range targets {

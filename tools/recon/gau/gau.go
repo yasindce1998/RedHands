@@ -11,23 +11,25 @@ import (
 )
 
 type GAUInput struct {
-	Target     string `json:"target"`
-	Providers  string `json:"providers,omitempty"`
-	Subs       bool   `json:"include_subs,omitempty"`
-	Blacklist  string `json:"blacklist,omitempty"`
-	FilterMime string `json:"filter_mime,omitempty"`
-	MC         string `json:"match_status,omitempty"`
-	FromDate   string `json:"from,omitempty"`
-	ToDate     string `json:"to,omitempty"`
-	Threads    int    `json:"threads,omitempty"`
-	Verbose    bool   `json:"verbose,omitempty"`
+	Target       string `json:"target"`
+	Providers    string `json:"providers,omitempty"`
+	Subs         bool   `json:"include_subs,omitempty"`
+	Blacklist    string `json:"blacklist,omitempty"`
+	MatchMime    string `json:"match_mime,omitempty"`
+	FilterStatus string `json:"filter_status,omitempty"`
+	FromDate     string `json:"from,omitempty"`
+	ToDate       string `json:"to,omitempty"`
+	Threads      int    `json:"threads,omitempty"`
+	Verbose      bool   `json:"verbose,omitempty"`
+	OutputJSON   bool   `json:"output_json,omitempty"`
+	FetchFilters string `json:"fetch_filters,omitempty"`
 }
 
 type GAUTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewGAU(exec *executor.BinaryExecutor) *GAUTool {
+func NewGAU(exec executor.Executor) *GAUTool {
 	return &GAUTool{exec: exec}
 }
 
@@ -57,13 +59,13 @@ func (t *GAUTool) InputSchema() json.RawMessage {
 				"type": "string",
 				"description": "Comma-separated extensions to blacklist (e.g., 'png,jpg,gif,css')"
 			},
-			"filter_mime": {
+			"match_mime": {
 				"type": "string",
-				"description": "Comma-separated MIME types to filter (e.g., 'text/html,application/json')"
+				"description": "Comma-separated MIME types to match/include (e.g., 'text/html,application/json')"
 			},
-			"match_status": {
+			"filter_status": {
 				"type": "string",
-				"description": "Comma-separated status codes to match (e.g., '200,301,302')"
+				"description": "Comma-separated status codes to filter/exclude (e.g., '404,403')"
 			},
 			"from": {
 				"type": "string",
@@ -80,6 +82,14 @@ func (t *GAUTool) InputSchema() json.RawMessage {
 			"verbose": {
 				"type": "boolean",
 				"description": "Enable verbose output"
+			},
+			"output_json": {
+				"type": "boolean",
+				"description": "Output as JSON lines (includes status code, content type, etc.)"
+			},
+			"fetch_filters": {
+				"type": "string",
+				"description": "Comma-separated providers to filter from results (e.g., 'wayback,commoncrawl')"
 			}
 		},
 		"required": ["target"]
@@ -107,11 +117,11 @@ func (t *GAUTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.Too
 	if input.Blacklist != "" {
 		args = append(args, "--blacklist", input.Blacklist)
 	}
-	if input.FilterMime != "" {
-		args = append(args, "--mc", input.FilterMime)
+	if input.MatchMime != "" {
+		args = append(args, "--mt", input.MatchMime)
 	}
-	if input.MC != "" {
-		args = append(args, "--fc", input.MC)
+	if input.FilterStatus != "" {
+		args = append(args, "--fc", input.FilterStatus)
 	}
 	if input.FromDate != "" {
 		args = append(args, "--from", input.FromDate)
@@ -124,6 +134,12 @@ func (t *GAUTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.Too
 	}
 	if input.Verbose {
 		args = append(args, "--verbose")
+	}
+	if input.OutputJSON {
+		args = append(args, "--json")
+	}
+	if input.FetchFilters != "" {
+		args = append(args, "--fp", input.FetchFilters)
 	}
 
 	result, err := t.exec.Run(ctx, "gau", args...)

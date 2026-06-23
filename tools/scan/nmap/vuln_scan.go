@@ -18,10 +18,10 @@ type VulnScanInput struct {
 }
 
 type VulnScanTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewVulnScan(exec *executor.BinaryExecutor) *VulnScanTool {
+func NewVulnScan(exec executor.Executor) *VulnScanTool {
 	return &VulnScanTool{exec: exec}
 }
 

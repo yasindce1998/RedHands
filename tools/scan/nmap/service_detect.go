@@ -17,10 +17,10 @@ type ServiceDetectInput struct {
 }
 
 type ServiceDetectTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewServiceDetect(exec *executor.BinaryExecutor) *ServiceDetectTool {
+func NewServiceDetect(exec executor.Executor) *ServiceDetectTool {
 	return &ServiceDetectTool{exec: exec}
 }
 

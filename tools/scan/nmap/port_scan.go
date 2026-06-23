@@ -18,10 +18,10 @@ type PortScanInput struct {
 }
 
 type PortScanTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewPortScan(exec *executor.BinaryExecutor) *PortScanTool {
+func NewPortScan(exec executor.Executor) *PortScanTool {
 	return &PortScanTool{exec: exec}
 }
 

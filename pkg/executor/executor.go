@@ -19,6 +19,10 @@ type Result struct {
 	ExitCode int
 }
 
+type Executor interface {
+	Run(ctx context.Context, binary string, args ...string) (*Result, error)
+}
+
 type BinaryExecutor struct {
 	cfg Config
 }

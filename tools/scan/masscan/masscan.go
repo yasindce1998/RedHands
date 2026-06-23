@@ -11,28 +11,32 @@ import (
 )
 
 type MasscanInput struct {
-	Targets   string `json:"targets"`
-	Ports     string `json:"ports"`
-	Rate      int    `json:"rate,omitempty"`
-	Banners   bool   `json:"banners,omitempty"`
-	TopPorts  int    `json:"top_ports,omitempty"`
-	ExcludeIP string `json:"exclude,omitempty"`
-	Interface string `json:"interface,omitempty"`
-	Wait      int    `json:"wait,omitempty"`
+	Targets      string `json:"targets"`
+	Ports        string `json:"ports"`
+	Rate         int    `json:"rate,omitempty"`
+	Banners      bool   `json:"banners,omitempty"`
+	TopPorts     int    `json:"top_ports,omitempty"`
+	ExcludeIP    string `json:"exclude,omitempty"`
+	Interface    string `json:"interface,omitempty"`
+	Wait         int    `json:"wait,omitempty"`
+	Retries      int    `json:"retries,omitempty"`
+	SourceIP     string `json:"source_ip,omitempty"`
+	OutputFormat string `json:"output_format,omitempty"`
+	OpenOnly     bool   `json:"open_only,omitempty"`
 }
 
 type MasscanTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewMasscan(exec *executor.BinaryExecutor) *MasscanTool {
+func NewMasscan(exec executor.Executor) *MasscanTool {
 	return &MasscanTool{exec: exec}
 }
 
 func (t *MasscanTool) Name() string { return "masscan_scan" }
 
 func (t *MasscanTool) Description() string {
-	return "Internet-scale port scanner. Transmits up to 10 million packets per second. Scans the entire Internet in under 5 minutes from a single machine, producing results similar to nmap."
+	return "Internet-scale port scanner. Transmits up to 10 million packets per second. Supports banner grabbing, output format selection (JSON/XML/list), source IP binding, and retry configuration."
 }
 
 func (t *MasscanTool) InputSchema() json.RawMessage {
@@ -70,6 +74,23 @@ func (t *MasscanTool) InputSchema() json.RawMessage {
 			"wait": {
 				"type": "integer",
 				"description": "Seconds to wait for replies after transmit is done (default: 10)"
+			},
+			"retries": {
+				"type": "integer",
+				"description": "Number of retries per port (default: 0)"
+			},
+			"source_ip": {
+				"type": "string",
+				"description": "Source IP address to use (--adapter-ip)"
+			},
+			"output_format": {
+				"type": "string",
+				"enum": ["json", "xml", "list"],
+				"description": "Output format: json (-oJ), xml (-oX), or list (-oL). Default: standard text"
+			},
+			"open_only": {
+				"type": "boolean",
+				"description": "Only show open ports in results"
 			}
 		},
 		"required": ["targets", "ports"]
@@ -108,6 +129,26 @@ func (t *MasscanTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 	}
 	if input.Wait > 0 {
 		args = append(args, "--wait", fmt.Sprintf("%d", input.Wait))
+	}
+	if input.Retries > 0 {
+		args = append(args, "--retries", fmt.Sprintf("%d", input.Retries))
+	}
+	if input.SourceIP != "" {
+		if err := validateIP(input.SourceIP); err != nil {
+			return errorResult(err.Error()), nil
+		}
+		args = append(args, "--adapter-ip", input.SourceIP)
+	}
+	switch input.OutputFormat {
+	case "json":
+		args = append(args, "-oJ", "-")
+	case "xml":
+		args = append(args, "-oX", "-")
+	case "list":
+		args = append(args, "-oL", "-")
+	}
+	if input.OpenOnly {
+		args = append(args, "--open-only")
 	}
 
 	result, err := t.exec.Run(ctx, "masscan", args...)
@@ -178,6 +219,19 @@ func validatePorts(ports string) error {
 	for _, c := range forbidden {
 		if strings.Contains(ports, c) {
 			return fmt.Errorf("ports contains forbidden character: %q", c)
+		}
+	}
+	return nil
+}
+
+func validateIP(ip string) error {
+	if len(ip) > 45 {
+		return fmt.Errorf("source_ip too long")
+	}
+	forbidden := []string{";", "|", "&", "`", "$", "(", ")", "{", "}", "<", ">", "!", " ", "'", "\"", "\\"}
+	for _, c := range forbidden {
+		if strings.Contains(ip, c) {
+			return fmt.Errorf("source_ip contains forbidden character: %q", c)
 		}
 	}
 	return nil

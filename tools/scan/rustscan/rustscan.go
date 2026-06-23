@@ -11,29 +11,33 @@ import (
 )
 
 type RustScanInput struct {
-	Target    string `json:"target"`
-	Ports     string `json:"ports,omitempty"`
-	Range     string `json:"range,omitempty"`
-	BatchSize int    `json:"batch_size,omitempty"`
-	Timeout   int    `json:"timeout,omitempty"`
-	Tries     int    `json:"tries,omitempty"`
-	TopPorts  bool   `json:"top_ports,omitempty"`
-	Greppable bool   `json:"greppable,omitempty"`
-	Ulimit    int    `json:"ulimit,omitempty"`
+	Target     string `json:"target"`
+	Ports      string `json:"ports,omitempty"`
+	Range      string `json:"range,omitempty"`
+	BatchSize  int    `json:"batch_size,omitempty"`
+	Timeout    int    `json:"timeout,omitempty"`
+	Tries      int    `json:"tries,omitempty"`
+	TopPorts   bool   `json:"top_ports,omitempty"`
+	Greppable  bool   `json:"greppable,omitempty"`
+	Ulimit     int    `json:"ulimit,omitempty"`
+	NoNmap     bool   `json:"no_nmap,omitempty"`
+	Scripts    string `json:"scripts,omitempty"`
+	ScanOrder  string `json:"scan_order,omitempty"`
+	Accessible bool   `json:"accessible,omitempty"`
 }
 
 type RustScanTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewRustScan(exec *executor.BinaryExecutor) *RustScanTool {
+func NewRustScan(exec executor.Executor) *RustScanTool {
 	return &RustScanTool{exec: exec}
 }
 
 func (t *RustScanTool) Name() string { return "rustscan_scan" }
 
 func (t *RustScanTool) Description() string {
-	return "Modern port scanner. Scans all 65535 ports in 3 seconds with adaptive timing. Automatically pipes open ports to Nmap for service detection."
+	return "Modern port scanner. Scans all 65535 ports in 3 seconds with adaptive timing. Supports nmap script pass-through, scan ordering, and accessibility mode."
 }
 
 func (t *RustScanTool) InputSchema() json.RawMessage {
@@ -75,6 +79,23 @@ func (t *RustScanTool) InputSchema() json.RawMessage {
 			"ulimit": {
 				"type": "integer",
 				"description": "Set the file descriptor limit (ulimit)"
+			},
+			"no_nmap": {
+				"type": "boolean",
+				"description": "Skip nmap service detection on discovered ports"
+			},
+			"scripts": {
+				"type": "string",
+				"description": "Nmap scripts to run on open ports (space-separated args passed after '--', e.g., '-sV -sC' or '--script vuln')"
+			},
+			"scan_order": {
+				"type": "string",
+				"enum": ["random", "serial"],
+				"description": "Port scan order: 'random' (default) or 'serial' (sequential)"
+			},
+			"accessible": {
+				"type": "boolean",
+				"description": "Accessible mode — disable colour and progress bars for screen readers"
 			}
 		},
 		"required": ["target"]
@@ -116,6 +137,28 @@ func (t *RustScanTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 	}
 	if input.Ulimit > 0 {
 		args = append(args, "--ulimit", fmt.Sprintf("%d", input.Ulimit))
+	}
+	if input.NoNmap {
+		args = append(args, "--no-nmap")
+	}
+	if input.ScanOrder != "" {
+		args = append(args, "--scan-order", input.ScanOrder)
+	}
+	if input.Accessible {
+		args = append(args, "--accessible")
+	}
+
+	if input.Scripts != "" {
+		if err := validateScripts(input.Scripts); err != nil {
+			return errorResult(err.Error()), nil
+		}
+		args = append(args, "--")
+		for s := range strings.SplitSeq(input.Scripts, " ") {
+			s = strings.TrimSpace(s)
+			if s != "" {
+				args = append(args, s)
+			}
+		}
 	}
 
 	result, err := t.exec.Run(ctx, "rustscan", args...)
@@ -162,6 +205,19 @@ func validateTarget(target string) error {
 	for _, c := range forbidden {
 		if strings.Contains(target, c) {
 			return fmt.Errorf("target contains forbidden character: %q", c)
+		}
+	}
+	return nil
+}
+
+func validateScripts(scripts string) error {
+	if len(scripts) > 1024 {
+		return fmt.Errorf("scripts too long")
+	}
+	forbidden := []string{";", "|", "&", "`", "$", "(", ")", "{", "}", "<", ">", "!", "'", "\"", "\\"}
+	for _, c := range forbidden {
+		if strings.Contains(scripts, c) {
+			return fmt.Errorf("scripts contains forbidden character: %q", c)
 		}
 	}
 	return nil

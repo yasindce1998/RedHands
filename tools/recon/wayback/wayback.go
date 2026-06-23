@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/yasindce1998/redhands/pkg/executor"
@@ -11,23 +12,26 @@ import (
 )
 
 type WaybackInput struct {
-	Domain     string `json:"domain"`
-	NoSubs     bool   `json:"no_subs,omitempty"`
-	GetVersions bool  `json:"get_versions,omitempty"`
+	Domain           string `json:"domain"`
+	NoSubs           bool   `json:"no_subs,omitempty"`
+	GetVersions      bool   `json:"get_versions,omitempty"`
+	FilterExtensions string `json:"filter_extensions,omitempty"`
+	UniquePaths      bool   `json:"unique_paths,omitempty"`
+	Limit            int    `json:"limit,omitempty"`
 }
 
 type WaybackTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewWayback(exec *executor.BinaryExecutor) *WaybackTool {
+func NewWayback(exec executor.Executor) *WaybackTool {
 	return &WaybackTool{exec: exec}
 }
 
 func (t *WaybackTool) Name() string { return "waybackurls" }
 
 func (t *WaybackTool) Description() string {
-	return "Fetch known URLs for a domain from the Wayback Machine (web.archive.org). Useful for discovering historical endpoints, parameters, and hidden paths."
+	return "Fetch known URLs for a domain from the Wayback Machine (web.archive.org). Supports filtering by extension, deduplication by path, and result limiting."
 }
 
 func (t *WaybackTool) InputSchema() json.RawMessage {
@@ -45,6 +49,18 @@ func (t *WaybackTool) InputSchema() json.RawMessage {
 			"get_versions": {
 				"type": "boolean",
 				"description": "Get all archived versions of each URL"
+			},
+			"filter_extensions": {
+				"type": "string",
+				"description": "Comma-separated extensions to exclude (e.g., 'png,jpg,gif,css,js')"
+			},
+			"unique_paths": {
+				"type": "boolean",
+				"description": "Deduplicate by URL path (strips query parameters)"
+			},
+			"limit": {
+				"type": "integer",
+				"description": "Maximum number of URLs to return"
 			}
 		},
 		"required": ["domain"]
@@ -87,6 +103,51 @@ func (t *WaybackTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		if l != "" {
 			urls = append(urls, l)
 		}
+	}
+
+	if input.FilterExtensions != "" {
+		exts := make(map[string]bool)
+		for _, ext := range strings.Split(input.FilterExtensions, ",") {
+			ext = strings.TrimSpace(ext)
+			if ext != "" {
+				if !strings.HasPrefix(ext, ".") {
+					ext = "." + ext
+				}
+				exts[strings.ToLower(ext)] = true
+			}
+		}
+		var filtered []string
+		for _, u := range urls {
+			urlPath := u
+			if idx := strings.IndexByte(u, '?'); idx != -1 {
+				urlPath = u[:idx]
+			}
+			ext := strings.ToLower(path.Ext(urlPath))
+			if !exts[ext] {
+				filtered = append(filtered, u)
+			}
+		}
+		urls = filtered
+	}
+
+	if input.UniquePaths {
+		seen := make(map[string]bool)
+		var unique []string
+		for _, u := range urls {
+			p := u
+			if idx := strings.IndexByte(u, '?'); idx != -1 {
+				p = u[:idx]
+			}
+			if !seen[p] {
+				seen[p] = true
+				unique = append(unique, u)
+			}
+		}
+		urls = unique
+	}
+
+	if input.Limit > 0 && len(urls) > input.Limit {
+		urls = urls[:input.Limit]
 	}
 
 	var sb strings.Builder

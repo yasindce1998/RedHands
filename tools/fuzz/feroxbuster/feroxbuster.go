@@ -28,20 +28,27 @@ type FeroxInput struct {
 	ExtractLinks bool   `json:"extract_links,omitempty"`
 	Methods      string `json:"methods,omitempty"`
 	RandomAgent  bool   `json:"random_agent,omitempty"`
+	RateLimit    int    `json:"rate_limit,omitempty"`
+	FilterLines  string `json:"filter_lines,omitempty"`
+	AutoTune     bool   `json:"auto_tune,omitempty"`
+	AutoBail     bool   `json:"auto_bail,omitempty"`
+	TimeLimit    string `json:"time_limit,omitempty"`
+	DontFilter   bool   `json:"dont_filter,omitempty"`
+	JSON         bool   `json:"json,omitempty"`
 }
 
 type FeroxTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewFeroxbuster(exec *executor.BinaryExecutor) *FeroxTool {
+func NewFeroxbuster(exec executor.Executor) *FeroxTool {
 	return &FeroxTool{exec: exec}
 }
 
 func (t *FeroxTool) Name() string { return "feroxbuster_scan" }
 
 func (t *FeroxTool) Description() string {
-	return "Fast, recursive content discovery tool written in Rust. Performs forced browsing to find hidden files and directories with advanced filtering, auto-calibration, and link extraction."
+	return "Fast, recursive content discovery tool written in Rust. Performs forced browsing to find hidden files and directories with advanced filtering, auto-calibration, auto-bail, rate limiting, and link extraction."
 }
 
 func (t *FeroxTool) InputSchema() json.RawMessage {
@@ -115,6 +122,34 @@ func (t *FeroxTool) InputSchema() json.RawMessage {
 			"random_agent": {
 				"type": "boolean",
 				"description": "Use a random User-Agent for each request"
+			},
+			"rate_limit": {
+				"type": "integer",
+				"description": "Limit requests per second"
+			},
+			"filter_lines": {
+				"type": "string",
+				"description": "Filter responses by line count"
+			},
+			"auto_tune": {
+				"type": "boolean",
+				"description": "Automatically lower scan speed to reduce errors"
+			},
+			"auto_bail": {
+				"type": "boolean",
+				"description": "Automatically stop scanning when too many errors are encountered"
+			},
+			"time_limit": {
+				"type": "string",
+				"description": "Maximum scan time (e.g., '10m', '1h', '30s')"
+			},
+			"dont_filter": {
+				"type": "boolean",
+				"description": "Disable all default auto-filtering"
+			},
+			"json": {
+				"type": "boolean",
+				"description": "Output results in JSON format"
 			}
 		},
 		"required": ["url"]
@@ -190,6 +225,27 @@ func (t *FeroxTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.T
 	}
 	if input.RandomAgent {
 		args = append(args, "--random-agent")
+	}
+	if input.RateLimit > 0 {
+		args = append(args, "-L", fmt.Sprintf("%d", input.RateLimit))
+	}
+	if input.FilterLines != "" {
+		args = append(args, "-N", input.FilterLines)
+	}
+	if input.AutoTune {
+		args = append(args, "--auto-tune")
+	}
+	if input.AutoBail {
+		args = append(args, "--auto-bail")
+	}
+	if input.TimeLimit != "" {
+		args = append(args, "--time-limit", input.TimeLimit)
+	}
+	if input.DontFilter {
+		args = append(args, "--dont-filter")
+	}
+	if input.JSON {
+		args = append(args, "--json")
 	}
 
 	result, err := t.exec.Run(ctx, "feroxbuster", args...)

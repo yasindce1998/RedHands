@@ -11,27 +11,39 @@ import (
 )
 
 type NucleiScanInput struct {
-	Target    string `json:"target"`
-	Templates string `json:"templates,omitempty"`
-	Severity  string `json:"severity,omitempty"`
-	Tags      string `json:"tags,omitempty"`
-	ExcTags   string `json:"exclude_tags,omitempty"`
-	RateLimit int    `json:"rate_limit,omitempty"`
-	BulkSize  int    `json:"bulk_size,omitempty"`
+	Target          string `json:"target"`
+	Templates       string `json:"templates,omitempty"`
+	Severity        string `json:"severity,omitempty"`
+	Tags            string `json:"tags,omitempty"`
+	ExcTags         string `json:"exclude_tags,omitempty"`
+	RateLimit       int    `json:"rate_limit,omitempty"`
+	BulkSize        int    `json:"bulk_size,omitempty"`
+	Proxy           string `json:"proxy,omitempty"`
+	InteractshSrv   string `json:"interactsh_server,omitempty"`
+	Headless        bool   `json:"headless,omitempty"`
+	SystemResolvers bool   `json:"system_resolvers,omitempty"`
+	NewTemplates    bool   `json:"new_templates,omitempty"`
+	AutomaticScan   bool   `json:"automatic_scan,omitempty"`
+	TemplateID      string `json:"template_id,omitempty"`
+	ExcludeID       string `json:"exclude_id,omitempty"`
+	Author          string `json:"author,omitempty"`
+	Type            string `json:"type,omitempty"`
+	Concurrency     int    `json:"concurrency,omitempty"`
+	Timeout         int    `json:"timeout,omitempty"`
 }
 
 type NucleiScanTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewNucleiScan(exec *executor.BinaryExecutor) *NucleiScanTool {
+func NewNucleiScan(exec executor.Executor) *NucleiScanTool {
 	return &NucleiScanTool{exec: exec}
 }
 
 func (t *NucleiScanTool) Name() string { return "nuclei_scan" }
 
 func (t *NucleiScanTool) Description() string {
-	return "Run template-based vulnerability scanning with Nuclei. Supports severity filtering, tag-based selection, and rate limiting."
+	return "Run template-based vulnerability scanning with Nuclei. Supports severity filtering, tag-based selection, rate limiting, headless browser scanning, and interactsh-based OOB detection."
 }
 
 func (t *NucleiScanTool) InputSchema() json.RawMessage {
@@ -65,6 +77,55 @@ func (t *NucleiScanTool) InputSchema() json.RawMessage {
 			"bulk_size": {
 				"type": "integer",
 				"description": "Number of templates to run in parallel (default: 25)"
+			},
+			"proxy": {
+				"type": "string",
+				"description": "HTTP/SOCKS5 proxy URL (e.g., 'http://127.0.0.1:8080')"
+			},
+			"interactsh_server": {
+				"type": "string",
+				"description": "Custom interactsh server URL for OOB testing"
+			},
+			"headless": {
+				"type": "boolean",
+				"description": "Enable headless browser-based templates"
+			},
+			"system_resolvers": {
+				"type": "boolean",
+				"description": "Use system DNS resolvers instead of built-in"
+			},
+			"new_templates": {
+				"type": "boolean",
+				"description": "Run only newly added templates"
+			},
+			"automatic_scan": {
+				"type": "boolean",
+				"description": "Automatic web scan using wappalyzer technology detection"
+			},
+			"template_id": {
+				"type": "string",
+				"description": "Run specific template IDs (comma-separated, e.g., 'CVE-2021-44228')"
+			},
+			"exclude_id": {
+				"type": "string",
+				"description": "Exclude specific template IDs (comma-separated)"
+			},
+			"author": {
+				"type": "string",
+				"description": "Filter templates by author (comma-separated)"
+			},
+			"type": {
+				"type": "string",
+				"enum": ["http", "dns", "file", "network", "headless", "ssl"],
+				"description": "Filter templates by protocol type"
+			},
+			"concurrency": {
+				"type": "integer",
+				"description": "Maximum number of templates to execute in parallel (default: 25)"
+			},
+			"timeout": {
+				"type": "integer",
+				"description": "Timeout in seconds for each request (default: 10)"
 			}
 		},
 		"required": ["target"]
@@ -100,6 +161,42 @@ func (t *NucleiScanTool) Execute(ctx context.Context, params json.RawMessage) (*
 	}
 	if input.BulkSize > 0 {
 		args = append(args, "-bulk-size", fmt.Sprintf("%d", input.BulkSize))
+	}
+	if input.Proxy != "" {
+		args = append(args, "-proxy", input.Proxy)
+	}
+	if input.InteractshSrv != "" {
+		args = append(args, "-iserver", input.InteractshSrv)
+	}
+	if input.Headless {
+		args = append(args, "-headless")
+	}
+	if input.SystemResolvers {
+		args = append(args, "-sr")
+	}
+	if input.NewTemplates {
+		args = append(args, "-nt")
+	}
+	if input.AutomaticScan {
+		args = append(args, "-as")
+	}
+	if input.TemplateID != "" {
+		args = append(args, "-id", input.TemplateID)
+	}
+	if input.ExcludeID != "" {
+		args = append(args, "-eid", input.ExcludeID)
+	}
+	if input.Author != "" {
+		args = append(args, "-author", input.Author)
+	}
+	if input.Type != "" {
+		args = append(args, "-type", input.Type)
+	}
+	if input.Concurrency > 0 {
+		args = append(args, "-c", fmt.Sprintf("%d", input.Concurrency))
+	}
+	if input.Timeout > 0 {
+		args = append(args, "-timeout", fmt.Sprintf("%d", input.Timeout))
 	}
 
 	result, err := t.exec.Run(ctx, "nuclei", args...)

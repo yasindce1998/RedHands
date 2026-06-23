@@ -11,26 +11,35 @@ import (
 )
 
 type WebScanInput struct {
-	Host    string `json:"host"`
-	Port    int    `json:"port,omitempty"`
-	SSL     bool   `json:"ssl,omitempty"`
-	Tuning  string `json:"tuning,omitempty"`
-	Plugins string `json:"plugins,omitempty"`
-	Timeout int    `json:"timeout,omitempty"`
+	Host         string `json:"host"`
+	Port         int    `json:"port,omitempty"`
+	SSL          bool   `json:"ssl,omitempty"`
+	Tuning       string `json:"tuning,omitempty"`
+	Plugins      string `json:"plugins,omitempty"`
+	Timeout      int    `json:"timeout,omitempty"`
+	Proxy        string `json:"proxy,omitempty"`
+	Mutate       string `json:"mutate,omitempty"`
+	Evasion      string `json:"evasion,omitempty"`
+	UserAgent    string `json:"user_agent,omitempty"`
+	Auth         string `json:"auth,omitempty"`
+	OutputFormat string `json:"output_format,omitempty"`
+	CgiDirs      string `json:"cgidirs,omitempty"`
+	MaxTime      int    `json:"max_time,omitempty"`
+	No404        bool   `json:"no_404,omitempty"`
 }
 
 type WebScanTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewWebScan(exec *executor.BinaryExecutor) *WebScanTool {
+func NewWebScan(exec executor.Executor) *WebScanTool {
 	return &WebScanTool{exec: exec}
 }
 
 func (t *WebScanTool) Name() string { return "nikto_scan" }
 
 func (t *WebScanTool) Description() string {
-	return "Web server scanner that checks for dangerous files, outdated software, misconfigurations, and known vulnerabilities."
+	return "Web server scanner that checks for dangerous files, outdated software, misconfigurations, and known vulnerabilities. Supports proxy, IDS evasion, mutation techniques, and authentication."
 }
 
 func (t *WebScanTool) InputSchema() json.RawMessage {
@@ -60,6 +69,43 @@ func (t *WebScanTool) InputSchema() json.RawMessage {
 			"timeout": {
 				"type": "integer",
 				"description": "Timeout per request in seconds (default: 10)"
+			},
+			"proxy": {
+				"type": "string",
+				"description": "Proxy URL (e.g., 'http://127.0.0.1:8080')"
+			},
+			"mutate": {
+				"type": "string",
+				"description": "Mutation techniques (1=test all files with root dirs, 2=guess password file names, 3=enumerate usernames via Apache, 4=enumerate usernames via cgiwrap, 5=brute force subdomains, 6=attempt all)"
+			},
+			"evasion": {
+				"type": "string",
+				"description": "IDS evasion techniques (1=random URI encoding, 2=directory self-reference, 3=premature URL ending, 4=prepend long random string, 5=fake parameter, 6=TAB as request spacer, 7=change URL case, 8=Windows dir separator)"
+			},
+			"user_agent": {
+				"type": "string",
+				"description": "Custom User-Agent string"
+			},
+			"auth": {
+				"type": "string",
+				"description": "HTTP authentication credentials (format: 'user:password')"
+			},
+			"output_format": {
+				"type": "string",
+				"enum": ["txt", "json", "xml", "htm", "csv"],
+				"description": "Output format (default: txt)"
+			},
+			"cgidirs": {
+				"type": "string",
+				"description": "CGI directories to scan ('none', 'all', or custom like '/cgi/')"
+			},
+			"max_time": {
+				"type": "integer",
+				"description": "Maximum scan time in seconds"
+			},
+			"no_404": {
+				"type": "boolean",
+				"description": "Disable 404 guessing (useful for servers that don't return proper 404s)"
 			}
 		},
 		"required": ["host"]
@@ -76,7 +122,12 @@ func (t *WebScanTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"-h", input.Host, "-nointeractive", "-Format", "txt"}
+	outputFmt := "txt"
+	if input.OutputFormat != "" {
+		outputFmt = input.OutputFormat
+	}
+
+	args := []string{"-h", input.Host, "-nointeractive", "-Format", outputFmt}
 
 	if input.Port > 0 {
 		args = append(args, "-p", fmt.Sprintf("%d", input.Port))
@@ -92,6 +143,30 @@ func (t *WebScanTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 	}
 	if input.Timeout > 0 {
 		args = append(args, "-timeout", fmt.Sprintf("%d", input.Timeout))
+	}
+	if input.Proxy != "" {
+		args = append(args, "-useproxy", input.Proxy)
+	}
+	if input.Mutate != "" {
+		args = append(args, "-mutate", input.Mutate)
+	}
+	if input.Evasion != "" {
+		args = append(args, "-evasion", input.Evasion)
+	}
+	if input.UserAgent != "" {
+		args = append(args, "-useragent", input.UserAgent)
+	}
+	if input.Auth != "" {
+		args = append(args, "-id", input.Auth)
+	}
+	if input.CgiDirs != "" {
+		args = append(args, "-Cgidirs", input.CgiDirs)
+	}
+	if input.MaxTime > 0 {
+		args = append(args, "-maxtime", fmt.Sprintf("%d", input.MaxTime))
+	}
+	if input.No404 {
+		args = append(args, "-no404")
 	}
 
 	result, err := t.exec.Run(ctx, "nikto", args...)

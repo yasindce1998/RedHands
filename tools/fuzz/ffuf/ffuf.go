@@ -11,31 +11,42 @@ import (
 )
 
 type WebFuzzInput struct {
-	URL         string `json:"url"`
-	Wordlist    string `json:"wordlist"`
-	Method      string `json:"method,omitempty"`
-	Headers     string `json:"headers,omitempty"`
-	Data        string `json:"data,omitempty"`
-	MatchCodes  string `json:"match_codes,omitempty"`
-	FilterCodes string `json:"filter_codes,omitempty"`
-	FilterSize  string `json:"filter_size,omitempty"`
-	Threads     int    `json:"threads,omitempty"`
-	RateLimit   int    `json:"rate_limit,omitempty"`
-	Extensions  string `json:"extensions,omitempty"`
+	URL            string `json:"url"`
+	Wordlist       string `json:"wordlist"`
+	Method         string `json:"method,omitempty"`
+	Headers        string `json:"headers,omitempty"`
+	Data           string `json:"data,omitempty"`
+	MatchCodes     string `json:"match_codes,omitempty"`
+	FilterCodes    string `json:"filter_codes,omitempty"`
+	FilterSize     string `json:"filter_size,omitempty"`
+	Threads        int    `json:"threads,omitempty"`
+	RateLimit      int    `json:"rate_limit,omitempty"`
+	Extensions     string `json:"extensions,omitempty"`
+	AutoCalibrate  bool   `json:"autocalibrate,omitempty"`
+	Recursion      bool   `json:"recursion,omitempty"`
+	RecursionDepth int    `json:"recursion_depth,omitempty"`
+	MatchLines     string `json:"match_lines,omitempty"`
+	MatchRegex     string `json:"match_regex,omitempty"`
+	FilterLines    string `json:"filter_lines,omitempty"`
+	FilterWords    string `json:"filter_words,omitempty"`
+	FilterRegex    string `json:"filter_regex,omitempty"`
+	Timeout        int    `json:"timeout,omitempty"`
+	MaxTime        int    `json:"max_time,omitempty"`
+	Verbose        bool   `json:"verbose,omitempty"`
 }
 
 type WebFuzzTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewWebFuzz(exec *executor.BinaryExecutor) *WebFuzzTool {
+func NewWebFuzz(exec executor.Executor) *WebFuzzTool {
 	return &WebFuzzTool{exec: exec}
 }
 
 func (t *WebFuzzTool) Name() string { return "ffuf_fuzz" }
 
 func (t *WebFuzzTool) Description() string {
-	return "Web fuzzer for directory/file discovery, parameter fuzzing, and virtual host enumeration. Use FUZZ keyword in URL for injection point."
+	return "Web fuzzer for directory/file discovery, parameter fuzzing, and virtual host enumeration. Supports auto-calibration, recursion, regex matching/filtering, and rate limiting. Use FUZZ keyword in URL for injection point."
 }
 
 func (t *WebFuzzTool) InputSchema() json.RawMessage {
@@ -86,6 +97,50 @@ func (t *WebFuzzTool) InputSchema() json.RawMessage {
 			"extensions": {
 				"type": "string",
 				"description": "File extensions to append (e.g., 'php,html,txt')"
+			},
+			"autocalibrate": {
+				"type": "boolean",
+				"description": "Automatically calibrate filtering options"
+			},
+			"recursion": {
+				"type": "boolean",
+				"description": "Enable recursive scanning of discovered directories"
+			},
+			"recursion_depth": {
+				"type": "integer",
+				"description": "Maximum recursion depth (default: 0 = infinite)"
+			},
+			"match_lines": {
+				"type": "string",
+				"description": "Match responses with specific line count (e.g., '10' or '10-50')"
+			},
+			"match_regex": {
+				"type": "string",
+				"description": "Match responses containing regex pattern"
+			},
+			"filter_lines": {
+				"type": "string",
+				"description": "Filter responses by line count"
+			},
+			"filter_words": {
+				"type": "string",
+				"description": "Filter responses by word count"
+			},
+			"filter_regex": {
+				"type": "string",
+				"description": "Filter responses matching regex pattern"
+			},
+			"timeout": {
+				"type": "integer",
+				"description": "HTTP request timeout in seconds (default: 10)"
+			},
+			"max_time": {
+				"type": "integer",
+				"description": "Maximum total execution time in seconds"
+			},
+			"verbose": {
+				"type": "boolean",
+				"description": "Verbose output (show full URLs and redirect locations)"
 			}
 		},
 		"required": ["url", "wordlist"]
@@ -139,6 +194,39 @@ func (t *WebFuzzTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 	}
 	if input.Extensions != "" {
 		args = append(args, "-e", input.Extensions)
+	}
+	if input.AutoCalibrate {
+		args = append(args, "-ac")
+	}
+	if input.Recursion {
+		args = append(args, "-recursion")
+	}
+	if input.RecursionDepth > 0 {
+		args = append(args, "-recursion-depth", fmt.Sprintf("%d", input.RecursionDepth))
+	}
+	if input.MatchLines != "" {
+		args = append(args, "-ml", input.MatchLines)
+	}
+	if input.MatchRegex != "" {
+		args = append(args, "-mr", input.MatchRegex)
+	}
+	if input.FilterLines != "" {
+		args = append(args, "-fl", input.FilterLines)
+	}
+	if input.FilterWords != "" {
+		args = append(args, "-fw", input.FilterWords)
+	}
+	if input.FilterRegex != "" {
+		args = append(args, "-fr", input.FilterRegex)
+	}
+	if input.Timeout > 0 {
+		args = append(args, "-timeout", fmt.Sprintf("%d", input.Timeout))
+	}
+	if input.MaxTime > 0 {
+		args = append(args, "-maxtime", fmt.Sprintf("%d", input.MaxTime))
+	}
+	if input.Verbose {
+		args = append(args, "-v")
 	}
 
 	result, err := t.exec.Run(ctx, "ffuf", args...)

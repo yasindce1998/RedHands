@@ -11,27 +11,36 @@ import (
 )
 
 type CrawlInput struct {
-	URL         string `json:"url"`
-	Depth       int    `json:"depth,omitempty"`
-	JSCrawl     bool   `json:"js_crawl,omitempty"`
-	Headless    bool   `json:"headless,omitempty"`
-	Scope       string `json:"scope,omitempty"`
-	Concurrency int    `json:"concurrency,omitempty"`
-	FormFill    bool   `json:"form_fill,omitempty"`
+	URL             string `json:"url"`
+	Depth           int    `json:"depth,omitempty"`
+	JSCrawl         bool   `json:"js_crawl,omitempty"`
+	Headless        bool   `json:"headless,omitempty"`
+	Scope           string `json:"scope,omitempty"`
+	Concurrency     int    `json:"concurrency,omitempty"`
+	FormFill        bool   `json:"form_fill,omitempty"`
+	KnownFiles      string `json:"known_files,omitempty"`
+	ExtensionFilter string `json:"extension_filter,omitempty"`
+	ExtensionMatch  string `json:"extension_match,omitempty"`
+	OutputFields    string `json:"output_fields,omitempty"`
+	RateLimit       int    `json:"rate_limit,omitempty"`
+	Proxy           string `json:"proxy,omitempty"`
+	Headers         string `json:"headers,omitempty"`
+	CrawlDuration   int    `json:"crawl_duration,omitempty"`
+	BodyRegex       string `json:"body_regex,omitempty"`
 }
 
 type CrawlTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewCrawl(exec *executor.BinaryExecutor) *CrawlTool {
+func NewCrawl(exec executor.Executor) *CrawlTool {
 	return &CrawlTool{exec: exec}
 }
 
 func (t *CrawlTool) Name() string { return "katana_crawl" }
 
 func (t *CrawlTool) Description() string {
-	return "Next-generation web crawler for discovering endpoints, JavaScript files, API routes, and forms. Supports headless browser crawling."
+	return "Next-generation web crawler for discovering endpoints, JavaScript files, API routes, and forms. Supports headless browser crawling, extension filtering, custom headers, rate limiting, and body regex matching."
 }
 
 func (t *CrawlTool) InputSchema() json.RawMessage {
@@ -65,6 +74,42 @@ func (t *CrawlTool) InputSchema() json.RawMessage {
 			"form_fill": {
 				"type": "boolean",
 				"description": "Enable automatic form filling during crawling"
+			},
+			"known_files": {
+				"type": "string",
+				"description": "Known file types to discover: 'all', 'robotstxt', 'sitemapxml'"
+			},
+			"extension_filter": {
+				"type": "string",
+				"description": "Comma-separated extensions to exclude from results (e.g., 'png,jpg,gif,css')"
+			},
+			"extension_match": {
+				"type": "string",
+				"description": "Comma-separated extensions to include exclusively (e.g., 'php,asp,jsp')"
+			},
+			"output_fields": {
+				"type": "string",
+				"description": "Comma-separated output fields: 'url,path,fqdn,rdn,rurl,qurl,qpath,file,key,value,kv,dir,udir'"
+			},
+			"rate_limit": {
+				"type": "integer",
+				"description": "Maximum requests per second"
+			},
+			"proxy": {
+				"type": "string",
+				"description": "HTTP proxy URL (e.g., 'http://127.0.0.1:8080')"
+			},
+			"headers": {
+				"type": "string",
+				"description": "Custom headers (semicolon-separated, e.g., 'Cookie: sess=abc;Authorization: Bearer xyz')"
+			},
+			"crawl_duration": {
+				"type": "integer",
+				"description": "Maximum crawl duration in seconds"
+			},
+			"body_regex": {
+				"type": "string",
+				"description": "Regex pattern to filter responses by body content"
 			}
 		},
 		"required": ["url"]
@@ -100,6 +145,38 @@ func (t *CrawlTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.T
 	}
 	if input.FormFill {
 		args = append(args, "-aff")
+	}
+	if input.KnownFiles != "" {
+		args = append(args, "-kf", input.KnownFiles)
+	}
+	if input.ExtensionFilter != "" {
+		args = append(args, "-ef", input.ExtensionFilter)
+	}
+	if input.ExtensionMatch != "" {
+		args = append(args, "-em", input.ExtensionMatch)
+	}
+	if input.OutputFields != "" {
+		args = append(args, "-f", input.OutputFields)
+	}
+	if input.RateLimit > 0 {
+		args = append(args, "-rl", fmt.Sprintf("%d", input.RateLimit))
+	}
+	if input.Proxy != "" {
+		args = append(args, "-proxy", input.Proxy)
+	}
+	if input.Headers != "" {
+		for h := range strings.SplitSeq(input.Headers, ";") {
+			h = strings.TrimSpace(h)
+			if h != "" {
+				args = append(args, "-H", h)
+			}
+		}
+	}
+	if input.CrawlDuration > 0 {
+		args = append(args, "-ct", fmt.Sprintf("%d", input.CrawlDuration))
+	}
+	if input.BodyRegex != "" {
+		args = append(args, "-fr", input.BodyRegex)
 	}
 
 	result, err := t.exec.Run(ctx, "katana", args...)

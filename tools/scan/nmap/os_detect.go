@@ -15,10 +15,10 @@ type OSDetectInput struct {
 }
 
 type OSDetectTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewOSDetect(exec *executor.BinaryExecutor) *OSDetectTool {
+func NewOSDetect(exec executor.Executor) *OSDetectTool {
 	return &OSDetectTool{exec: exec}
 }
 

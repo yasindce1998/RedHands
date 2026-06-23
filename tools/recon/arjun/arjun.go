@@ -11,29 +11,34 @@ import (
 )
 
 type ArjunInput struct {
-	URL       string `json:"url"`
-	Method    string `json:"method,omitempty"`
-	Headers   string `json:"headers,omitempty"`
-	Wordlist  string `json:"wordlist,omitempty"`
-	Threads   int    `json:"threads,omitempty"`
-	Delay     int    `json:"delay,omitempty"`
-	Include   string `json:"include,omitempty"`
-	Stable    bool   `json:"stable,omitempty"`
-	Passive   bool   `json:"passive,omitempty"`
+	URL              string `json:"url"`
+	Method           string `json:"method,omitempty"`
+	Headers          string `json:"headers,omitempty"`
+	Wordlist         string `json:"wordlist,omitempty"`
+	Threads          int    `json:"threads,omitempty"`
+	Delay            int    `json:"delay,omitempty"`
+	Include          string `json:"include,omitempty"`
+	Stable           bool   `json:"stable,omitempty"`
+	Passive          bool   `json:"passive,omitempty"`
+	OutputJSON       bool   `json:"output_json,omitempty"`
+	ChunkSize        int    `json:"chunk_size,omitempty"`
+	Timeout          int    `json:"timeout,omitempty"`
+	RateLimit        int    `json:"rate_limit,omitempty"`
+	DisableRedirects bool   `json:"disable_redirects,omitempty"`
 }
 
 type ArjunTool struct {
-	exec *executor.BinaryExecutor
+	exec executor.Executor
 }
 
-func NewArjun(exec *executor.BinaryExecutor) *ArjunTool {
+func NewArjun(exec executor.Executor) *ArjunTool {
 	return &ArjunTool{exec: exec}
 }
 
 func (t *ArjunTool) Name() string { return "arjun_discover" }
 
 func (t *ArjunTool) Description() string {
-	return "HTTP parameter discovery tool. Finds hidden GET/POST parameters using smart heuristics and a large wordlist. Supports JSON, form-data, and XML parameter types."
+	return "HTTP parameter discovery tool. Finds hidden GET/POST/JSON/XML parameters using smart heuristics and a large wordlist. Supports chunked requests, rate limiting, and passive discovery."
 }
 
 func (t *ArjunTool) InputSchema() json.RawMessage {
@@ -76,6 +81,26 @@ func (t *ArjunTool) InputSchema() json.RawMessage {
 			"passive": {
 				"type": "boolean",
 				"description": "Only use passive sources (CommonCrawl, Wayback, etc.)"
+			},
+			"output_json": {
+				"type": "boolean",
+				"description": "Output results in JSON format"
+			},
+			"chunk_size": {
+				"type": "integer",
+				"description": "Number of parameters per request chunk (default: 250)"
+			},
+			"timeout": {
+				"type": "integer",
+				"description": "HTTP request timeout in seconds (default: 15)"
+			},
+			"rate_limit": {
+				"type": "integer",
+				"description": "Maximum requests per second"
+			},
+			"disable_redirects": {
+				"type": "boolean",
+				"description": "Disable following HTTP redirects"
 			}
 		},
 		"required": ["url"]
@@ -122,6 +147,21 @@ func (t *ArjunTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.T
 	}
 	if input.Passive {
 		args = append(args, "--passive")
+	}
+	if input.OutputJSON {
+		args = append(args, "-oJ", "-")
+	}
+	if input.ChunkSize > 0 {
+		args = append(args, "-c", fmt.Sprintf("%d", input.ChunkSize))
+	}
+	if input.Timeout > 0 {
+		args = append(args, "-T", fmt.Sprintf("%d", input.Timeout))
+	}
+	if input.RateLimit > 0 {
+		args = append(args, "--rate-limit", fmt.Sprintf("%d", input.RateLimit))
+	}
+	if input.DisableRedirects {
+		args = append(args, "--disable-redirects")
 	}
 
 	result, err := t.exec.Run(ctx, "arjun", args...)

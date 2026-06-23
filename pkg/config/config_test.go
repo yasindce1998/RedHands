@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"testing"
 	"time"
 )
@@ -20,14 +19,9 @@ func TestLoadDefaults(t *testing.T) {
 }
 
 func TestLoadFromEnv(t *testing.T) {
-	os.Setenv("REDHANDS_TOOLSETS", "nmap,nuclei,subfinder")
-	os.Setenv("REDHANDS_TIMEOUT", "10m")
-	os.Setenv("REDHANDS_RATE_LIMIT", "5")
-	defer func() {
-		os.Unsetenv("REDHANDS_TOOLSETS")
-		os.Unsetenv("REDHANDS_TIMEOUT")
-		os.Unsetenv("REDHANDS_RATE_LIMIT")
-	}()
+	t.Setenv("REDHANDS_TOOLSETS", "nmap,nuclei,subfinder")
+	t.Setenv("REDHANDS_TIMEOUT", "10m")
+	t.Setenv("REDHANDS_RATE_LIMIT", "5")
 
 	cfg := Load()
 	if len(cfg.Toolsets) != 3 {

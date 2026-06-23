@@ -166,12 +166,6 @@ docker build -t redhands .
 docker run -i redhands
 ```
 
-## Architecture
-
-<p align="center">
-  <img src="docs/directory-structure.svg" alt="Project Structure" width="750"/>
-</p>
-
 ## License
 
 MIT

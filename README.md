@@ -153,34 +153,43 @@ docker run -i redhands
 ## Architecture
 
 ```
-cmd/redhands/       Entry point, tool registration, config
-pkg/mcp/            MCP protocol (JSON-RPC 2.0, stdio transport)
-pkg/executor/       Secure binary execution + sandbox
-pkg/audit/          Structured audit logging (JSONL)
-pkg/config/         Environment-based configuration
-pkg/cache/          LRU result cache with TTL
-pkg/ratelimit/      Token bucket rate limiter
-pkg/nmap/           Nmap XML parser + query helpers
-tools/nmap/         Nmap MCP tools (port scan, service, OS, vuln)
-tools/subfinder/    Subdomain enumeration
-tools/amass/        ASN and network mapping
-tools/dns/          DNS lookups via dig
-tools/httpx/        HTTP probing
-tools/katana/       Web crawling
-tools/nikto/        Web server scanning
-tools/ffuf/         Web fuzzing
-tools/gobuster/     Directory brute-forcing
-tools/nuclei/       Template-based vuln scanning
-tools/testssl/      TLS/SSL testing
-tools/whatweb/      Web fingerprinting
-tools/wayback/      Wayback Machine URL retrieval
-tools/gau/          URL fetching from multiple sources
-tools/arjun/        HTTP parameter discovery
-tools/masscan/      Internet-scale port scanning
-tools/rustscan/     Modern fast port scanner
-tools/feroxbuster/  Recursive content discovery
-tools/sqlmap/       SQL injection testing
-tools/health/       Server health check
+cmd/redhands/            Entry point, tool registration, config
+pkg/
+├── mcp/                 MCP protocol (JSON-RPC 2.0, stdio transport)
+├── executor/            Secure binary execution + sandbox
+├── audit/               Structured audit logging (JSONL)
+├── config/              Environment-based configuration
+├── cache/               LRU result cache with TTL
+├── ratelimit/           Token bucket rate limiter
+└── nmap/                Nmap XML parser + query helpers
+tools/
+├── scan/                Port scanning
+│   ├── nmap/            TCP/UDP port scan, service detect, OS fingerprint, vuln scan
+│   ├── masscan/         Internet-scale port scanning (10M pps)
+│   └── rustscan/        Modern fast port scanner
+├── recon/               Reconnaissance & enumeration
+│   ├── subfinder/       Subdomain enumeration
+│   ├── amass/           ASN and network mapping
+│   ├── dns/             DNS lookups via dig
+│   ├── wayback/         Wayback Machine URL retrieval
+│   ├── gau/             URL fetching from multiple sources
+│   └── arjun/           HTTP parameter discovery
+├── web/                 Web analysis & probing
+│   ├── httpx/           HTTP service probing
+│   ├── katana/          Web crawling (JS, headless)
+│   ├── nikto/           Web server vulnerability scanning
+│   ├── whatweb/         Web technology fingerprinting
+│   └── testssl/         TLS/SSL encryption testing
+├── fuzz/                Fuzzing & brute-forcing
+│   ├── ffuf/            Web fuzzing (dirs, params, vhosts)
+│   ├── gobuster/        Directory/file brute-forcing
+│   └── feroxbuster/     Recursive content discovery
+├── exploit/             Exploitation
+│   └── sqlmap/          SQL injection detection & exploitation
+├── vuln/                Vulnerability scanning
+│   └── nuclei/          Template-based vulnerability scanning
+└── system/              Internal
+    └── health/          Server health check & dependency status
 ```
 
 ## License

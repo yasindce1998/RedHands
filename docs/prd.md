@@ -4,7 +4,7 @@
 
 RedHands is an MCP (Model Context Protocol) server that exposes offensive security tools to AI agents. It follows the same architecture patterns used by GitHub's MCP server and Atlassian's MCP server — a single-binary Go server that starts with stdio transport, groups tools into logical toolsets, and delegates auth to the MCP host via environment variables.
 
-**Current state:** v0.1.0 shipped with stdio transport, 4 Nmap tools, secure binary execution, and structured audit logging.
+**Current state:** v0.3.0 shipped with stdio transport, 23 tools across 7 toolsets, secure binary execution, rate limiting, result caching, and structured audit logging.
 
 ---
 
@@ -39,121 +39,186 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 │  - Controls tool approval                                │
 │  - Passes credentials via env vars                       │
 └──────────────┬──────────────────────────────────────────┘
-               │ stdio (local) or HTTP/SSE (remote)
+               │ stdio (local) or HTTP/SSE (remote, future)
                ▼
 ┌─────────────────────────────────────────────────────────┐
 │  RedHands MCP Server                                     │
 │                                                          │
-│  ┌─────────┐  ┌──────────┐  ┌────────────┐             │
-│  │ Toolsets │  │ Executor │  │ Audit Log  │             │
-│  │         │  │          │  │            │             │
-│  │ • recon │  │ allowlist │  │ JSONL file │             │
-│  │ • scan  │  │ sandbox   │  │ (or OTLP)  │             │
-│  │ • vuln  │  │ timeout   │  │            │             │
-│  │ • enum  │  │ caps      │  │            │             │
-│  └────┬────┘  └─────┬────┘  └────────────┘             │
-│       │              │                                   │
-│       └──────┬───────┘                                   │
-│              ▼                                           │
-│  ┌──────────────────────┐                               │
-│  │  Binary Execution    │                               │
-│  │  nmap, nuclei,       │                               │
-│  │  subfinder, httpx... │                               │
-│  └──────────────────────┘                               │
+│  ┌──────────────┐  ┌──────────┐  ┌────────────┐        │
+│  │  Middleware   │  │ Executor │  │ Audit Log  │        │
+│  │              │  │          │  │            │        │
+│  │ • ratelimit  │  │ allowlist │  │ JSONL file │        │
+│  │ • cache      │  │ sandbox   │  │            │        │
+│  │ • audit      │  │ timeout   │  │            │        │
+│  └──────┬───────┘  └─────┬────┘  └────────────┘        │
+│         │                 │                              │
+│         └────────┬────────┘                              │
+│                  ▼                                        │
+│  ┌──────────────────────────────────────────────┐       │
+│  │  Toolsets (category-based layout)             │       │
+│  │                                               │       │
+│  │  tools/scan/     nmap, masscan, rustscan      │       │
+│  │  tools/recon/    subfinder, amass, dns,       │       │
+│  │                  wayback, gau, arjun           │       │
+│  │  tools/web/      httpx, katana, nikto,        │       │
+│  │                  whatweb, testssl              │       │
+│  │  tools/fuzz/     ffuf, gobuster, feroxbuster  │       │
+│  │  tools/exploit/  sqlmap                       │       │
+│  │  tools/vuln/     nuclei                       │       │
+│  │  tools/system/   health                       │       │
+│  └──────────────────────────────────────────────┘       │
 └─────────────────────────────────────────────────────────┘
+```
+
+### Directory Layout
+
+```
+tools/
+├── scan/            Port scanning
+│   ├── nmap/        TCP/UDP scan, service detect, OS fingerprint, vuln scan
+│   ├── masscan/     Internet-scale port scanning (10M pps)
+│   └── rustscan/    Modern fast port scanner
+├── recon/           Reconnaissance & enumeration
+│   ├── subfinder/   Subdomain enumeration
+│   ├── amass/       ASN and network mapping
+│   ├── dns/         DNS lookups via dig
+│   ├── wayback/     Wayback Machine URL retrieval
+│   ├── gau/         URL fetching from multiple sources
+│   └── arjun/       HTTP parameter discovery
+├── web/             Web analysis & probing
+│   ├── httpx/       HTTP service probing
+│   ├── katana/      Web crawling (JS, headless)
+│   ├── nikto/       Web server vulnerability scanning
+│   ├── whatweb/     Web technology fingerprinting
+│   └── testssl/     TLS/SSL encryption testing
+├── fuzz/            Fuzzing & brute-forcing
+│   ├── ffuf/        Web fuzzing (dirs, params, vhosts)
+│   ├── gobuster/    Directory/file brute-forcing
+│   └── feroxbuster/ Recursive content discovery
+├── exploit/         Exploitation
+│   └── sqlmap/      SQL injection detection & exploitation
+├── vuln/            Vulnerability scanning
+│   └── nuclei/      Template-based vulnerability scanning
+└── system/          Internal
+    └── health/      Server health check & dependency status
 ```
 
 ---
 
 ## Toolsets & Tools
 
-### Toolset: `recon` — Subdomain & Asset Discovery
+### Toolset: `nmap` — Nmap Suite
 
 | Tool | Binary | Description |
 |------|--------|-------------|
-| `subfinder_enumerate` | subfinder | Passive subdomain enumeration |
-| `amass_enum` | amass | Active/passive subdomain enumeration |
-| `httpx_probe` | httpx | HTTP probing, tech detection, status codes |
+| `nmap_port_scan` | nmap | TCP/UDP port scanning (SYN, connect, UDP) |
+| `nmap_service_detect` | nmap | Service and version detection (-sV) |
+| `nmap_os_detect` | nmap | OS fingerprinting (-O) |
+| `nmap_vuln_scan` | nmap | NSE vulnerability scripts |
 
-### Toolset: `scan` — Port & Service Scanning (shipped)
+### Toolset: `scan` — Port Scanning
 
 | Tool | Binary | Description |
 |------|--------|-------------|
-| `nmap_port_scan` | nmap | TCP/UDP port scanning |
-| `nmap_service_detect` | nmap | Service version detection |
-| `nmap_os_detect` | nmap | OS fingerprinting |
+| `masscan_scan` | masscan | Internet-scale port scanning (10M pps) |
+| `rustscan_scan` | rustscan | Modern fast port scanner (all 65535 ports) |
+
+### Toolset: `recon` — Reconnaissance & Enumeration
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `subfinder_enum` | subfinder | Passive subdomain enumeration |
+| `amass_enum` | amass | Network mapping and ASN discovery |
+| `dns_lookup` | dig | DNS record queries (A, AAAA, MX, NS, TXT, etc.) |
+| `waybackurls` | waybackurls | Fetch archived URLs from the Wayback Machine |
+| `gau_urls` | gau | Fetch URLs from AlienVault OTX, Wayback, CommonCrawl, URLScan |
+| `arjun_discover` | arjun | HTTP parameter discovery (hidden GET/POST params) |
+
+### Toolset: `web` — Web Analysis & Probing
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `httpx_probe` | httpx | HTTP service probing with tech detection |
+| `katana_crawl` | katana | Next-gen web crawler (JS crawling, headless) |
+| `nikto_scan` | nikto | Web server vulnerability scanner |
+| `whatweb_fingerprint` | whatweb | Web technology fingerprinting |
+| `testssl_scan` | testssl.sh | TLS/SSL encryption testing |
+
+### Toolset: `fuzz` — Fuzzing & Brute-forcing
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `ffuf_fuzz` | ffuf | Web fuzzing (dirs, params, vhosts) |
+| `gobuster_dir` | gobuster | Directory/file brute-forcing |
+| `feroxbuster_scan` | feroxbuster | Recursive content discovery (forced browsing) |
+
+### Toolset: `exploit` — Exploitation
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `sqlmap_scan` | sqlmap | Automatic SQL injection detection and exploitation |
 
 ### Toolset: `vuln` — Vulnerability Scanning
 
 | Tool | Binary | Description |
 |------|--------|-------------|
-| `nmap_vuln_scan` | nmap | NSE vulnerability scripts (shipped) |
 | `nuclei_scan` | nuclei | Template-based vulnerability scanning |
-| `nuclei_scan_custom` | nuclei | Custom template execution |
 
-### Toolset: `enum` — Service Enumeration
-
-| Tool | Binary | Description |
-|------|--------|-------------|
-| `ffuf_fuzz` | ffuf | Web path/parameter fuzzing |
-| `gobuster_dir` | gobuster | Directory brute-forcing |
-| `dnsrecon_enum` | dnsrecon | DNS enumeration |
-
-### Toolset: `analyze` — Output Analysis
+### System (always enabled)
 
 | Tool | Binary | Description |
 |------|--------|-------------|
-| `parse_nmap_xml` | — | Parse existing Nmap XML files |
-| `parse_nuclei_json` | — | Parse existing Nuclei JSON output |
-| `summarize_findings` | — | Aggregate findings across tools |
+| `redhands_health` | — | Server health check and binary dependency status |
 
 ### Default Toolsets
 
-When no `--toolsets` flag is specified: `scan`, `vuln` (safe starting point).
+When `REDHANDS_TOOLSETS` is unset: all toolsets are enabled.
 
 ### Configuration
 
 ```bash
 # Enable specific toolsets
-redhands stdio --toolsets=recon,scan,vuln,enum
+export REDHANDS_TOOLSETS=nmap,recon,web
 
-# Enable individual tools
-redhands stdio --tools=nmap_port_scan,nuclei_scan
+# Enable all scanning + exploitation
+export REDHANDS_TOOLSETS=nmap,recon,web,fuzz,scan,exploit,vuln
 
-# Read-only mode (recon/scan only, no active exploitation)
-redhands stdio --read-only
-
-# Via environment variables
-REDHANDS_TOOLSETS=recon,scan,vuln
-REDHANDS_READ_ONLY=true
+# All tools (default when unset)
+export REDHANDS_TOOLSETS=
 ```
+
+---
+
+## Release History
+
+### v0.1.0 — Foundation (shipped)
+
+- MCP protocol core (JSON-RPC 2.0, stdio transport)
+- 4 Nmap tools (port_scan, service_detect, os_detect, vuln_scan)
+- Secure binary execution with allowlist + sandbox
+- Structured audit logging (JSONL)
+- Input validation and shell metacharacter rejection
+
+### v0.2.0 — Tool Expansion (shipped)
+
+- Toolset filtering via `REDHANDS_TOOLSETS` env var
+- Added 13 tools: subfinder, httpx, nuclei, ffuf, dns, amass, katana, nikto, gobuster, wayback, testssl, whatweb, health
+- Token bucket rate limiting middleware
+- LRU result cache with TTL
+- Binary auto-discovery
+
+### v0.3.0 — Full Suite (shipped, current)
+
+- Added 6 more tools: sqlmap, masscan, rustscan, feroxbuster, arjun, gau
+- New toolset categories: scan, exploit
+- Category-based directory layout (tools organized by domain)
+- 23 tools total across 7 toolsets + system
 
 ---
 
 ## Release Plan
 
-### v0.2.0 — Tool Expansion (Next)
-
-**Goal:** Add Nuclei and recon tools, implement toolset filtering.
-
-| Deliverable | Details |
-|-------------|---------|
-| Toolset system | `--toolsets`, `--tools`, `--read-only` flags + env vars |
-| Nuclei integration | `nuclei_scan` with template category filtering |
-| Subfinder integration | `subfinder_enumerate` with source config |
-| httpx integration | `httpx_probe` with tech detection |
-| Output parsers | Nuclei JSON parser, subfinder text parser |
-| Binary discovery | Auto-detect installed tools, report missing |
-
-**Acceptance criteria:**
-- `redhands stdio --toolsets=recon,scan,vuln` starts with tools from all three groups
-- `tools/list` only returns tools from enabled toolsets
-- Each new tool has input validation matching the Nmap standard
-- Missing binaries reported gracefully (tool listed but returns clear error)
-
----
-
-### v0.3.0 — HTTP/SSE Transport
+### v0.4.0 — HTTP/SSE Transport (Next)
 
 **Goal:** Remote access for team use — one server, multiple agents connect.
 
@@ -162,38 +227,11 @@ REDHANDS_READ_ONLY=true
 | HTTP transport | `/mcp` endpoint, streamable HTTP per MCP spec |
 | SSE fallback | For clients that don't support streamable HTTP |
 | Token auth | Bearer token validation (env-configured shared secret) |
-| TLS | `--tls-cert` / `--tls-key` flags, auto-TLS via Let's Encrypt option |
+| TLS | `--tls-cert` / `--tls-key` flags |
 | Health endpoint | `GET /health` for load balancers and monitoring |
 | Concurrent sessions | Multiple agents connected simultaneously |
 
-**Configuration:**
-```bash
-# Remote mode
-redhands http --addr=0.0.0.0:8443 --token=$REDHANDS_TOKEN --tls-cert=cert.pem --tls-key=key.pem
-
-# MCP host config for remote
-{
-  "mcpServers": {
-    "redhands": {
-      "type": "http",
-      "url": "https://redhands.internal:8443/mcp",
-      "headers": {
-        "Authorization": "Bearer ${REDHANDS_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-**Acceptance criteria:**
-- Multiple Claude Code sessions connect to one RedHands instance
-- Token validation rejects unauthorized requests
-- SSE streaming works for long-running scans
-- Graceful connection handling (timeouts, reconnects)
-
----
-
-### v0.4.0 — Observability & Deployment
+### v0.5.0 — Observability & Deployment
 
 **Goal:** Production-ready deployment with full observability.
 
@@ -201,32 +239,19 @@ redhands http --addr=0.0.0.0:8443 --token=$REDHANDS_TOKEN --tls-cert=cert.pem --
 |-------------|---------|
 | OpenTelemetry | OTLP export for traces and metrics |
 | Structured logging | slog with JSON output, configurable level |
-| Metrics | Tool call count, duration histogram, error rate, active scans |
-| Dockerfile | Multi-stage with all security tools pre-installed |
+| Metrics | Tool call count, duration histogram, error rate |
 | Helm chart | Kubernetes deployment with configurable resources |
-| Docker Compose | Local multi-container setup (server + tools) |
-| Rate limiting | Per-tool concurrency limits (e.g., max 3 Nmap scans) |
+| Docker Compose | Local multi-container setup |
 
-**Acceptance criteria:**
-- `docker run redhands` starts with all tools available
-- Helm chart deploys to K8s with one `helm install`
-- Traces appear in Jaeger/Grafana when OTLP endpoint configured
-- Rate limiter prevents resource exhaustion from concurrent scans
+### v0.6.0 — Advanced Features
 
----
-
-### v0.5.0 — Advanced Tools & Workflows
-
-**Goal:** Broader tool coverage and multi-step workflow support.
+**Goal:** Workflow support and expanded tool coverage.
 
 | Deliverable | Details |
 |-------------|---------|
-| ffuf integration | Web fuzzing with wordlist management |
-| gobuster integration | Directory/DNS/vhost brute-forcing |
-| amass integration | Advanced asset discovery |
 | Workflow hints | Tool descriptions that guide AI agents to chain tools logically |
-| Result caching | Cache scan results, serve from cache on repeat queries |
 | Finding dedup | Cross-tool finding deduplication |
+| Additional tools | Expand coverage per user demand |
 
 ---
 
@@ -237,7 +262,6 @@ redhands http --addr=0.0.0.0:8443 --token=$REDHANDS_TOKEN --tls-cert=cert.pem --
 | Custom RBAC/permissions | MCP hosts control tool approval; adding our own layer adds friction without value |
 | Multi-tenancy in the server | Deploy separate instances per team; simpler, more isolated |
 | Web UI / dashboard | The AI agent IS the UI; audit logs feed into existing SIEM/Grafana |
-| Exploit execution tools | Out of scope — RedHands is recon/scan/enum, not exploitation |
 | Custom auth protocol | Industry pattern is env-var tokens; no reason to diverge |
 | Database persistence | Audit logs go to files/OTLP; findings returned to the agent directly |
 
@@ -259,7 +283,7 @@ redhands http --addr=0.0.0.0:8443 --token=$REDHANDS_TOKEN --tls-cert=cert.pem --
 │ • Output size caps (10MB default)           │
 │ • Execution timeout (5min default)          │
 │ • Read-only mode                            │
-│ • Rate limiting (v0.4+)                     │
+│ • Rate limiting (token bucket)               │
 ├─────────────────────────────────────────────┤
 │ Layer 3: OS / Container                     │
 │ • Non-root execution                        │
@@ -279,20 +303,18 @@ redhands http --addr=0.0.0.0:8443 --token=$REDHANDS_TOKEN --tls-cert=cert.pem --
 
 ## Configuration Reference
 
-All configuration via CLI flags with env var equivalents:
+All configuration via environment variables (`REDHANDS_*` prefix):
 
-| Flag | Env Var | Default | Description |
-|------|---------|---------|-------------|
-| `--toolsets` | `REDHANDS_TOOLSETS` | `scan,vuln` | Enabled toolset groups |
-| `--tools` | `REDHANDS_TOOLS` | (all in enabled toolsets) | Individual tool filter |
-| `--read-only` | `REDHANDS_READ_ONLY` | `false` | Disable destructive/active tools |
-| `--timeout` | `REDHANDS_TIMEOUT` | `5m` | Per-tool execution timeout |
-| `--max-output` | `REDHANDS_MAX_OUTPUT` | `10MB` | Max captured stdout per exec |
-| `--audit-file` | `REDHANDS_AUDIT_FILE` | `./audit.jsonl` | Audit log path |
-| `--addr` | `REDHANDS_ADDR` | (stdio mode) | HTTP listen address |
-| `--token` | `REDHANDS_TOKEN` | (none) | Bearer token for HTTP mode |
-| `--log-level` | `REDHANDS_LOG_LEVEL` | `info` | Log verbosity |
-| `--log-format` | `REDHANDS_LOG_FORMAT` | `json` | Log format (json/text) |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REDHANDS_TOOLSETS` | (all) | Comma-separated toolsets to enable (nmap,recon,web,fuzz,scan,exploit,vuln) |
+| `REDHANDS_TIMEOUT` | `5m` | Execution timeout per tool call |
+| `REDHANDS_MAX_OUTPUT` | `10485760` | Max output bytes per execution (10MB) |
+| `REDHANDS_RATE_LIMIT` | `10` | Token bucket refill rate (requests/sec) |
+| `REDHANDS_RATE_BURST` | `20` | Token bucket burst capacity |
+| `REDHANDS_CACHE_TTL` | `5m` | Result cache TTL |
+| `REDHANDS_CACHE_SIZE` | `100` | Max cached results (LRU eviction) |
+| `REDHANDS_AUDIT_FILE` | `audit.jsonl` | Audit log file path |
 
 ---
 
@@ -304,7 +326,7 @@ All configuration via CLI flags with env var equivalents:
 | Concurrent scans supported | 10+ simultaneous without degradation |
 | Binary startup time | <100ms to first `tools/list` response |
 | Test coverage | >80% on pkg/ packages |
-| Supported tools | 15+ by v0.5 |
+| Supported tools | 23 shipped (v0.3.0), expanding |
 | Container image size | <100MB with tools installed |
 
 ---

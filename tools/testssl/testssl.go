@@ -1,0 +1,160 @@
+package testssl
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/yasindce1998/redhands/pkg/executor"
+	"github.com/yasindce1998/redhands/pkg/mcp"
+)
+
+type TLSScanInput struct {
+	Host       string `json:"host"`
+	Port       int    `json:"port,omitempty"`
+	StartTLS   string `json:"starttls,omitempty"`
+	Protocols  bool   `json:"protocols,omitempty"`
+	Ciphers    bool   `json:"ciphers,omitempty"`
+	Vulns      bool   `json:"vulnerabilities,omitempty"`
+	Headers    bool   `json:"headers,omitempty"`
+	CertInfo   bool   `json:"cert_info,omitempty"`
+}
+
+type TLSScanTool struct {
+	exec *executor.BinaryExecutor
+}
+
+func NewTLSScan(exec *executor.BinaryExecutor) *TLSScanTool {
+	return &TLSScanTool{exec: exec}
+}
+
+func (t *TLSScanTool) Name() string { return "testssl_scan" }
+
+func (t *TLSScanTool) Description() string {
+	return "Test TLS/SSL encryption on a server. Checks protocols, cipher suites, vulnerabilities (BEAST, POODLE, Heartbleed, etc.), and certificate details."
+}
+
+func (t *TLSScanTool) InputSchema() json.RawMessage {
+	return json.RawMessage(`{
+		"type": "object",
+		"properties": {
+			"host": {
+				"type": "string",
+				"description": "Target host (e.g., 'example.com' or 'example.com:8443')"
+			},
+			"port": {
+				"type": "integer",
+				"description": "Port to test (default: 443)"
+			},
+			"starttls": {
+				"type": "string",
+				"enum": ["smtp", "pop3", "imap", "ftp", "xmpp", "ldap", "postgres", "mysql"],
+				"description": "STARTTLS protocol to use"
+			},
+			"protocols": {
+				"type": "boolean",
+				"description": "Check supported TLS/SSL protocols"
+			},
+			"ciphers": {
+				"type": "boolean",
+				"description": "Check cipher suites"
+			},
+			"vulnerabilities": {
+				"type": "boolean",
+				"description": "Check for TLS vulnerabilities (Heartbleed, CCS, ROBOT, etc.)"
+			},
+			"headers": {
+				"type": "boolean",
+				"description": "Check HTTP security headers (HSTS, etc.)"
+			},
+			"cert_info": {
+				"type": "boolean",
+				"description": "Display certificate information"
+			}
+		},
+		"required": ["host"]
+	}`)
+}
+
+func (t *TLSScanTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.ToolResult, error) {
+	var input TLSScanInput
+	if err := json.Unmarshal(params, &input); err != nil {
+		return errorResult("invalid input: " + err.Error()), nil
+	}
+
+	if err := validateHost(input.Host); err != nil {
+		return errorResult(err.Error()), nil
+	}
+
+	args := []string{"--color", "0"}
+
+	if input.StartTLS != "" {
+		args = append(args, "--starttls", input.StartTLS)
+	}
+	if input.Protocols {
+		args = append(args, "-p")
+	}
+	if input.Ciphers {
+		args = append(args, "-E")
+	}
+	if input.Vulns {
+		args = append(args, "-U")
+	}
+	if input.Headers {
+		args = append(args, "-h")
+	}
+	if input.CertInfo {
+		args = append(args, "-S")
+	}
+
+	target := input.Host
+	if input.Port > 0 {
+		target = fmt.Sprintf("%s:%d", input.Host, input.Port)
+	}
+	args = append(args, target)
+
+	result, err := t.exec.Run(ctx, "testssl.sh", args...)
+	if err != nil {
+		stderr := ""
+		if result != nil {
+			stderr = string(result.Stderr)
+		}
+		return errorResult(fmt.Sprintf("testssl execution failed: %s\n%s", err.Error(), stderr)), nil
+	}
+
+	output := strings.TrimSpace(string(result.Stdout))
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "## TLS/SSL Scan: %s\n\n", target)
+	sb.WriteString("```\n")
+	sb.WriteString(output)
+	sb.WriteString("\n```\n")
+
+	return &mcp.ToolResult{
+		Content: []mcp.ContentBlock{{Type: "text", Text: sb.String()}},
+	}, nil
+}
+
+func errorResult(msg string) *mcp.ToolResult {
+	return &mcp.ToolResult{
+		Content: []mcp.ContentBlock{{Type: "text", Text: msg}},
+		IsError: true,
+	}
+}
+
+func validateHost(host string) error {
+	if host == "" {
+		return fmt.Errorf("host is required")
+	}
+	if len(host) > 253 {
+		return fmt.Errorf("host too long")
+	}
+	forbidden := []string{";", "|", "&", "`", "$", "(", ")", "{", "}", "<", ">", "!", " ", "'", "\"", "\\"}
+	for _, c := range forbidden {
+		if strings.Contains(host, c) {
+			return fmt.Errorf("host contains forbidden character: %q", c)
+		}
+	}
+	return nil
+}

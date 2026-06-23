@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/yasindce1998/redhands/actions/workflows/ci.yml/badge.svg)](https://github.com/yasindce1998/redhands/actions/workflows/ci.yml)
 
-MCP server that exposes offensive security tools to AI agents. Built in Go, follows the same patterns as GitHub's MCP server — single binary, stdio transport, toolset grouping, env-var configuration.
+Enterprise-grade MCP server that exposes offensive security tools to AI agents. Built in Go with toolset grouping, rate limiting, result caching, and structured audit logging.
 
 ```
 go install github.com/yasindce1998/redhands/cmd/redhands@latest
@@ -14,8 +14,8 @@ go install github.com/yasindce1998/redhands/cmd/redhands@latest
 # Build
 make build
 
-# Run with Claude Code
-# Add to your MCP config (~/.claude/claude_desktop_config.json):
+# Run with Claude Code / Cursor / VS Code
+# Add to your MCP config:
 {
   "mcpServers": {
     "redhands": {
@@ -28,9 +28,11 @@ make build
 ## Requirements
 
 - Go 1.26+
-- Nmap installed and on PATH
+- Security tools installed on PATH (see Available Tools below)
 
 ## Available Tools
+
+### Nmap (toolset: `nmap`)
 
 | Tool | Description |
 |------|-------------|
@@ -39,14 +41,80 @@ make build
 | `nmap_os_detect` | OS fingerprinting (-O) |
 | `nmap_vuln_scan` | NSE vulnerability scripts |
 
+### Recon (toolset: `recon`)
+
+| Tool | Description |
+|------|-------------|
+| `subfinder_enum` | Subdomain enumeration from passive sources |
+| `amass_enum` | Network mapping and ASN discovery (OWASP Amass) |
+| `dns_lookup` | DNS record queries via dig (A, AAAA, MX, NS, TXT, etc.) |
+| `waybackurls` | Fetch archived URLs from the Wayback Machine |
+
+### Web (toolset: `web`)
+
+| Tool | Description |
+|------|-------------|
+| `httpx_probe` | HTTP service probing with tech detection |
+| `katana_crawl` | Next-gen web crawler (JS crawling, headless) |
+| `nikto_scan` | Web server vulnerability scanner |
+| `whatweb_fingerprint` | Web technology fingerprinting |
+| `testssl_scan` | TLS/SSL encryption testing |
+
+### Fuzzing (toolset: `fuzz`)
+
+| Tool | Description |
+|------|-------------|
+| `ffuf_fuzz` | Web fuzzing (dirs, params, vhosts) |
+| `gobuster_dir` | Directory/file brute-forcing |
+
+### Vulnerability (toolset: `vuln`)
+
+| Tool | Description |
+|------|-------------|
+| `nuclei_scan` | Template-based vulnerability scanning |
+
+### System
+
+| Tool | Description |
+|------|-------------|
+| `redhands_health` | Server health check and binary dependency status |
+
+## Configuration
+
+All settings via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REDHANDS_TOOLSETS` | (all) | Comma-separated toolsets to enable (e.g., `nmap,recon,web`) |
+| `REDHANDS_TIMEOUT` | `5m` | Execution timeout per tool call |
+| `REDHANDS_MAX_OUTPUT` | `10485760` | Max output bytes per execution (10MB) |
+| `REDHANDS_RATE_LIMIT` | `10` | Token bucket refill rate (requests/sec) |
+| `REDHANDS_RATE_BURST` | `20` | Token bucket burst capacity |
+| `REDHANDS_CACHE_TTL` | `5m` | Result cache TTL |
+| `REDHANDS_CACHE_SIZE` | `100` | Max cached results (LRU eviction) |
+| `REDHANDS_AUDIT_FILE` | `audit.jsonl` | Audit log file path |
+
+### Toolset Filtering
+
+Enable only specific toolsets:
+
+```bash
+# Only Nmap and recon tools
+export REDHANDS_TOOLSETS=nmap,recon
+
+# All tools (default when unset)
+export REDHANDS_TOOLSETS=
+```
+
 ## Security
 
-- Binary allowlist — only `nmap` can be executed
-- Shell metacharacter rejection on all inputs
-- Target validation (IP, CIDR, hostname only)
-- Output size cap (10MB)
-- Execution timeout (5 minutes)
-- Full audit trail (JSONL)
+- **Binary allowlist** — only known security tools can be executed
+- **Shell metacharacter rejection** on all inputs
+- **Target validation** — strict format checks for IPs, domains, URLs
+- **Output size cap** — 10MB per execution
+- **Execution timeout** — 5 minutes per tool call
+- **Rate limiting** — token bucket prevents abuse
+- **Full audit trail** — every tool invocation logged as JSONL
 
 ## Development
 
@@ -66,22 +134,29 @@ docker run -i redhands
 ## Architecture
 
 ```
-cmd/redhands/       Entry point
-pkg/mcp/            MCP protocol (JSON-RPC 2.0, stdio)
+cmd/redhands/       Entry point, tool registration, config
+pkg/mcp/            MCP protocol (JSON-RPC 2.0, stdio transport)
 pkg/executor/       Secure binary execution + sandbox
-pkg/audit/          Structured audit logging
+pkg/audit/          Structured audit logging (JSONL)
+pkg/config/         Environment-based configuration
+pkg/cache/          LRU result cache with TTL
+pkg/ratelimit/      Token bucket rate limiter
 pkg/nmap/           Nmap XML parser + query helpers
-tools/nmap/         MCP tool implementations
+tools/nmap/         Nmap MCP tools (port scan, service, OS, vuln)
+tools/subfinder/    Subdomain enumeration
+tools/amass/        ASN and network mapping
+tools/dns/          DNS lookups via dig
+tools/httpx/        HTTP probing
+tools/katana/       Web crawling
+tools/nikto/        Web server scanning
+tools/ffuf/         Web fuzzing
+tools/gobuster/     Directory brute-forcing
+tools/nuclei/       Template-based vuln scanning
+tools/testssl/      TLS/SSL testing
+tools/whatweb/      Web fingerprinting
+tools/wayback/      Wayback Machine URL retrieval
+tools/health/       Server health check
 ```
-
-## Roadmap
-
-See [docs/prd.md](docs/prd.md) for the full product requirements document.
-
-- **v0.2** — Nuclei, Subfinder, httpx + toolset filtering
-- **v0.3** — HTTP/SSE transport for remote/team use
-- **v0.4** — OpenTelemetry, Helm chart, rate limiting
-- **v0.5** — ffuf, gobuster, workflow hints, result caching
 
 ## License
 

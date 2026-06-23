@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 680" font-family="'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace" font-size="11">
+  <defs>
+    <filter id="gCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+      <feFlood flood-color="#00fff2" flood-opacity="0.3" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="bgGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="750" height="680" rx="12" fill="url(#bgGrad3)" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Title -->
+  <text x="375" y="32" text-anchor="middle" fill="#00fff2" font-size="14" font-weight="bold" filter="url(#gCyan)">Project Structure</text>
+
+  <!-- cmd/ -->
+  <text x="40" y="62" fill="#ff6e40" font-size="12" font-weight="bold">cmd/redhands/</text>
+  <text x="240" y="62" fill="#8b949e" font-size="11">Entry point, tool registration, config</text>
+
+  <!-- pkg/ header -->
+  <text x="40" y="95" fill="#00fff2" font-size="12" font-weight="bold">pkg/</text>
+  <line x1="40" y1="100" x2="710" y2="100" stroke="#21262d" stroke-width="1"/>
+
+  <!-- pkg tree -->
+  <text x="60" y="120" fill="#39ff14">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="120" fill="#e6edf3" font-weight="bold">mcp/</text>
+  <text x="240" y="120" fill="#8b949e">MCP protocol (JSON-RPC 2.0, stdio transport)</text>
+
+  <text x="60" y="145" fill="#39ff14">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="145" fill="#e6edf3" font-weight="bold">executor/</text>
+  <text x="240" y="145" fill="#8b949e">Secure binary execution + sandbox</text>
+
+  <text x="60" y="170" fill="#39ff14">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="170" fill="#e6edf3" font-weight="bold">audit/</text>
+  <text x="240" y="170" fill="#8b949e">Structured audit logging (JSONL)</text>
+
+  <text x="60" y="195" fill="#39ff14">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="195" fill="#e6edf3" font-weight="bold">config/</text>
+  <text x="240" y="195" fill="#8b949e">Environment-based configuration</text>
+
+  <text x="60" y="220" fill="#39ff14">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="220" fill="#e6edf3" font-weight="bold">cache/</text>
+  <text x="240" y="220" fill="#8b949e">LRU result cache with TTL</text>
+
+  <text x="60" y="245" fill="#39ff14">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="245" fill="#e6edf3" font-weight="bold">ratelimit/</text>
+  <text x="240" y="245" fill="#8b949e">Token bucket rate limiter</text>
+
+  <text x="60" y="270" fill="#39ff14">&#x2514;&#x2500;&#x2500;</text>
+  <text x="100" y="270" fill="#e6edf3" font-weight="bold">nmap/</text>
+  <text x="240" y="270" fill="#8b949e">Nmap XML parser + query helpers</text>
+
+  <!-- tools/ header -->
+  <text x="40" y="308" fill="#00fff2" font-size="12" font-weight="bold">tools/</text>
+  <line x1="40" y1="313" x2="710" y2="313" stroke="#21262d" stroke-width="1"/>
+
+  <!-- scan/ -->
+  <text x="60" y="338" fill="#ff4444">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="338" fill="#ff4444" font-weight="bold">scan/</text>
+  <text x="240" y="338" fill="#8b949e">Port scanning</text>
+  <text x="100" y="358" fill="#484f58">&#x251C;&#x2500;&#x2500;</text>
+  <text x="140" y="358" fill="#c9d1d9">nmap/</text>
+  <text x="300" y="358" fill="#6e7681">TCP/UDP scan, service detect, OS fingerprint, vuln scan</text>
+  <text x="100" y="378" fill="#484f58">&#x251C;&#x2500;&#x2500;</text>
+  <text x="140" y="378" fill="#c9d1d9">masscan/</text>
+  <text x="300" y="378" fill="#6e7681">Internet-scale port scanning (10M pps)</text>
+  <text x="100" y="398" fill="#484f58">&#x2514;&#x2500;&#x2500;</text>
+  <text x="140" y="398" fill="#c9d1d9">rustscan/</text>
+  <text x="300" y="398" fill="#6e7681">Modern fast port scanner</text>
+
+  <!-- recon/ -->
+  <text x="60" y="428" fill="#39ff14">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="428" fill="#39ff14" font-weight="bold">recon/</text>
+  <text x="240" y="428" fill="#8b949e">Reconnaissance &amp; enumeration</text>
+  <text x="100" y="448" fill="#484f58">&#x251C;&#x2500;&#x2500;</text>
+  <text x="140" y="448" fill="#c9d1d9">subfinder/ amass/ dns/</text>
+  <text x="100" y="468" fill="#484f58">&#x2514;&#x2500;&#x2500;</text>
+  <text x="140" y="468" fill="#c9d1d9">wayback/ gau/ arjun/</text>
+
+  <!-- web/ -->
+  <text x="60" y="498" fill="#58a6ff">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="498" fill="#58a6ff" font-weight="bold">web/</text>
+  <text x="240" y="498" fill="#8b949e">Web analysis &amp; probing</text>
+  <text x="100" y="518" fill="#484f58">&#x251C;&#x2500;&#x2500;</text>
+  <text x="140" y="518" fill="#c9d1d9">httpx/ katana/ nikto/</text>
+  <text x="100" y="538" fill="#484f58">&#x2514;&#x2500;&#x2500;</text>
+  <text x="140" y="538" fill="#c9d1d9">whatweb/ testssl/</text>
+
+  <!-- fuzz/ -->
+  <text x="60" y="568" fill="#bf5fff">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="568" fill="#bf5fff" font-weight="bold">fuzz/</text>
+  <text x="240" y="568" fill="#8b949e">Fuzzing &amp; brute-forcing</text>
+  <text x="100" y="588" fill="#484f58">&#x2514;&#x2500;&#x2500;</text>
+  <text x="140" y="588" fill="#c9d1d9">ffuf/ gobuster/ feroxbuster/</text>
+
+  <!-- exploit/ -->
+  <text x="60" y="618" fill="#ff00ff">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="618" fill="#ff00ff" font-weight="bold">exploit/</text>
+  <text x="240" y="618" fill="#8b949e">sqlmap</text>
+
+  <!-- vuln/ -->
+  <text x="60" y="643" fill="#ff00ff">&#x251C;&#x2500;&#x2500;</text>
+  <text x="100" y="643" fill="#ff00ff" font-weight="bold">vuln/</text>
+  <text x="240" y="643" fill="#8b949e">nuclei</text>
+
+  <!-- system/ -->
+  <text x="60" y="668" fill="#484f58">&#x2514;&#x2500;&#x2500;</text>
+  <text x="100" y="668" fill="#8b949e" font-weight="bold">system/</text>
+  <text x="240" y="668" fill="#6e7681">health check &amp; dependency status</text>
+</svg>

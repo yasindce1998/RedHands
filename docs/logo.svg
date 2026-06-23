@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160" fill="none">
+  <defs>
+    <linearGradient id="redGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ff2d2d"/>
+      <stop offset="100%" stop-color="#cc0000"/>
+    </linearGradient>
+    <filter id="softGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feFlood flood-color="#ff2d2d" flood-opacity="0.2" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Top hand reaching down (simplified palm + fingers) -->
+  <g filter="url(#softGlow)">
+    <path d="
+      M 42 12 C 42 8, 45 6, 48 6 C 51 6, 53 8, 53 12 L 53 45
+      M 34 20 C 34 16, 37 14, 40 14 C 43 14, 45 16, 45 20 L 45 50
+      M 50 18 C 50 14, 53 12, 56 12 C 59 12, 61 14, 61 18 L 61 48
+      M 58 24 C 58 20, 61 18, 64 18 C 67 18, 69 20, 69 24 L 69 44
+      M 66 34 C 66 30, 69 28, 72 28 C 75 28, 77 30, 77 34 L 77 42
+    " stroke="url(#redGrad)" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <!-- Top palm -->
+    <path d="
+      M 34 50 C 34 50, 34 68, 44 76 L 52 82
+      C 56 85, 62 85, 66 82 L 72 76 C 77 70, 77 60, 77 42
+    " stroke="url(#redGrad)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- Bottom hand reaching up (mirror, simplified) -->
+  <g filter="url(#softGlow)">
+    <path d="
+      M 78 148 C 78 152, 75 154, 72 154 C 69 154, 67 152, 67 148 L 67 115
+      M 86 140 C 86 144, 83 146, 80 146 C 77 146, 75 144, 75 140 L 75 110
+      M 70 142 C 70 146, 67 148, 64 148 C 61 148, 59 146, 59 142 L 59 112
+      M 62 136 C 62 140, 59 142, 56 142 C 53 142, 51 140, 51 136 L 51 116
+      M 54 126 C 54 130, 51 132, 48 132 C 45 132, 43 130, 43 126 L 43 118
+    " stroke="url(#redGrad)" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <!-- Bottom palm -->
+    <path d="
+      M 86 110 C 86 110, 86 92, 76 84 L 68 78
+      C 64 75, 58 75, 54 78 L 48 84 C 43 90, 43 100, 43 118
+    " stroke="url(#redGrad)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+</svg>

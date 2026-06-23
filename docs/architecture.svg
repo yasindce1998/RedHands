@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" font-family="'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace" font-size="12">
+  <defs>
+    <filter id="neonCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feFlood flood-color="#00fff2" flood-opacity="0.4" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="neonMagenta" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feFlood flood-color="#ff00ff" flood-opacity="0.4" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="neonGreen" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feFlood flood-color="#39ff14" flood-opacity="0.4" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="neonPurple" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feFlood flood-color="#bf5fff" flood-opacity="0.4" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="620" rx="12" fill="url(#bgGrad)" stroke="#30363d" stroke-width="1"/>
+
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" fill="#00fff2" font-size="16" font-weight="bold" filter="url(#neonCyan)">RedHands Architecture</text>
+
+  <!-- MCP Host Box -->
+  <rect x="40" y="55" width="820" height="75" rx="8" fill="none" stroke="#bf5fff" stroke-width="1.5" filter="url(#neonPurple)"/>
+  <text x="450" y="78" text-anchor="middle" fill="#bf5fff" font-size="13" font-weight="bold">MCP Host (Claude Code / Cursor / VS Code)</text>
+  <text x="120" y="100" fill="#c9d1d9" font-size="11">&#x2022; Manages sessions</text>
+  <text x="370" y="100" fill="#c9d1d9" font-size="11">&#x2022; Controls tool approval</text>
+  <text x="620" y="100" fill="#c9d1d9" font-size="11">&#x2022; Passes credentials via env</text>
+
+  <!-- Connection Arrow -->
+  <line x1="450" y1="130" x2="450" y2="155" stroke="#00fff2" stroke-width="1.5" stroke-dasharray="4,3" filter="url(#neonCyan)"/>
+  <polygon points="444,152 450,162 456,152" fill="#00fff2"/>
+  <text x="540" y="148" fill="#58a6ff" font-size="10">stdio (local) / HTTP+SSE (remote)</text>
+
+  <!-- RedHands Server Outer Box -->
+  <rect x="40" y="165" width="820" height="430" rx="8" fill="none" stroke="#00fff2" stroke-width="1.5" filter="url(#neonCyan)"/>
+  <text x="450" y="188" text-anchor="middle" fill="#00fff2" font-size="13" font-weight="bold">RedHands MCP Server</text>
+
+  <!-- Middleware Box -->
+  <rect x="65" y="205" width="200" height="120" rx="6" fill="#0d1117" stroke="#39ff14" stroke-width="1.2" filter="url(#neonGreen)"/>
+  <text x="165" y="225" text-anchor="middle" fill="#39ff14" font-size="12" font-weight="bold">Middleware</text>
+  <text x="90" y="250" fill="#c9d1d9" font-size="11">&#x2022; Rate Limiter</text>
+  <text x="90" y="270" fill="#c9d1d9" font-size="11">&#x2022; Result Cache (LRU)</text>
+  <text x="90" y="290" fill="#c9d1d9" font-size="11">&#x2022; Audit Logger</text>
+  <text x="90" y="310" fill="#c9d1d9" font-size="11">&#x2022; Timeout Control</text>
+
+  <!-- Executor Box -->
+  <rect x="295" y="205" width="200" height="120" rx="6" fill="#0d1117" stroke="#ff6e40" stroke-width="1.2"/>
+  <text x="395" y="225" text-anchor="middle" fill="#ff6e40" font-size="12" font-weight="bold">Executor</text>
+  <text x="320" y="250" fill="#c9d1d9" font-size="11">&#x2022; Binary Allowlist</text>
+  <text x="320" y="270" fill="#c9d1d9" font-size="11">&#x2022; Sandbox (Pdeathsig)</text>
+  <text x="320" y="290" fill="#c9d1d9" font-size="11">&#x2022; Output Size Cap</text>
+  <text x="320" y="310" fill="#c9d1d9" font-size="11">&#x2022; Input Validation</text>
+
+  <!-- Audit Log Box -->
+  <rect x="525" y="205" width="200" height="120" rx="6" fill="#0d1117" stroke="#ff00ff" stroke-width="1.2" filter="url(#neonMagenta)"/>
+  <text x="625" y="225" text-anchor="middle" fill="#ff00ff" font-size="12" font-weight="bold">Audit Log</text>
+  <text x="550" y="250" fill="#c9d1d9" font-size="11">&#x2022; JSONL file output</text>
+  <text x="550" y="270" fill="#c9d1d9" font-size="11">&#x2022; Every call logged</text>
+  <text x="550" y="290" fill="#c9d1d9" font-size="11">&#x2022; Params sanitized</text>
+  <text x="550" y="310" fill="#c9d1d9" font-size="11">&#x2022; OTLP export (v0.3)</text>
+
+  <!-- Config Box -->
+  <rect x="755" y="205" width="85" height="120" rx="6" fill="#0d1117" stroke="#58a6ff" stroke-width="1.2"/>
+  <text x="797" y="225" text-anchor="middle" fill="#58a6ff" font-size="12" font-weight="bold">Config</text>
+  <text x="765" y="250" fill="#c9d1d9" font-size="10">Env vars</text>
+  <text x="765" y="268" fill="#c9d1d9" font-size="10">Toolset</text>
+  <text x="765" y="286" fill="#c9d1d9" font-size="10">filtering</text>
+  <text x="765" y="304" fill="#c9d1d9" font-size="10">Timeouts</text>
+
+  <!-- Flow arrows from Middleware+Executor down -->
+  <line x1="165" y1="325" x2="165" y2="355" stroke="#39ff14" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="395" y1="325" x2="395" y2="355" stroke="#ff6e40" stroke-width="1" stroke-dasharray="3,2"/>
+  <line x1="280" y1="345" x2="280" y2="365" stroke="#c9d1d9" stroke-width="1"/>
+  <polygon points="274,362 280,372 286,362" fill="#c9d1d9"/>
+
+  <!-- Toolsets Box -->
+  <rect x="65" y="370" width="770" height="210" rx="6" fill="#0d1117" stroke="#00fff2" stroke-width="1" stroke-dasharray="6,3"/>
+  <text x="450" y="392" text-anchor="middle" fill="#00fff2" font-size="12" font-weight="bold">Toolsets</text>
+
+  <!-- scan -->
+  <rect x="85" y="405" width="160" height="80" rx="5" fill="#1a1f2e" stroke="#ff4444" stroke-width="1"/>
+  <text x="165" y="423" text-anchor="middle" fill="#ff4444" font-size="11" font-weight="bold">scan/</text>
+  <text x="100" y="442" fill="#8b949e" font-size="10">nmap (4 tools)</text>
+  <text x="100" y="458" fill="#8b949e" font-size="10">masscan</text>
+  <text x="100" y="474" fill="#8b949e" font-size="10">rustscan</text>
+
+  <!-- recon -->
+  <rect x="260" y="405" width="160" height="80" rx="5" fill="#1a1f2e" stroke="#39ff14" stroke-width="1"/>
+  <text x="340" y="423" text-anchor="middle" fill="#39ff14" font-size="11" font-weight="bold">recon/</text>
+  <text x="275" y="442" fill="#8b949e" font-size="10">subfinder, amass</text>
+  <text x="275" y="458" fill="#8b949e" font-size="10">dns, wayback</text>
+  <text x="275" y="474" fill="#8b949e" font-size="10">gau, arjun</text>
+
+  <!-- web -->
+  <rect x="435" y="405" width="160" height="80" rx="5" fill="#1a1f2e" stroke="#58a6ff" stroke-width="1"/>
+  <text x="515" y="423" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="bold">web/</text>
+  <text x="450" y="442" fill="#8b949e" font-size="10">httpx, katana</text>
+  <text x="450" y="458" fill="#8b949e" font-size="10">nikto, whatweb</text>
+  <text x="450" y="474" fill="#8b949e" font-size="10">testssl</text>
+
+  <!-- fuzz -->
+  <rect x="610" y="405" width="105" height="80" rx="5" fill="#1a1f2e" stroke="#bf5fff" stroke-width="1"/>
+  <text x="662" y="423" text-anchor="middle" fill="#bf5fff" font-size="11" font-weight="bold">fuzz/</text>
+  <text x="622" y="442" fill="#8b949e" font-size="10">ffuf</text>
+  <text x="622" y="458" fill="#8b949e" font-size="10">gobuster</text>
+  <text x="622" y="474" fill="#8b949e" font-size="10">feroxbuster</text>
+
+  <!-- exploit + vuln -->
+  <rect x="730" y="405" width="90" height="80" rx="5" fill="#1a1f2e" stroke="#ff00ff" stroke-width="1"/>
+  <text x="775" y="423" text-anchor="middle" fill="#ff00ff" font-size="11" font-weight="bold">exploit/</text>
+  <text x="742" y="442" fill="#8b949e" font-size="10">sqlmap</text>
+  <text x="742" y="460" fill="#ff00ff" font-size="11" font-weight="bold">vuln/</text>
+  <text x="742" y="476" fill="#8b949e" font-size="10">nuclei</text>
+
+  <!-- system -->
+  <rect x="85" y="500" width="160" height="35" rx="5" fill="#1a1f2e" stroke="#484f58" stroke-width="1"/>
+  <text x="165" y="522" text-anchor="middle" fill="#8b949e" font-size="11">system/health (always on)</text>
+
+  <!-- Tool count badge -->
+  <rect x="700" y="555" width="120" height="22" rx="11" fill="#1a1f2e" stroke="#00fff2" stroke-width="1"/>
+  <text x="760" y="570" text-anchor="middle" fill="#00fff2" font-size="10" font-weight="bold">23 tools total</text>
+</svg>

@@ -32,76 +32,15 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  MCP Host (Claude Code / Cursor / VS Code)              │
-│  - Manages sessions                                      │
-│  - Controls tool approval                                │
-│  - Passes credentials via env vars                       │
-└──────────────┬──────────────────────────────────────────┘
-               │ stdio (local) or HTTP/SSE (remote, future)
-               ▼
-┌─────────────────────────────────────────────────────────┐
-│  RedHands MCP Server                                     │
-│                                                          │
-│  ┌──────────────┐  ┌──────────┐  ┌────────────┐        │
-│  │  Middleware   │  │ Executor │  │ Audit Log  │        │
-│  │              │  │          │  │            │        │
-│  │ • ratelimit  │  │ allowlist │  │ JSONL file │        │
-│  │ • cache      │  │ sandbox   │  │            │        │
-│  │ • audit      │  │ timeout   │  │            │        │
-│  └──────┬───────┘  └─────┬────┘  └────────────┘        │
-│         │                 │                              │
-│         └────────┬────────┘                              │
-│                  ▼                                        │
-│  ┌──────────────────────────────────────────────┐       │
-│  │  Toolsets (category-based layout)             │       │
-│  │                                               │       │
-│  │  tools/scan/     nmap, masscan, rustscan      │       │
-│  │  tools/recon/    subfinder, amass, dns,       │       │
-│  │                  wayback, gau, arjun           │       │
-│  │  tools/web/      httpx, katana, nikto,        │       │
-│  │                  whatweb, testssl              │       │
-│  │  tools/fuzz/     ffuf, gobuster, feroxbuster  │       │
-│  │  tools/exploit/  sqlmap                       │       │
-│  │  tools/vuln/     nuclei                       │       │
-│  │  tools/system/   health                       │       │
-│  └──────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="architecture.svg" alt="RedHands Architecture" width="900"/>
+</p>
 
 ### Directory Layout
 
-```
-tools/
-├── scan/            Port scanning
-│   ├── nmap/        TCP/UDP scan, service detect, OS fingerprint, vuln scan
-│   ├── masscan/     Internet-scale port scanning (10M pps)
-│   └── rustscan/    Modern fast port scanner
-├── recon/           Reconnaissance & enumeration
-│   ├── subfinder/   Subdomain enumeration
-│   ├── amass/       ASN and network mapping
-│   ├── dns/         DNS lookups via dig
-│   ├── wayback/     Wayback Machine URL retrieval
-│   ├── gau/         URL fetching from multiple sources
-│   └── arjun/       HTTP parameter discovery
-├── web/             Web analysis & probing
-│   ├── httpx/       HTTP service probing
-│   ├── katana/      Web crawling (JS, headless)
-│   ├── nikto/       Web server vulnerability scanning
-│   ├── whatweb/     Web technology fingerprinting
-│   └── testssl/     TLS/SSL encryption testing
-├── fuzz/            Fuzzing & brute-forcing
-│   ├── ffuf/        Web fuzzing (dirs, params, vhosts)
-│   ├── gobuster/    Directory/file brute-forcing
-│   └── feroxbuster/ Recursive content discovery
-├── exploit/         Exploitation
-│   └── sqlmap/      SQL injection detection & exploitation
-├── vuln/            Vulnerability scanning
-│   └── nuclei/      Template-based vulnerability scanning
-└── system/          Internal
-    └── health/      Server health check & dependency status
-```
+<p align="center">
+  <img src="directory-structure.svg" alt="Directory Structure" width="750"/>
+</p>
 
 ---
 
@@ -259,35 +198,9 @@ export REDHANDS_TOOLSETS=
 
 ## Security Model
 
-```
-┌─────────────────────────────────────────────┐
-│ Layer 1: MCP Host (Claude Code)             │
-│ • Human-in-the-loop tool approval           │
-│ • Session isolation                         │
-│ • Credential injection via env              │
-├─────────────────────────────────────────────┤
-│ Layer 2: RedHands Server                    │
-│ • Binary allowlist (only known tools)       │
-│ • Argument injection prevention             │
-│ • Target validation (IP/CIDR/hostname)      │
-│ • Output size caps (10MB default)           │
-│ • Execution timeout (5min default)          │
-│ • Read-only mode                            │
-│ • Rate limiting (token bucket)               │
-├─────────────────────────────────────────────┤
-│ Layer 3: OS / Container                     │
-│ • Non-root execution                        │
-│ • Pdeathsig (Linux)                         │
-│ • Network policy (K8s, v0.2+)              │
-│ • Minimal container image                   │
-├─────────────────────────────────────────────┤
-│ Layer 4: Audit Trail                        │
-│ • Every tool call logged                    │
-│ • Params sanitized (secrets redacted)       │
-│ • OTLP export (v0.3+)                      │
-│ • Immutable append-only log                 │
-└─────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="security-model.svg" alt="Security Model — Defense in Depth" width="720"/>
+</p>
 
 ---
 

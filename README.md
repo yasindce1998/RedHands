@@ -1,8 +1,24 @@
-# RedHands
+<p align="center">
+  <img src="docs/logo.svg" alt="RedHands Logo" width="100" height="130"/>
+</p>
 
-[![CI](https://github.com/yasindce1998/redhands/actions/workflows/ci.yml/badge.svg)](https://github.com/yasindce1998/redhands/actions/workflows/ci.yml)
+<h1 align="center">RedHands</h1>
 
-Enterprise-grade MCP server that exposes offensive security tools to AI agents. Built in Go with toolset grouping, rate limiting, result caching, and structured audit logging.
+<p align="center">
+  <strong>Enterprise-grade MCP server for offensive security tools</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/yasindce1998/redhands/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/yasindce1998/redhands/ci.yml?style=flat-square&logo=github&logoColor=white&label=CI&color=00c853" alt="CI"></a>
+  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26+"></a>
+  <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-23-00fff2?style=flat-square" alt="23 Tools"></a>
+</p>
+
+<p align="center">
+  Built in Go with toolset grouping, rate limiting, result caching, and structured audit logging.
+</p>
 
 ```
 go install github.com/yasindce1998/redhands/cmd/redhands@latest
@@ -152,45 +168,9 @@ docker run -i redhands
 
 ## Architecture
 
-```
-cmd/redhands/            Entry point, tool registration, config
-pkg/
-├── mcp/                 MCP protocol (JSON-RPC 2.0, stdio transport)
-├── executor/            Secure binary execution + sandbox
-├── audit/               Structured audit logging (JSONL)
-├── config/              Environment-based configuration
-├── cache/               LRU result cache with TTL
-├── ratelimit/           Token bucket rate limiter
-└── nmap/                Nmap XML parser + query helpers
-tools/
-├── scan/                Port scanning
-│   ├── nmap/            TCP/UDP port scan, service detect, OS fingerprint, vuln scan
-│   ├── masscan/         Internet-scale port scanning (10M pps)
-│   └── rustscan/        Modern fast port scanner
-├── recon/               Reconnaissance & enumeration
-│   ├── subfinder/       Subdomain enumeration
-│   ├── amass/           ASN and network mapping
-│   ├── dns/             DNS lookups via dig
-│   ├── wayback/         Wayback Machine URL retrieval
-│   ├── gau/             URL fetching from multiple sources
-│   └── arjun/           HTTP parameter discovery
-├── web/                 Web analysis & probing
-│   ├── httpx/           HTTP service probing
-│   ├── katana/          Web crawling (JS, headless)
-│   ├── nikto/           Web server vulnerability scanning
-│   ├── whatweb/         Web technology fingerprinting
-│   └── testssl/         TLS/SSL encryption testing
-├── fuzz/                Fuzzing & brute-forcing
-│   ├── ffuf/            Web fuzzing (dirs, params, vhosts)
-│   ├── gobuster/        Directory/file brute-forcing
-│   └── feroxbuster/     Recursive content discovery
-├── exploit/             Exploitation
-│   └── sqlmap/          SQL injection detection & exploitation
-├── vuln/                Vulnerability scanning
-│   └── nuclei/          Template-based vulnerability scanning
-└── system/              Internal
-    └── health/          Server health check & dependency status
-```
+<p align="center">
+  <img src="docs/directory-structure.svg" alt="Project Structure" width="750"/>
+</p>
 
 ## License
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.svg" alt="RedHands Logo" width="100" height="130"/>
+  <img src="docs/logo.png" alt="RedHands Logo" width="250" height="250"/>
 </p>
 
 <h1 align="center">RedHands</h1>

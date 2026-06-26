@@ -16,6 +16,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/fuzz/feroxbuster"
 	"github.com/yasindce1998/redhands/tools/fuzz/ffuf"
 	"github.com/yasindce1998/redhands/tools/fuzz/gobuster"
+	"github.com/yasindce1998/redhands/tools/kubedagger"
 	"github.com/yasindce1998/redhands/tools/recon/amass"
 	"github.com/yasindce1998/redhands/tools/recon/arjun"
 	"github.com/yasindce1998/redhands/tools/recon/dns"
@@ -39,6 +40,7 @@ var allBinaries = []string{
 	"dig", "amass", "katana", "nikto", "gobuster",
 	"waybackurls", "testssl.sh", "whatweb", "sqlmap",
 	"masscan", "rustscan", "feroxbuster", "arjun", "gau",
+	"kubedagger-client", "kubedagger-operator",
 }
 
 func main() {
@@ -115,6 +117,67 @@ func main() {
 	// Vuln toolset
 	if cfg.ToolsetEnabled("vuln") {
 		srv.RegisterTool(nuclei.NewNucleiScan(execr))
+	}
+
+	// KubeDagger toolset
+	if cfg.ToolsetEnabled("kubedagger") {
+		srv.RegisterTool(kubedagger.NewNetworkScan(execr))
+		srv.RegisterTool(kubedagger.NewNetworkDiscovery(execr))
+		srv.RegisterTool(kubedagger.NewDockerList(execr))
+		srv.RegisterTool(kubedagger.NewDockerOverride(execr))
+		srv.RegisterTool(kubedagger.NewK8sDiscover(execr))
+		srv.RegisterTool(kubedagger.NewK8sAbuse(execr))
+		srv.RegisterTool(kubedagger.NewContainerEscape(execr))
+		srv.RegisterTool(kubedagger.NewSecretsHarvest(execr))
+		srv.RegisterTool(kubedagger.NewCloudMeta(execr))
+		srv.RegisterTool(kubedagger.NewCloudExfil(execr))
+		srv.RegisterTool(kubedagger.NewEvasion(execr))
+		srv.RegisterTool(kubedagger.NewNetBypass(execr))
+		srv.RegisterTool(kubedagger.NewMeshBypass(execr))
+		srv.RegisterTool(kubedagger.NewObsPoison(execr))
+		srv.RegisterTool(kubedagger.NewDNSExfil(execr))
+		srv.RegisterTool(kubedagger.NewCovertChannel(execr))
+		srv.RegisterTool(kubedagger.NewWebhook(execr))
+		srv.RegisterTool(kubedagger.NewDaemonset(execr))
+		srv.RegisterTool(kubedagger.NewKeyring(execr))
+		srv.RegisterTool(kubedagger.NewTLSIntercept(execr))
+		srv.RegisterTool(kubedagger.NewEtcdSteal(execr))
+		srv.RegisterTool(kubedagger.NewLogTamper(execr))
+		srv.RegisterTool(kubedagger.NewSyscallBypass(execr))
+		srv.RegisterTool(kubedagger.NewAuditFilter(execr))
+		srv.RegisterTool(kubedagger.NewPcapBlind(execr))
+		srv.RegisterTool(kubedagger.NewPolymorph(execr))
+		srv.RegisterTool(kubedagger.NewFilelessExec(execr))
+		srv.RegisterTool(kubedagger.NewXDPShell(execr))
+		srv.RegisterTool(kubedagger.NewARPSpoof(execr))
+		srv.RegisterTool(kubedagger.NewKubelet(execr))
+		srv.RegisterTool(kubedagger.NewVethHijack(execr))
+		srv.RegisterTool(kubedagger.NewSidecarInject(execr))
+		srv.RegisterTool(kubedagger.NewSupplyChain(execr))
+		srv.RegisterTool(kubedagger.NewCRITamper(execr))
+		srv.RegisterTool(kubedagger.NewSAToken(execr))
+		srv.RegisterTool(kubedagger.NewPodIdentity(execr))
+		srv.RegisterTool(kubedagger.NewGitOpsPoison(execr))
+		srv.RegisterTool(kubedagger.NewCRDBackdoor(execr))
+		srv.RegisterTool(kubedagger.NewHoneypotDetect(execr))
+		srv.RegisterTool(kubedagger.NewK8sEventC2(execr))
+		srv.RegisterTool(kubedagger.NewContainerLogC2(execr))
+		srv.RegisterTool(kubedagger.NewDoHC2(execr))
+		srv.RegisterTool(kubedagger.NewTCPStego(execr))
+		srv.RegisterTool(kubedagger.NewBPFIPC(execr))
+		srv.RegisterTool(kubedagger.NewSchedStarve(execr))
+		srv.RegisterTool(kubedagger.NewFaultInject(execr))
+		srv.RegisterTool(kubedagger.NewCgroupManip(execr))
+		srv.RegisterTool(kubedagger.NewElectionDisrupt(execr))
+		srv.RegisterTool(kubedagger.NewCertSabotage(execr))
+		srv.RegisterTool(kubedagger.NewKeyringMITM(execr))
+		srv.RegisterTool(kubedagger.NewCoredumpSuppress(execr))
+		srv.RegisterTool(kubedagger.NewTimeskew(execr))
+		srv.RegisterTool(kubedagger.NewSigBypass(execr))
+		srv.RegisterTool(kubedagger.NewOperatorAgents(execr))
+		srv.RegisterTool(kubedagger.NewOperatorShell(execr))
+		srv.RegisterTool(kubedagger.NewOperatorModule(execr))
+		srv.RegisterTool(kubedagger.NewOperatorTasks(execr))
 	}
 
 	// Health (always registered)

@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 RUN apk add --no-cache git
 
@@ -28,9 +28,9 @@ RUN python3 -m pip install --break-system-packages \
 
 # Install Go-based tools
 ENV GOPATH=/tmp/go
-RUN wget -q https://go.dev/dl/go1.23.0.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go1.23.0.linux-amd64.tar.gz && \
-    rm go1.23.0.linux-amd64.tar.gz && \
+RUN wget -q https://go.dev/dl/go1.26.0.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go1.26.0.linux-amd64.tar.gz && \
+    rm go1.26.0.linux-amd64.tar.gz && \
     /usr/local/go/bin/go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
     /usr/local/go/bin/go install github.com/projectdiscovery/httpx/cmd/httpx@latest && \
     /usr/local/go/bin/go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \

@@ -41,14 +41,14 @@ func (s *Server) ServeWebSocket(ctx context.Context, addr string) error {
 			log.Printf("ws: upgrade failed: %v", err)
 			return
 		}
-		defer conn.conn.Close()
+		defer func() { _ = conn.conn.Close() }()
 
 		s.handleWSConn(ctx, conn)
 	})
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"status":"ok","transport":"ws"}`)
+		_, _ = fmt.Fprintf(w, `{"status":"ok","transport":"ws"}`)
 	})
 
 	server := &http.Server{
@@ -62,7 +62,7 @@ func (s *Server) ServeWebSocket(ctx context.Context, addr string) error {
 		<-ctx.Done()
 		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		server.Shutdown(shutCtx)
+		_ = server.Shutdown(shutCtx)
 	}()
 
 	log.Printf("WebSocket transport listening on %s", addr)
@@ -94,7 +94,7 @@ func (s *Server) handleWSConn(ctx context.Context, ws *wsConn) {
 			wsWriteClose(ws, 1000, "")
 			return
 		case wsOpPing:
-			wsWriteFrame(ws, wsOpPong, payload)
+			_ = wsWriteFrame(ws, wsOpPong, payload)
 			continue
 		case wsOpPong:
 			continue
@@ -108,14 +108,14 @@ func (s *Server) handleWSConn(ctx context.Context, ws *wsConn) {
 		if err := json.Unmarshal(payload, &req); err != nil {
 			resp := s.errorResponse(nil, ErrCodeParse, "parse error")
 			data, _ := json.Marshal(resp)
-			wsWriteFrame(ws, wsOpText, data)
+			_ = wsWriteFrame(ws, wsOpText, data)
 			continue
 		}
 
 		if req.JSONRPC != JSONRPCVersion {
 			resp := s.errorResponse(req.ID, ErrCodeInvalidRequest, "invalid jsonrpc version")
 			data, _ := json.Marshal(resp)
-			wsWriteFrame(ws, wsOpText, data)
+			_ = wsWriteFrame(ws, wsOpText, data)
 			continue
 		}
 
@@ -175,11 +175,11 @@ func upgradeWebSocket(w http.ResponseWriter, r *http.Request) (*wsConn, error) {
 		"Sec-WebSocket-Accept: " + acceptKey + "\r\n\r\n"
 
 	if _, err := bufrw.WriteString(resp); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("write upgrade response: %w", err)
 	}
 	if err := bufrw.Flush(); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("flush upgrade response: %w", err)
 	}
 
@@ -272,5 +272,5 @@ func wsWriteClose(ws *wsConn, code uint16, reason string) {
 	payload := make([]byte, 2+len(reason))
 	binary.BigEndian.PutUint16(payload, code)
 	copy(payload[2:], reason)
-	wsWriteFrame(ws, wsOpClose, payload)
+	_ = wsWriteFrame(ws, wsOpClose, payload)
 }

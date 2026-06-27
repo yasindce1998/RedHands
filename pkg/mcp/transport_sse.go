@@ -57,7 +57,7 @@ func (s *Server) ServeSSE(ctx context.Context, addr string) error {
 		w.Header().Set("X-Client-ID", id)
 
 		// Send endpoint event so client knows where to POST
-		fmt.Fprintf(w, "event: endpoint\ndata: /message?clientId=%s\n\n", id)
+		_, _ = fmt.Fprintf(w, "event: endpoint\ndata: /message?clientId=%s\n\n", id)
 		flusher.Flush()
 
 		for {
@@ -67,7 +67,7 @@ func (s *Server) ServeSSE(ctx context.Context, addr string) error {
 			case <-r.Context().Done():
 				return
 			case data := <-client.events:
-				fmt.Fprintf(w, "event: message\ndata: %s\n\n", data)
+				_, _ = fmt.Fprintf(w, "event: message\ndata: %s\n\n", data)
 				flusher.Flush()
 			}
 		}
@@ -138,19 +138,18 @@ func (s *Server) ServeSSE(ctx context.Context, addr string) error {
 			}
 		}
 
-		// Also handle single JSON body (non-line-delimited)
-		if scanner.Err() == nil && !scanner.Scan() {
-			// Already processed above via scanner
+		if err := scanner.Err(); err != nil {
+			log.Printf("sse: scanner error for client %s: %v", clientId, err)
 		}
 
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprintf(w, `{"status":"accepted"}`)
+		_, _ = fmt.Fprintf(w, `{"status":"accepted"}`)
 	})
 
 	// Health endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"status":"ok","transport":"sse"}`)
+		_, _ = fmt.Fprintf(w, `{"status":"ok","transport":"sse"}`)
 	})
 
 	server := &http.Server{
@@ -165,7 +164,7 @@ func (s *Server) ServeSSE(ctx context.Context, addr string) error {
 		<-ctx.Done()
 		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		server.Shutdown(shutCtx)
+		_ = server.Shutdown(shutCtx)
 	}()
 
 	log.Printf("SSE transport listening on %s", addr)
@@ -222,7 +221,7 @@ func (s *Server) ServeSSEWithHandler(ctx context.Context, addr string, authCheck
 		w.Header().Set("Connection", "keep-alive")
 		w.Header().Set("X-Client-ID", id)
 
-		fmt.Fprintf(w, "event: endpoint\ndata: /message?clientId=%s\n\n", id)
+		_, _ = fmt.Fprintf(w, "event: endpoint\ndata: /message?clientId=%s\n\n", id)
 		flusher.Flush()
 
 		for {
@@ -232,7 +231,7 @@ func (s *Server) ServeSSEWithHandler(ctx context.Context, addr string, authCheck
 			case <-r.Context().Done():
 				return
 			case data := <-client.events:
-				fmt.Fprintf(w, "event: message\ndata: %s\n\n", data)
+				_, _ = fmt.Fprintf(w, "event: message\ndata: %s\n\n", data)
 				flusher.Flush()
 			}
 		}
@@ -269,7 +268,7 @@ func (s *Server) ServeSSEWithHandler(ctx context.Context, addr string, authCheck
 		}
 
 		body := new(bytes.Buffer)
-		body.ReadFrom(r.Body)
+		_, _ = body.ReadFrom(r.Body)
 
 		var req JSONRPCRequest
 		if err := json.Unmarshal(body.Bytes(), &req); err != nil {
@@ -310,7 +309,7 @@ func (s *Server) ServeSSEWithHandler(ctx context.Context, addr string, authCheck
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"status":"ok","transport":"sse"}`)
+		_, _ = fmt.Fprintf(w, `{"status":"ok","transport":"sse"}`)
 	})
 
 	server := &http.Server{
@@ -325,7 +324,7 @@ func (s *Server) ServeSSEWithHandler(ctx context.Context, addr string, authCheck
 		<-ctx.Done()
 		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		server.Shutdown(shutCtx)
+		_ = server.Shutdown(shutCtx)
 	}()
 
 	log.Printf("SSE transport listening on %s (with auth)", addr)

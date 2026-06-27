@@ -24,7 +24,7 @@ RUN git clone --depth 1 https://github.com/sullo/nikto.git /opt/nikto && \
 RUN python3 -m pip install --break-system-packages \
     impacket \
     certipy-ad \
-    crackmapexec
+    netexec
 
 # Install Go-based tools
 ENV GOPATH=/tmp/go

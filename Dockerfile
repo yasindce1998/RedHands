@@ -11,10 +11,14 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /redhands ./cmd/redhan
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    nmap masscan tshark hashcat john nikto whatweb \
-    python3 python3-pip python3-venv \
+    nmap masscan tshark hashcat john whatweb \
+    python3 python3-pip python3-venv perl libnet-ssleay-perl \
     wget curl unzip git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Install nikto from source (not in bookworm repos)
+RUN git clone --depth 1 https://github.com/sullo/nikto.git /opt/nikto && \
+    ln -s /opt/nikto/program/nikto.pl /usr/local/bin/nikto
 
 # Install Python security tools
 RUN python3 -m pip install --break-system-packages \

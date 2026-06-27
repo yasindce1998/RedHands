@@ -20,11 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN git clone --depth 1 https://github.com/sullo/nikto.git /opt/nikto && \
     ln -s /opt/nikto/program/nikto.pl /usr/local/bin/nikto
 
-# Install Python security tools
+# Install Python security tools (netexec/crackmapexec requires Python 3.12+, install separately if needed)
 RUN python3 -m pip install --break-system-packages \
     impacket \
-    certipy-ad \
-    netexec
+    certipy-ad
 
 # Install Go-based tools
 ENV GOPATH=/tmp/go

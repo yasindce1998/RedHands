@@ -11,7 +11,6 @@ import (
 
 var (
 	namespaceRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
-	podNameRegex   = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 	shellMetachars = []string{";", "|", "&", "`", "$", "(", ")", "{", "}", "<", ">", "!", "'", "\"", "\\", "\n", "\r"}
 )
 
@@ -41,19 +40,6 @@ func validateNamespace(ns string) error {
 	return nil
 }
 
-func validatePodName(name string) error {
-	if name == "" {
-		return fmt.Errorf("pod name is required")
-	}
-	if len(name) > 253 {
-		return fmt.Errorf("pod name too long (max 253 chars)")
-	}
-	if !podNameRegex.MatchString(name) {
-		return fmt.Errorf("invalid pod name: must be lowercase alphanumeric with dashes and dots")
-	}
-	return nil
-}
-
 func validateSafeString(s, field string) error {
 	if s == "" {
 		return nil
@@ -67,20 +53,6 @@ func validateSafeString(s, field string) error {
 		}
 	}
 	return nil
-}
-
-func validatePort(port int) error {
-	if port < 0 || port > 65535 {
-		return fmt.Errorf("invalid port number: %d (must be 0-65535)", port)
-	}
-	return nil
-}
-
-func validateTarget(target string) error {
-	if target == "" {
-		return nil
-	}
-	return validateSafeString(target, "target")
 }
 
 func errorResult(msg string) *mcp.ToolResult {

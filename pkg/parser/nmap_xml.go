@@ -54,10 +54,7 @@ func (p *NmapXMLParser) Parse(data []byte) (json.RawMessage, error) {
 
 		if h.OS != nil {
 			for _, m := range h.OS.Matches {
-				host.OS = append(host.OS, nmapOSMatch{
-					Name:     m.Name,
-					Accuracy: m.Accuracy,
-				})
+				host.OS = append(host.OS, nmapOSMatch(m))
 			}
 		}
 

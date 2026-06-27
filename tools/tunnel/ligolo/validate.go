@@ -24,13 +24,6 @@ func validateSafeString(s, field string) error {
 	return nil
 }
 
-func validateRequired(s, field string) error {
-	if s == "" {
-		return fmt.Errorf("%s is required", field)
-	}
-	return validateSafeString(s, field)
-}
-
 func errorResult(msg string) *mcp.ToolResult {
 	return &mcp.ToolResult{
 		Content: []mcp.ContentBlock{{Type: "text", Text: msg}},

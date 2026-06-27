@@ -40,16 +40,14 @@ RUN wget -q https://go.dev/dl/go1.26.0.linux-amd64.tar.gz && \
     cp /tmp/go/bin/* /usr/local/bin/ && \
     rm -rf /usr/local/go /tmp/go
 
-# Install chisel (resolve latest version dynamically)
-RUN CHISEL_VER=$(curl -fsSL https://api.github.com/repos/jpillora/chisel/releases/latest | grep -o '"tag_name":"[^"]*"' | head -1 | cut -d'"' -f4 | tr -d 'v') && \
-    curl -fsSL "https://github.com/jpillora/chisel/releases/download/v${CHISEL_VER}/chisel_${CHISEL_VER}_linux_amd64.gz" -o chisel.gz && \
+# Install chisel
+RUN curl -fsSL "https://github.com/jpillora/chisel/releases/download/v1.11.5/chisel_1.11.5_linux_amd64.gz" -o chisel.gz && \
     gunzip chisel.gz && \
     chmod +x chisel && \
     mv chisel /usr/local/bin/chisel
 
-# Install ligolo-ng (resolve latest version dynamically)
-RUN LIGOLO_VER=$(curl -fsSL https://api.github.com/repos/nicocha30/ligolo-ng/releases/latest | grep -o '"tag_name":"[^"]*"' | head -1 | cut -d'"' -f4 | tr -d 'v') && \
-    curl -fsSL "https://github.com/nicocha30/ligolo-ng/releases/download/v${LIGOLO_VER}/ligolo-ng_proxy_${LIGOLO_VER}_linux_amd64.tar.gz" -o ligolo.tar.gz && \
+# Install ligolo-ng
+RUN curl -fsSL "https://github.com/nicocha30/ligolo-ng/releases/download/v0.8.3/ligolo-ng_proxy_0.8.3_linux_amd64.tar.gz" -o ligolo.tar.gz && \
     tar -xzf ligolo.tar.gz && \
     mv proxy /usr/local/bin/ligolo-proxy && \
     rm -f ligolo.tar.gz

@@ -13,6 +13,16 @@ import (
 	"syscall"
 )
 
+// WorkflowRunner executes a workflow from raw JSON params.
+type WorkflowRunner interface {
+	RunFromJSON(ctx context.Context, params json.RawMessage) (json.RawMessage, error)
+}
+
+// ReportGenerator generates a report from raw JSON params.
+type ReportGenerator interface {
+	GenerateFromJSON(data json.RawMessage) (string, error)
+}
+
 type Server struct {
 	name        string
 	version     string
@@ -21,6 +31,8 @@ type Server struct {
 	middlewares []Middleware
 	initialized bool
 	mu          sync.RWMutex
+	workflow    WorkflowRunner
+	reporter   ReportGenerator
 }
 
 func NewServer(name, version string) *Server {
@@ -40,6 +52,21 @@ func (s *Server) RegisterTool(t Tool) {
 
 func (s *Server) Use(m Middleware) {
 	s.middlewares = append(s.middlewares, m)
+}
+
+func (s *Server) GetTool(name string) (Tool, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	t, ok := s.tools[name]
+	return t, ok
+}
+
+func (s *Server) SetWorkflowRunner(w WorkflowRunner) {
+	s.workflow = w
+}
+
+func (s *Server) SetReportGenerator(r ReportGenerator) {
+	s.reporter = r
 }
 
 func (s *Server) ServeStdio(ctx context.Context) error {

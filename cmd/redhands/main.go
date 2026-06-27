@@ -2,16 +2,29 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 
 	"github.com/yasindce1998/redhands/pkg/audit"
+	"github.com/yasindce1998/redhands/pkg/auth"
 	"github.com/yasindce1998/redhands/pkg/cache"
 	"github.com/yasindce1998/redhands/pkg/config"
 	"github.com/yasindce1998/redhands/pkg/executor"
 	"github.com/yasindce1998/redhands/pkg/mcp"
+	"github.com/yasindce1998/redhands/pkg/plugin"
 	"github.com/yasindce1998/redhands/pkg/ratelimit"
+	"github.com/yasindce1998/redhands/pkg/report"
+	"github.com/yasindce1998/redhands/pkg/workflow"
+	"github.com/yasindce1998/redhands/tools/analysis/tshark"
+	"github.com/yasindce1998/redhands/tools/c2/sliver"
+	"github.com/yasindce1998/redhands/tools/crack/hashcat"
+	"github.com/yasindce1998/redhands/tools/crack/john"
+	"github.com/yasindce1998/redhands/tools/exploit/certipy"
+	"github.com/yasindce1998/redhands/tools/exploit/crackmapexec"
+	"github.com/yasindce1998/redhands/tools/exploit/impacket"
 	"github.com/yasindce1998/redhands/tools/exploit/sqlmap"
 	"github.com/yasindce1998/redhands/tools/fuzz/feroxbuster"
 	"github.com/yasindce1998/redhands/tools/fuzz/ffuf"
@@ -27,6 +40,8 @@ import (
 	"github.com/yasindce1998/redhands/tools/scan/masscan"
 	"github.com/yasindce1998/redhands/tools/scan/rustscan"
 	"github.com/yasindce1998/redhands/tools/system/health"
+	"github.com/yasindce1998/redhands/tools/tunnel/chisel"
+	"github.com/yasindce1998/redhands/tools/tunnel/ligolo"
 	"github.com/yasindce1998/redhands/tools/vuln/nuclei"
 	"github.com/yasindce1998/redhands/tools/web/httpx"
 	"github.com/yasindce1998/redhands/tools/web/katana"
@@ -41,12 +56,29 @@ var allBinaries = []string{
 	"waybackurls", "testssl.sh", "whatweb", "sqlmap",
 	"masscan", "rustscan", "feroxbuster", "arjun", "gau",
 	"kubedagger-client", "kubedagger-operator",
+	// Impacket
+	"impacket-secretsdump", "impacket-psexec", "impacket-wmiexec",
+	"impacket-smbclient", "impacket-dcomexec", "impacket-getTGT",
+	"impacket-getST", "impacket-ntlmrelayx",
+	// Sliver C2
+	"sliver-client",
+	// Chisel / Ligolo
+	"chisel", "ligolo-proxy",
+	// Hashcat / John
+	"hashcat", "john",
+	// CrackMapExec
+	"crackmapexec",
+	// Certipy
+	"certipy",
+	// tshark
+	"tshark",
 }
 
 func main() {
 	log.SetOutput(os.Stderr)
 
 	cfg := config.Load()
+	authCfg := auth.LoadConfig()
 
 	binPaths := discoverBinaries()
 	execr := executor.New(executor.Config{
@@ -68,6 +100,10 @@ func main() {
 	srv.Use(audit.Middleware(auditLogger))
 	srv.Use(ratelimit.Middleware(limiter))
 	srv.Use(cache.Middleware(resultCache))
+
+	if authCfg.Mode != "none" {
+		srv.Use(auth.Middleware(authCfg))
+	}
 
 	// Nmap toolset
 	if cfg.ToolsetEnabled("nmap") {
@@ -117,6 +153,78 @@ func main() {
 	// Vuln toolset
 	if cfg.ToolsetEnabled("vuln") {
 		srv.RegisterTool(nuclei.NewNucleiScan(execr))
+	}
+
+	// Impacket toolset
+	if cfg.ToolsetEnabled("impacket") {
+		srv.RegisterTool(impacket.NewSecretsDump(execr))
+		srv.RegisterTool(impacket.NewPsExec(execr))
+		srv.RegisterTool(impacket.NewWmiExec(execr))
+		srv.RegisterTool(impacket.NewSMBClient(execr))
+		srv.RegisterTool(impacket.NewDcomExec(execr))
+		srv.RegisterTool(impacket.NewGetTGT(execr))
+		srv.RegisterTool(impacket.NewGetST(execr))
+		srv.RegisterTool(impacket.NewNTLMRelay(execr))
+	}
+
+	// Sliver C2 toolset
+	if cfg.ToolsetEnabled("sliver") {
+		srv.RegisterTool(sliver.NewGenerate(execr))
+		srv.RegisterTool(sliver.NewListeners(execr))
+		srv.RegisterTool(sliver.NewSessions(execr))
+		srv.RegisterTool(sliver.NewBeacons(execr))
+		srv.RegisterTool(sliver.NewExecute(execr))
+		srv.RegisterTool(sliver.NewUpload(execr))
+		srv.RegisterTool(sliver.NewDownload(execr))
+		srv.RegisterTool(sliver.NewPivot(execr))
+		srv.RegisterTool(sliver.NewPortFwd(execr))
+	}
+
+	// Chisel/Ligolo tunneling toolset
+	if cfg.ToolsetEnabled("tunnel") {
+		srv.RegisterTool(chisel.NewServer(execr))
+		srv.RegisterTool(chisel.NewClient(execr))
+		srv.RegisterTool(ligolo.NewProxyStart(execr))
+		srv.RegisterTool(ligolo.NewRoute(execr))
+		srv.RegisterTool(ligolo.NewListener(execr))
+	}
+
+	// Hashcat/John cracking toolset
+	if cfg.ToolsetEnabled("crack") {
+		srv.RegisterTool(hashcat.NewCrack(execr))
+		srv.RegisterTool(hashcat.NewBenchmark(execr))
+		srv.RegisterTool(hashcat.NewShow(execr))
+		srv.RegisterTool(john.NewCrack(execr))
+		srv.RegisterTool(john.NewShow(execr))
+		srv.RegisterTool(john.NewFormats(execr))
+	}
+
+	// CrackMapExec toolset
+	if cfg.ToolsetEnabled("crackmapexec") {
+		srv.RegisterTool(crackmapexec.NewSMB(execr))
+		srv.RegisterTool(crackmapexec.NewWinRM(execr))
+		srv.RegisterTool(crackmapexec.NewLDAP(execr))
+		srv.RegisterTool(crackmapexec.NewMSSQL(execr))
+		srv.RegisterTool(crackmapexec.NewSSH(execr))
+	}
+
+	// Certipy toolset
+	if cfg.ToolsetEnabled("certipy") {
+		srv.RegisterTool(certipy.NewFind(execr))
+		srv.RegisterTool(certipy.NewRequest(execr))
+		srv.RegisterTool(certipy.NewAuth(execr))
+		srv.RegisterTool(certipy.NewShadow(execr))
+		srv.RegisterTool(certipy.NewForge(execr))
+		srv.RegisterTool(certipy.NewRelay(execr))
+	}
+
+	// tshark toolset
+	if cfg.ToolsetEnabled("tshark") {
+		srv.RegisterTool(tshark.NewCapture(execr))
+		srv.RegisterTool(tshark.NewRead(execr))
+		srv.RegisterTool(tshark.NewStats(execr))
+		srv.RegisterTool(tshark.NewExtract(execr))
+		srv.RegisterTool(tshark.NewFollow(execr))
 	}
 
 	// KubeDagger toolset
@@ -183,8 +291,53 @@ func main() {
 	// Health (always registered)
 	srv.RegisterTool(health.NewHealthCheck(allBinaries))
 
-	if err := srv.ServeStdio(context.Background()); err != nil {
-		log.Fatalf("server error: %v", err)
+	// Plugin tools
+	pluginTools := plugin.LoadPlugins(cfg.PluginsDir, execr)
+	for _, t := range pluginTools {
+		srv.RegisterTool(t)
+	}
+
+	// Workflow engine
+	wfEngine := workflow.NewEngine(func(ctx context.Context, toolName string, params json.RawMessage) (string, bool, error) {
+		tool, ok := srv.GetTool(toolName)
+		if !ok {
+			return "", false, fmt.Errorf("unknown tool: %s", toolName)
+		}
+		result, err := tool.Execute(ctx, params)
+		if err != nil {
+			return "", false, err
+		}
+		text := ""
+		for _, c := range result.Content {
+			if c.Type == "text" {
+				text += c.Text
+			}
+		}
+		return text, !result.IsError, nil
+	})
+	srv.SetWorkflowRunner(wfEngine)
+
+	// Report generator
+	srv.SetReportGenerator(report.NewGenerator())
+
+	// Start transport
+	ctx := context.Background()
+	switch cfg.Transport {
+	case "sse":
+		authCheck := auth.HTTPAuthCheck(authCfg)
+		log.Printf("starting SSE transport on %s", cfg.SSEAddr)
+		if err := srv.ServeSSEWithHandler(ctx, cfg.SSEAddr, authCheck); err != nil {
+			log.Fatalf("SSE server error: %v", err)
+		}
+	case "ws":
+		log.Printf("starting WebSocket transport on %s", cfg.WSAddr)
+		if err := srv.ServeWebSocket(ctx, cfg.WSAddr); err != nil {
+			log.Fatalf("WebSocket server error: %v", err)
+		}
+	default:
+		if err := srv.ServeStdio(ctx); err != nil {
+			log.Fatalf("server error: %v", err)
+		}
 	}
 }
 

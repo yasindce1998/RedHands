@@ -1,0 +1,39 @@
+package john
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/yasindce1998/redhands/pkg/mcp"
+)
+
+var shellMetachars = []string{";", "|", "&", "`", "$", "(", ")", "{", "}", "<", ">", "!", "'", "\"", "\\", "\n", "\r"}
+
+func validateSafeString(s, field string) error {
+	if s == "" {
+		return nil
+	}
+	if len(s) > 4096 {
+		return fmt.Errorf("%s too long (max 4096 chars)", field)
+	}
+	for _, mc := range shellMetachars {
+		if strings.Contains(s, mc) {
+			return fmt.Errorf("%s contains forbidden character: %q", field, mc)
+		}
+	}
+	return nil
+}
+
+func validateRequired(s, field string) error {
+	if s == "" {
+		return fmt.Errorf("%s is required", field)
+	}
+	return validateSafeString(s, field)
+}
+
+func errorResult(msg string) *mcp.ToolResult {
+	return &mcp.ToolResult{
+		Content: []mcp.ContentBlock{{Type: "text", Text: msg}},
+		IsError: true,
+	}
+}

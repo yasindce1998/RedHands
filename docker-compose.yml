@@ -1,0 +1,35 @@
+services:
+  redhands:
+    build: .
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      - REDHANDS_TRANSPORT=sse
+      - REDHANDS_SSE_ADDR=:8080
+      - REDHANDS_WS_ADDR=:8081
+      - REDHANDS_AUTH=none
+      - REDHANDS_TIMEOUT=5m
+      - REDHANDS_RATE_LIMIT=10
+      - REDHANDS_RATE_BURST=20
+      - REDHANDS_PLUGINS_DIR=/opt/redhands/plugins
+    volumes:
+      - ./plugins:/opt/redhands/plugins:ro
+      - ./audit:/opt/redhands/audit
+    restart: unless-stopped
+
+  redhands-secure:
+    build: .
+    ports:
+      - "8443:8080"
+    environment:
+      - REDHANDS_TRANSPORT=sse
+      - REDHANDS_SSE_ADDR=:8080
+      - REDHANDS_AUTH=apikey
+      - REDHANDS_API_KEY=${REDHANDS_API_KEY:-changeme}
+      - REDHANDS_TIMEOUT=5m
+    volumes:
+      - ./plugins:/opt/redhands/plugins:ro
+    restart: unless-stopped
+    profiles:
+      - secure

@@ -9,8 +9,10 @@ const (
 	MethodInitialized         = "notifications/initialized"
 	MethodToolsList           = "tools/list"
 	MethodToolsCall           = "tools/call"
-	MethodPing                = "ping"
+	MethodPing                   = "ping"
 	MethodNotificationsCancelled = "notifications/cancelled"
+	MethodWorkflowRun            = "workflow/run"
+	MethodReportGenerate         = "report/generate"
 
 	ErrCodeParse          = -32700
 	ErrCodeInvalidRequest = -32600

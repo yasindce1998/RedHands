@@ -17,6 +17,10 @@ func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSONRP
 		return s.handleToolsList(req)
 	case MethodToolsCall:
 		return s.handleToolsCall(ctx, req)
+	case MethodWorkflowRun:
+		return s.handleWorkflowRun(ctx, req)
+	case MethodReportGenerate:
+		return s.handleReportGenerate(req)
 	case MethodPing:
 		return s.successResponse(req.ID, struct{}{})
 	default:
@@ -84,6 +88,38 @@ func (s *Server) handleToolsCall(ctx context.Context, req *JSONRPCRequest) *JSON
 	}
 
 	return s.successResponse(req.ID, result)
+}
+
+func (s *Server) handleWorkflowRun(ctx context.Context, req *JSONRPCRequest) *JSONRPCResponse {
+	if s.workflow == nil {
+		return s.errorResponse(req.ID, ErrCodeMethodNotFound, "workflow engine not configured")
+	}
+
+	result, err := s.workflow.RunFromJSON(ctx, req.Params)
+	if err != nil {
+		return s.errorResponse(req.ID, ErrCodeInternal, err.Error())
+	}
+
+	return &JSONRPCResponse{
+		JSONRPC: JSONRPCVersion,
+		ID:      req.ID,
+		Result:  json.RawMessage(result),
+	}
+}
+
+func (s *Server) handleReportGenerate(req *JSONRPCRequest) *JSONRPCResponse {
+	if s.reporter == nil {
+		return s.errorResponse(req.ID, ErrCodeMethodNotFound, "report generator not configured")
+	}
+
+	output, err := s.reporter.GenerateFromJSON(req.Params)
+	if err != nil {
+		return s.errorResponse(req.ID, ErrCodeInternal, err.Error())
+	}
+
+	return s.successResponse(req.ID, &ToolResult{
+		Content: []ContentBlock{{Type: "text", Text: output}},
+	})
 }
 
 func (s *Server) successResponse(id json.RawMessage, result any) *JSONRPCResponse {

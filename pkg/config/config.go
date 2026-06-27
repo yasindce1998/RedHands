@@ -17,6 +17,10 @@ type Config struct {
 	CacheTTL       time.Duration
 	CacheMaxSize   int
 	AuditFile      string
+	Transport      string
+	SSEAddr        string
+	WSAddr         string
+	PluginsDir     string
 }
 
 func Load() Config {
@@ -28,6 +32,10 @@ func Load() Config {
 		CacheTTL:       5 * time.Minute,
 		CacheMaxSize:   100,
 		AuditFile:      "audit.jsonl",
+		Transport:      "stdio",
+		SSEAddr:        ":8080",
+		WSAddr:         ":8081",
+		PluginsDir:     "./plugins",
 	}
 
 	if v := os.Getenv("REDHANDS_TOOLSETS"); v != "" {
@@ -75,6 +83,22 @@ func Load() Config {
 
 	if v := os.Getenv("REDHANDS_AUDIT_FILE"); v != "" {
 		cfg.AuditFile = v
+	}
+
+	if v := os.Getenv("REDHANDS_TRANSPORT"); v != "" {
+		cfg.Transport = v
+	}
+
+	if v := os.Getenv("REDHANDS_SSE_ADDR"); v != "" {
+		cfg.SSEAddr = v
+	}
+
+	if v := os.Getenv("REDHANDS_WS_ADDR"); v != "" {
+		cfg.WSAddr = v
+	}
+
+	if v := os.Getenv("REDHANDS_PLUGINS_DIR"); v != "" {
+		cfg.PluginsDir = v
 	}
 
 	return cfg

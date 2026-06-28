@@ -249,6 +249,33 @@ JSON tool definitions loaded from `REDHANDS_PLUGINS_DIR`:
 - Input validation inherited from executor sandbox
 - Hot-reload on server startup
 
+### Installation Infrastructure
+
+Non-Docker installation system for native usage:
+
+| Script | Purpose | Platform |
+|--------|---------|----------|
+| `scripts/install.sh` | One-line quick installer (binary + optional tools) | Linux, macOS |
+| `scripts/install-tools.sh` | Full tool dependency installer with profiles | Linux, macOS |
+| `scripts/install-tools.ps1` | Full tool dependency installer with profiles | Windows |
+| `scripts/check-deps.sh` | Dependency checker with install hints | Linux, macOS |
+
+**Profiles** map to common engagement types:
+- `minimal` — nmap, subfinder, httpx, nuclei
+- `web` — web assessment (adds ffuf, katana, nikto, sqlmap, feroxbuster)
+- `network` — infrastructure (adds masscan, rustscan, tshark, chisel, ligolo)
+- `ad` — Active Directory (adds impacket, certipy, crackmapexec, hashcat, john)
+- `recon` — deep recon (adds amass, gau, waybackurls, arjun)
+- `all` — everything
+
+**OS detection**: install-tools.sh detects Debian/Fedora/Arch/macOS and uses the correct package manager (apt/dnf/pacman/brew).
+
+**Install categories per tool**:
+1. System packages (apt/dnf/pacman/brew)
+2. Python tools (pip install)
+3. Go tools (go install)
+4. Binary releases (curl from GitHub releases)
+
 ---
 
 ## Configuration Reference
@@ -279,7 +306,16 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 
 ## Release History
 
-### v0.2.0 — Full Arsenal (current)
+### v0.2.1 — Non-Docker Installation (current)
+
+- **One-line installer**: `curl -fsSL .../install.sh | bash` for binary download or build from source
+- **Profile-based tool installation**: `minimal`, `web`, `network`, `ad`, `recon`, `all` profiles matching REDHANDS_TOOLSETS concepts
+- **Cross-platform scripts**: `install-tools.sh` (Linux/macOS with apt/dnf/pacman/brew detection) and `install-tools.ps1` (Windows with Chocolatey/Scoop)
+- **Dependency checker**: `check-deps.sh` reports installed/missing tools with per-tool install hints
+- **Makefile targets**: `make install`, `make install-tools PROFILE=web`, `make check-deps`
+- **Windows support**: Full PowerShell installer with `-Profile`, `-Check` parameters
+
+### v0.2.0 — Full Arsenal
 
 - **7 new toolsets**: Impacket (8 tools), Sliver C2 (9), Chisel/Ligolo tunneling (5), Hashcat/John cracking (6), CrackMapExec (5), Certipy AD CS (6), tshark packet analysis (5)
 - **Multi-transport**: SSE (stdlib net/http) and WebSocket (raw frame protocol, stdlib crypto/sha1)

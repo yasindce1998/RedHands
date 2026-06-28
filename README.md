@@ -27,34 +27,94 @@ go install github.com/yasindce1998/redhands/cmd/redhands@latest
 
 ## Quick Start
 
-```bash
-# Build
-make build
+### One-Line Install (Linux/macOS)
 
-# Run with Claude Code / Cursor / VS Code (stdio)
-# Add to your MCP config:
+```bash
+curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/install.sh | bash
+```
+
+This downloads the `redhands` binary and prints MCP configuration instructions. To also install security tools:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/install.sh | bash -s -- --with-tools --profile=web
+```
+
+### Install from Source
+
+```bash
+git clone https://github.com/yasindce1998/redhands.git && cd redhands
+make build
+sudo make install
+
+# Install security tool dependencies (pick a profile)
+sudo make install-tools PROFILE=minimal   # nmap, nuclei, httpx, subfinder
+sudo make install-tools PROFILE=web       # web assessment tools
+sudo make install-tools PROFILE=network   # network/infrastructure tools
+sudo make install-tools PROFILE=ad        # Active Directory tools
+sudo make install-tools PROFILE=all       # everything
+
+# Check what's installed
+make check-deps
+```
+
+### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/yasindce1998/redhands.git; cd redhands
+go build -o bin\redhands.exe .\cmd\redhands
+
+# Install tool dependencies
+.\scripts\install-tools.ps1 -Profile web
+.\scripts\install-tools.ps1 -Check    # show what's installed/missing
+```
+
+### MCP Configuration
+
+Add to your MCP client config:
+
+**Claude Code** (`~/.claude/claude_desktop_config.json`), **Cursor** (`.cursor/mcp.json`), **VS Code** (`.vscode/mcp.json`):
+
+```json
 {
   "mcpServers": {
     "redhands": {
-      "command": "/path/to/redhands"
+      "command": "redhands"
     }
   }
 }
+```
 
-# Run with SSE transport (remote/team use)
-REDHANDS_TRANSPORT=sse REDHANDS_SSE_ADDR=:8080 ./bin/redhands
+### Running
 
-# Run with WebSocket transport
-REDHANDS_TRANSPORT=ws REDHANDS_WS_ADDR=:8081 ./bin/redhands
+```bash
+# stdio (default, for MCP clients)
+redhands
 
-# Run with Docker
+# SSE transport (remote/team use)
+REDHANDS_TRANSPORT=sse REDHANDS_SSE_ADDR=:8080 redhands
+
+# WebSocket transport
+REDHANDS_TRANSPORT=ws REDHANDS_WS_ADDR=:8081 redhands
+
+# Docker (all tools pre-installed)
 docker compose up
 ```
 
+### Installation Profiles
+
+| Profile | Tools Included | Use Case |
+|---------|---------------|----------|
+| `minimal` | nmap, subfinder, httpx, nuclei | Quick recon and scanning |
+| `web` | minimal + ffuf, katana, nikto, sqlmap, feroxbuster | Web application testing |
+| `network` | minimal + masscan, rustscan, tshark, chisel, ligolo | Network/infrastructure |
+| `ad` | minimal + impacket, certipy, crackmapexec, hashcat, john | Active Directory attacks |
+| `recon` | minimal + amass, gau, waybackurls, arjun, whatweb | Deep reconnaissance |
+| `all` | Everything | Full offensive toolkit |
+
 ## Requirements
 
-- Go 1.26+
-- Security tools installed on PATH (see Available Tools below)
+- Go 1.26+ (for building from source)
+- Security tools on PATH (installed via scripts above, Docker, or manually)
 
 ## Available Tools
 
@@ -344,10 +404,13 @@ export REDHANDS_TOOLSETS=
 ## Development
 
 ```bash
-make build      # Build binary to bin/
-make test       # Run tests with race detector
-make lint       # Run golangci-lint
-make docker     # Build Docker image
+make build          # Build binary to bin/
+make test           # Run tests with race detector
+make lint           # Run golangci-lint
+make docker         # Build Docker image
+make install        # Install binary to /usr/local/bin
+make install-tools  # Install security tools (PROFILE=minimal|web|network|ad|all)
+make check-deps     # Check which tools are available
 ```
 
 ## Docker

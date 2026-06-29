@@ -1,0 +1,24 @@
+{
+  "name": "barzakh_baseline_create",
+  "description": "Create a firmware baseline from a known-good image. The baseline is used for differential scanning to reduce false positives.",
+  "binary": "barzakh-scanner",
+  "args_template": [
+    "baseline", "create",
+    "--target", "{{.target}}",
+    "--output", "{{.output}}"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "target": {
+        "type": "string",
+        "description": "Path to a known-good firmware image to use as baseline"
+      },
+      "output": {
+        "type": "string",
+        "description": "Output path for the baseline JSON file"
+      }
+    },
+    "required": ["target", "output"]
+  }
+}

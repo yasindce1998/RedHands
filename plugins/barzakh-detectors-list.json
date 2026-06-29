@@ -1,0 +1,11 @@
+{
+  "name": "barzakh_detectors_list",
+  "description": "List all available bootkit detection modules with their descriptions and capabilities.",
+  "binary": "barzakh-scanner",
+  "args_template": ["detectors", "list"],
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

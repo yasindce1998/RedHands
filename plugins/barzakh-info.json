@@ -1,0 +1,11 @@
+{
+  "name": "barzakh_info",
+  "description": "Display Barzakh scanner platform information, version, and detection statistics.",
+  "binary": "barzakh-scanner",
+  "args_template": ["info"],
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

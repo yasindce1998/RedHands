@@ -72,6 +72,8 @@ var allBinaries = []string{
 	"certipy",
 	// tshark
 	"tshark",
+	// Barzakh UEFI bootkit scanner
+	"barzakh-scanner",
 }
 
 func main() {

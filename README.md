@@ -51,6 +51,7 @@ sudo make install-tools PROFILE=minimal   # nmap, nuclei, httpx, subfinder
 sudo make install-tools PROFILE=web       # web assessment tools
 sudo make install-tools PROFILE=network   # network/infrastructure tools
 sudo make install-tools PROFILE=ad        # Active Directory tools
+sudo make install-tools PROFILE=k8s       # Kubernetes offensive tools
 sudo make install-tools PROFILE=all       # everything
 
 # Check what's installed
@@ -108,6 +109,7 @@ docker compose up
 | `web` | minimal + ffuf, katana, nikto, sqlmap, feroxbuster | Web application testing |
 | `network` | minimal + masscan, rustscan, tshark, chisel, ligolo | Network/infrastructure |
 | `ad` | minimal + impacket, certipy, crackmapexec, hashcat, john | Active Directory attacks |
+| `k8s` | nmap, kubedagger-client, kubedagger-operator | Kubernetes offensive (eBPF) |
 | `recon` | minimal + amass, gau, waybackurls, arjun, whatweb | Deep reconnaissance |
 | `all` | Everything | Full offensive toolkit |
 
@@ -431,8 +433,14 @@ The Docker image includes all supported security tools pre-installed:
 - **apt**: nmap, masscan, tshark, hashcat, john, nikto, whatweb
 - **pip**: impacket, certipy-ad, crackmapexec
 - **Go tools**: subfinder, httpx, nuclei, ffuf, katana, gobuster, gau
-- **Releases**: chisel, ligolo-ng
+- **Releases**: chisel, ligolo-ng, kubedagger
 
 ## License
 
 MIT
+
+## Disclaimer
+
+RedHands is provided for authorized security testing, education, and research purposes only. You are solely responsible for ensuring you have explicit, written permission before using this tool against any system, network, or application. Unauthorized access to computer systems is illegal and punishable under applicable law including the Computer Fraud and Abuse Act (CFAA), Computer Misuse Act, and equivalent legislation worldwide.
+
+The authors and contributors of RedHands accept no liability for misuse or damage caused by this software. Use responsibly and ethically.

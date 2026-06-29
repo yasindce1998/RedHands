@@ -111,6 +111,12 @@ TOOL_INSTALL_HINT[certipy]="pip install certipy-ad"
 TOOL_CATEGORY[tshark]="tshark"
 TOOL_INSTALL_HINT[tshark]="apt: tshark | brew: wireshark | choco: wireshark"
 
+# KubeDagger
+TOOL_CATEGORY[kubedagger-client]="kubedagger"
+TOOL_INSTALL_HINT[kubedagger-client]="https://github.com/yasindce1998/KubeDagger/releases"
+TOOL_CATEGORY[kubedagger-operator]="kubedagger"
+TOOL_INSTALL_HINT[kubedagger-operator]="https://github.com/yasindce1998/KubeDagger/releases"
+
 # ─── Main ──────────────────────────────────────────────────────────────────────
 
 echo ""

@@ -52,6 +52,11 @@ RUN curl -fsSL "https://github.com/nicocha30/ligolo-ng/releases/download/v0.8.3/
     mv proxy /usr/local/bin/ligolo-proxy && \
     rm -f ligolo.tar.gz
 
+# Install KubeDagger (eBPF-based Kubernetes offensive toolkit)
+RUN curl -fsSL "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-client-linux-amd64" -o /usr/local/bin/kubedagger-client && \
+    curl -fsSL "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-linux-amd64" -o /usr/local/bin/kubedagger-operator && \
+    chmod +x /usr/local/bin/kubedagger-client /usr/local/bin/kubedagger-operator
+
 COPY --from=builder /redhands /usr/local/bin/redhands
 
 RUN mkdir -p /opt/redhands/plugins

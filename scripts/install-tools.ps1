@@ -20,7 +20,7 @@
 #>
 
 param(
-    [ValidateSet("all", "web", "network", "ad", "recon", "minimal")]
+    [ValidateSet("all", "web", "network", "ad", "k8s", "recon", "minimal")]
     [string]$Profile = "all",
     [switch]$Check,
     [switch]$List,
@@ -46,12 +46,14 @@ $ToolProfiles = @{
                 "subfinder", "httpx", "nuclei", "ffuf", "katana", "gobuster", "gau",
                 "nikto", "whatweb", "sqlmap", "testssl.sh", "arjun", "amass",
                 "chisel", "ligolo-proxy", "feroxbuster", "waybackurls",
-                "impacket-secretsdump", "crackmapexec", "certipy")
+                "impacket-secretsdump", "crackmapexec", "certipy",
+                "kubedagger-client", "kubedagger-operator")
     web     = @("nmap", "subfinder", "httpx", "nuclei", "ffuf", "katana", "gobuster",
                 "gau", "nikto", "whatweb", "sqlmap", "testssl.sh", "arjun",
                 "feroxbuster", "waybackurls", "masscan", "rustscan", "amass")
     network = @("nmap", "masscan", "rustscan", "tshark", "chisel", "ligolo-proxy")
     ad      = @("nmap", "impacket-secretsdump", "crackmapexec", "certipy", "hashcat", "john")
+    k8s     = @("nmap", "kubedagger-client", "kubedagger-operator")
     recon   = @("subfinder", "httpx", "katana", "whatweb", "arjun", "gau", "waybackurls", "amass")
     minimal = @("nmap", "nuclei", "httpx", "subfinder")
 }
@@ -64,6 +66,7 @@ if ($List) {
     Write-Host "  web        Web application assessment" -ForegroundColor Green
     Write-Host "  network    Network assessment & tunneling" -ForegroundColor Green
     Write-Host "  ad         Active Directory attacks" -ForegroundColor Green
+    Write-Host "  k8s        Kubernetes offensive (eBPF-powered)" -ForegroundColor Green
     Write-Host "  recon      Reconnaissance tools" -ForegroundColor Green
     Write-Host "  minimal    Just the essentials" -ForegroundColor Green
     Write-Host ""
@@ -295,6 +298,29 @@ function Install-BinaryReleases {
             Write-Ok "ligolo-ng installed"
         } catch {
             Write-Warn "Failed to install ligolo-ng: $_"
+        }
+    }
+
+    # KubeDagger
+    if ($tools -contains "kubedagger-client" -and -not (Test-Tool "kubedagger-client")) {
+        Write-Step "Installing kubedagger-client..."
+        $url = "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-client-windows-${arch}.exe"
+        try {
+            Invoke-WebRequest -Uri $url -OutFile "C:\Windows\System32\kubedagger-client.exe" -UseBasicParsing
+            Write-Ok "kubedagger-client installed"
+        } catch {
+            Write-Warn "Failed to install kubedagger-client: $_"
+        }
+    }
+
+    if ($tools -contains "kubedagger-operator" -and -not (Test-Tool "kubedagger-operator")) {
+        Write-Step "Installing kubedagger-operator..."
+        $url = "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-windows-${arch}.exe"
+        try {
+            Invoke-WebRequest -Uri $url -OutFile "C:\Windows\System32\kubedagger-operator.exe" -UseBasicParsing
+            Write-Ok "kubedagger-operator installed"
+        } catch {
+            Write-Warn "Failed to install kubedagger-operator: $_"
         }
     }
 

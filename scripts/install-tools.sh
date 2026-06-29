@@ -43,6 +43,7 @@ Profiles:
   web        Web application assessment (nmap, recon, web, fuzz, vuln)
   network    Network assessment (nmap, scan, tshark, tunnel)
   ad         Active Directory (nmap, impacket, crackmapexec, certipy, crack)
+  k8s        Kubernetes (nmap, kubedagger-client, kubedagger-operator)
   recon      Reconnaissance only (subfinder, amass, dns, wayback, gau, arjun)
   minimal    Just the essentials (nmap, nuclei, httpx, subfinder)
 
@@ -85,11 +86,12 @@ TOOLS_CRACK="hashcat john"
 TOOLS_CME="crackmapexec"
 TOOLS_CERTIPY="certipy"
 TOOLS_TSHARK="tshark"
+TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator"
 
 get_profile_tools() {
     case "$1" in
         all)
-            echo "$TOOLS_NMAP $TOOLS_RECON $TOOLS_WEB $TOOLS_FUZZ $TOOLS_SCAN $TOOLS_VULN $TOOLS_EXPLOIT $TOOLS_IMPACKET $TOOLS_TUNNEL $TOOLS_CRACK $TOOLS_CME $TOOLS_CERTIPY $TOOLS_TSHARK"
+            echo "$TOOLS_NMAP $TOOLS_RECON $TOOLS_WEB $TOOLS_FUZZ $TOOLS_SCAN $TOOLS_VULN $TOOLS_EXPLOIT $TOOLS_IMPACKET $TOOLS_TUNNEL $TOOLS_CRACK $TOOLS_CME $TOOLS_CERTIPY $TOOLS_TSHARK $TOOLS_KUBEDAGGER"
             ;;
         web)
             echo "$TOOLS_NMAP $TOOLS_RECON $TOOLS_WEB $TOOLS_FUZZ $TOOLS_SCAN $TOOLS_VULN $TOOLS_EXPLOIT"
@@ -102,6 +104,9 @@ get_profile_tools() {
             ;;
         recon)
             echo "$TOOLS_RECON $TOOLS_WEB"
+            ;;
+        k8s)
+            echo "$TOOLS_NMAP $TOOLS_KUBEDAGGER"
             ;;
         minimal)
             echo "nmap nuclei httpx subfinder"
@@ -129,6 +134,9 @@ list_profiles() {
     echo ""
     echo -e "  ${GREEN}ad${NC}         Active Directory attacks"
     echo "             nmap, impacket suite, crackmapexec, certipy, hashcat, john"
+    echo ""
+    echo -e "  ${GREEN}k8s${NC}        Kubernetes offensive (eBPF-powered)"
+    echo "             nmap, kubedagger-client, kubedagger-operator"
     echo ""
     echo -e "  ${GREEN}recon${NC}      Reconnaissance"
     echo "             subfinder, amass, dig, waybackurls, gau, arjun, httpx,"
@@ -435,6 +443,21 @@ install_binary_releases() {
             tar -xzf /tmp/ligolo.tar.gz -C /tmp && mv /tmp/proxy /usr/local/bin/ligolo-proxy && \
             rm -f /tmp/ligolo.tar.gz && \
             log_ok "ligolo-ng $ligolo_ver installed" || log_warn "Failed to install ligolo-ng"
+    fi
+
+    # KubeDagger
+    if [[ "$TOOLS" == *"kubedagger-client"* ]] && ! check_tool kubedagger-client; then
+        log_step "Installing kubedagger-client..."
+        curl -fsSL "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-client-${os_name}-${arch}" \
+            -o /usr/local/bin/kubedagger-client && chmod +x /usr/local/bin/kubedagger-client && \
+            log_ok "kubedagger-client installed" || log_warn "Failed to install kubedagger-client"
+    fi
+
+    if [[ "$TOOLS" == *"kubedagger-operator"* ]] && ! check_tool kubedagger-operator; then
+        log_step "Installing kubedagger-operator..."
+        curl -fsSL "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-${os_name}-${arch}" \
+            -o /usr/local/bin/kubedagger-operator && chmod +x /usr/local/bin/kubedagger-operator && \
+            log_ok "kubedagger-operator installed" || log_warn "Failed to install kubedagger-operator"
     fi
 
     # RustScan

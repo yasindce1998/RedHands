@@ -265,6 +265,7 @@ Non-Docker installation system for native usage:
 - `web` — web assessment (adds ffuf, katana, nikto, sqlmap, feroxbuster)
 - `network` — infrastructure (adds masscan, rustscan, tshark, chisel, ligolo)
 - `ad` — Active Directory (adds impacket, certipy, crackmapexec, hashcat, john)
+- `k8s` — Kubernetes offensive (nmap, kubedagger-client, kubedagger-operator)
 - `recon` — deep recon (adds amass, gau, waybackurls, arjun)
 - `all` — everything
 

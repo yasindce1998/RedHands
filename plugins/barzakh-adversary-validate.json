@@ -1,0 +1,24 @@
+{
+  "name": "barzakh_adversary_validate",
+  "description": "Validate generated bootkit payloads against the scanner to confirm they trigger detection. Returns JSON results showing which payloads were detected and which evaded.",
+  "binary": "barzakh-scanner",
+  "args_template": [
+    "adversary", "validate",
+    "--corpus", "{{.corpus}}",
+    "{{if .json}}--json{{end}}"
+  ],
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "corpus": {
+        "type": "string",
+        "description": "Path to directory containing generated corpus dumps"
+      },
+      "json": {
+        "type": "boolean",
+        "description": "Output results as JSON (default: false)"
+      }
+    },
+    "required": ["corpus"]
+  }
+}

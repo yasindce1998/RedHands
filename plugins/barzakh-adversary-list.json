@@ -1,0 +1,11 @@
+{
+  "name": "barzakh_adversary_list",
+  "description": "List all available UEFI bootkit payloads that can be generated for red-team engagements. Shows payload name, target architecture, and expected detection count.",
+  "binary": "barzakh-scanner",
+  "args_template": ["adversary", "list"],
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

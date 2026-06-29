@@ -1,9 +1,9 @@
 {
   "name": "barzakh_adversary_corpus",
   "description": "Generate a full test corpus of malicious UEFI firmware images paired with clean counterparts. Useful for building detection evasion test suites or training datasets.",
-  "binary": "barzakh-scanner",
+  "binary": "barzakh-adversary",
   "args_template": [
-    "adversary", "corpus",
+    "corpus",
     "{{if .output}}--output{{end}}", "{{if .output}}{{.output}}{{end}}"
   ],
   "input_schema": {

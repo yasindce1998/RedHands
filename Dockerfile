@@ -57,6 +57,11 @@ RUN curl -fsSL "https://github.com/yasindce1998/KubeDagger/releases/download/v0.
     curl -fsSL "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-linux-amd64" -o /usr/local/bin/kubedagger-operator && \
     chmod +x /usr/local/bin/kubedagger-client /usr/local/bin/kubedagger-operator
 
+# Install Barzakh (UEFI bootkit adversary simulation toolkit)
+RUN curl -fsSL "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-linux-x86_64" -o /usr/local/bin/barzakh-adversary && \
+    curl -fsSL "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-linux-x86_64" -o /usr/local/bin/barzakh-scanner && \
+    chmod +x /usr/local/bin/barzakh-adversary /usr/local/bin/barzakh-scanner
+
 COPY --from=builder /redhands /usr/local/bin/redhands
 
 RUN mkdir -p /opt/redhands/plugins

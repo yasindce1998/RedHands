@@ -52,6 +52,7 @@ sudo make install-tools PROFILE=web       # web assessment tools
 sudo make install-tools PROFILE=network   # network/infrastructure tools
 sudo make install-tools PROFILE=ad        # Active Directory tools
 sudo make install-tools PROFILE=k8s       # Kubernetes offensive tools
+sudo make install-tools PROFILE=uefi      # UEFI bootkit simulation
 sudo make install-tools PROFILE=all       # everything
 
 # Check what's installed
@@ -110,6 +111,7 @@ docker compose up
 | `network` | minimal + masscan, rustscan, tshark, chisel, ligolo | Network/infrastructure |
 | `ad` | minimal + impacket, certipy, crackmapexec, hashcat, john | Active Directory attacks |
 | `k8s` | nmap, kubedagger-client, kubedagger-operator | Kubernetes offensive (eBPF) |
+| `uefi` | barzakh-adversary, barzakh-scanner | UEFI bootkit adversary simulation |
 | `recon` | minimal + amass, gau, waybackurls, arjun, whatweb | Deep reconnaissance |
 | `all` | Everything | Full offensive toolkit |
 
@@ -261,6 +263,15 @@ docker compose up
 | Tool | Description |
 |------|-------------|
 | 57 tools | eBPF-powered Kubernetes offensive toolkit (see `tools/kubedagger/`) |
+
+### Barzakh (toolset: `barzakh`)
+
+| Tool | Description |
+|------|-------------|
+| `barzakh_list` | List available UEFI bootkit payload types |
+| `barzakh_generate` | Generate a UEFI bootkit payload for adversary simulation |
+| `barzakh_corpus` | Generate full test corpus of malicious/clean firmware pairs |
+| `barzakh_scan` | Scan firmware images with 43 specialized bootkit detectors |
 
 ### System
 

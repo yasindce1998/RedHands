@@ -117,6 +117,12 @@ TOOL_INSTALL_HINT[kubedagger-client]="https://github.com/yasindce1998/KubeDagger
 TOOL_CATEGORY[kubedagger-operator]="kubedagger"
 TOOL_INSTALL_HINT[kubedagger-operator]="https://github.com/yasindce1998/KubeDagger/releases"
 
+# Barzakh
+TOOL_CATEGORY[barzakh-adversary]="barzakh"
+TOOL_INSTALL_HINT[barzakh-adversary]="https://github.com/yasindce1998/Barzakh/releases"
+TOOL_CATEGORY[barzakh-scanner]="barzakh"
+TOOL_INSTALL_HINT[barzakh-scanner]="https://github.com/yasindce1998/Barzakh/releases"
+
 # ─── Main ──────────────────────────────────────────────────────────────────────
 
 echo ""

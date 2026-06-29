@@ -20,7 +20,7 @@
 #>
 
 param(
-    [ValidateSet("all", "web", "network", "ad", "k8s", "recon", "minimal")]
+    [ValidateSet("all", "web", "network", "ad", "k8s", "uefi", "recon", "minimal")]
     [string]$Profile = "all",
     [switch]$Check,
     [switch]$List,
@@ -47,13 +47,15 @@ $ToolProfiles = @{
                 "nikto", "whatweb", "sqlmap", "testssl.sh", "arjun", "amass",
                 "chisel", "ligolo-proxy", "feroxbuster", "waybackurls",
                 "impacket-secretsdump", "crackmapexec", "certipy",
-                "kubedagger-client", "kubedagger-operator")
+                "kubedagger-client", "kubedagger-operator",
+                "barzakh-adversary", "barzakh-scanner")
     web     = @("nmap", "subfinder", "httpx", "nuclei", "ffuf", "katana", "gobuster",
                 "gau", "nikto", "whatweb", "sqlmap", "testssl.sh", "arjun",
                 "feroxbuster", "waybackurls", "masscan", "rustscan", "amass")
     network = @("nmap", "masscan", "rustscan", "tshark", "chisel", "ligolo-proxy")
     ad      = @("nmap", "impacket-secretsdump", "crackmapexec", "certipy", "hashcat", "john")
     k8s     = @("nmap", "kubedagger-client", "kubedagger-operator")
+    uefi    = @("barzakh-adversary", "barzakh-scanner")
     recon   = @("subfinder", "httpx", "katana", "whatweb", "arjun", "gau", "waybackurls", "amass")
     minimal = @("nmap", "nuclei", "httpx", "subfinder")
 }
@@ -67,6 +69,7 @@ if ($List) {
     Write-Host "  network    Network assessment & tunneling" -ForegroundColor Green
     Write-Host "  ad         Active Directory attacks" -ForegroundColor Green
     Write-Host "  k8s        Kubernetes offensive (eBPF-powered)" -ForegroundColor Green
+    Write-Host "  uefi       UEFI bootkit adversary simulation" -ForegroundColor Green
     Write-Host "  recon      Reconnaissance tools" -ForegroundColor Green
     Write-Host "  minimal    Just the essentials" -ForegroundColor Green
     Write-Host ""
@@ -321,6 +324,31 @@ function Install-BinaryReleases {
             Write-Ok "kubedagger-operator installed"
         } catch {
             Write-Warn "Failed to install kubedagger-operator: $_"
+        }
+    }
+
+    # Barzakh
+    if ($tools -contains "barzakh-adversary" -and -not (Test-Tool "barzakh-adversary")) {
+        Write-Step "Installing barzakh-adversary..."
+        $barzakhArch = if ($arch -eq "amd64") { "x86_64" } else { "x86_64" }
+        $url = "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-windows-${barzakhArch}.exe"
+        try {
+            Invoke-WebRequest -Uri $url -OutFile "C:\Windows\System32\barzakh-adversary.exe" -UseBasicParsing
+            Write-Ok "barzakh-adversary installed"
+        } catch {
+            Write-Warn "Failed to install barzakh-adversary: $_"
+        }
+    }
+
+    if ($tools -contains "barzakh-scanner" -and -not (Test-Tool "barzakh-scanner")) {
+        Write-Step "Installing barzakh-scanner..."
+        $barzakhArch = if ($arch -eq "amd64") { "x86_64" } else { "x86_64" }
+        $url = "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-windows-${barzakhArch}.exe"
+        try {
+            Invoke-WebRequest -Uri $url -OutFile "C:\Windows\System32\barzakh-scanner.exe" -UseBasicParsing
+            Write-Ok "barzakh-scanner installed"
+        } catch {
+            Write-Warn "Failed to install barzakh-scanner: $_"
         }
     }
 

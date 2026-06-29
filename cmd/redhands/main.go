@@ -29,6 +29,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/fuzz/feroxbuster"
 	"github.com/yasindce1998/redhands/tools/fuzz/ffuf"
 	"github.com/yasindce1998/redhands/tools/fuzz/gobuster"
+	"github.com/yasindce1998/redhands/tools/barzakh"
 	"github.com/yasindce1998/redhands/tools/kubedagger"
 	"github.com/yasindce1998/redhands/tools/recon/amass"
 	"github.com/yasindce1998/redhands/tools/recon/arjun"
@@ -74,6 +75,7 @@ var allBinaries = []string{
 	"tshark",
 	// Barzakh UEFI adversary toolkit
 	"barzakh-adversary",
+	"barzakh-scanner",
 }
 
 func main() {
@@ -288,6 +290,14 @@ func main() {
 		srv.RegisterTool(kubedagger.NewOperatorShell(execr))
 		srv.RegisterTool(kubedagger.NewOperatorModule(execr))
 		srv.RegisterTool(kubedagger.NewOperatorTasks(execr))
+	}
+
+	// Barzakh UEFI toolset
+	if cfg.ToolsetEnabled("barzakh") {
+		srv.RegisterTool(barzakh.NewList(execr))
+		srv.RegisterTool(barzakh.NewGenerate(execr))
+		srv.RegisterTool(barzakh.NewCorpus(execr))
+		srv.RegisterTool(barzakh.NewScan(execr))
 	}
 
 	// Health (always registered)

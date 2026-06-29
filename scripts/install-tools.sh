@@ -44,6 +44,7 @@ Profiles:
   network    Network assessment (nmap, scan, tshark, tunnel)
   ad         Active Directory (nmap, impacket, crackmapexec, certipy, crack)
   k8s        Kubernetes (nmap, kubedagger-client, kubedagger-operator)
+  uefi       UEFI bootkit simulation (barzakh-adversary, barzakh-scanner)
   recon      Reconnaissance only (subfinder, amass, dns, wayback, gau, arjun)
   minimal    Just the essentials (nmap, nuclei, httpx, subfinder)
 
@@ -87,11 +88,12 @@ TOOLS_CME="crackmapexec"
 TOOLS_CERTIPY="certipy"
 TOOLS_TSHARK="tshark"
 TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator"
+TOOLS_BARZAKH="barzakh-adversary barzakh-scanner"
 
 get_profile_tools() {
     case "$1" in
         all)
-            echo "$TOOLS_NMAP $TOOLS_RECON $TOOLS_WEB $TOOLS_FUZZ $TOOLS_SCAN $TOOLS_VULN $TOOLS_EXPLOIT $TOOLS_IMPACKET $TOOLS_TUNNEL $TOOLS_CRACK $TOOLS_CME $TOOLS_CERTIPY $TOOLS_TSHARK $TOOLS_KUBEDAGGER"
+            echo "$TOOLS_NMAP $TOOLS_RECON $TOOLS_WEB $TOOLS_FUZZ $TOOLS_SCAN $TOOLS_VULN $TOOLS_EXPLOIT $TOOLS_IMPACKET $TOOLS_TUNNEL $TOOLS_CRACK $TOOLS_CME $TOOLS_CERTIPY $TOOLS_TSHARK $TOOLS_KUBEDAGGER $TOOLS_BARZAKH"
             ;;
         web)
             echo "$TOOLS_NMAP $TOOLS_RECON $TOOLS_WEB $TOOLS_FUZZ $TOOLS_SCAN $TOOLS_VULN $TOOLS_EXPLOIT"
@@ -107,6 +109,9 @@ get_profile_tools() {
             ;;
         k8s)
             echo "$TOOLS_NMAP $TOOLS_KUBEDAGGER"
+            ;;
+        uefi)
+            echo "$TOOLS_BARZAKH"
             ;;
         minimal)
             echo "nmap nuclei httpx subfinder"
@@ -137,6 +142,9 @@ list_profiles() {
     echo ""
     echo -e "  ${GREEN}k8s${NC}        Kubernetes offensive (eBPF-powered)"
     echo "             nmap, kubedagger-client, kubedagger-operator"
+    echo ""
+    echo -e "  ${GREEN}uefi${NC}       UEFI bootkit adversary simulation"
+    echo "             barzakh-adversary, barzakh-scanner"
     echo ""
     echo -e "  ${GREEN}recon${NC}      Reconnaissance"
     echo "             subfinder, amass, dig, waybackurls, gau, arjun, httpx,"
@@ -458,6 +466,29 @@ install_binary_releases() {
         curl -fsSL "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-${os_name}-${arch}" \
             -o /usr/local/bin/kubedagger-operator && chmod +x /usr/local/bin/kubedagger-operator && \
             log_ok "kubedagger-operator installed" || log_warn "Failed to install kubedagger-operator"
+    fi
+
+    # Barzakh
+    if [[ "$TOOLS" == *"barzakh-adversary"* ]] && ! check_tool barzakh-adversary; then
+        log_step "Installing barzakh-adversary..."
+        local barzakh_os="linux"
+        local barzakh_arch="x86_64"
+        [[ "$OS" == "macos" ]] && barzakh_os="macos"
+        [[ "$(uname -m)" == "aarch64" || "$(uname -m)" == "arm64" ]] && barzakh_arch="aarch64"
+        curl -fsSL "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-${barzakh_os}-${barzakh_arch}" \
+            -o /usr/local/bin/barzakh-adversary && chmod +x /usr/local/bin/barzakh-adversary && \
+            log_ok "barzakh-adversary installed" || log_warn "Failed to install barzakh-adversary"
+    fi
+
+    if [[ "$TOOLS" == *"barzakh-scanner"* ]] && ! check_tool barzakh-scanner; then
+        log_step "Installing barzakh-scanner..."
+        local barzakh_os="linux"
+        local barzakh_arch="x86_64"
+        [[ "$OS" == "macos" ]] && barzakh_os="macos"
+        [[ "$(uname -m)" == "aarch64" || "$(uname -m)" == "arm64" ]] && barzakh_arch="aarch64"
+        curl -fsSL "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-${barzakh_os}-${barzakh_arch}" \
+            -o /usr/local/bin/barzakh-scanner && chmod +x /usr/local/bin/barzakh-scanner && \
+            log_ok "barzakh-scanner installed" || log_warn "Failed to install barzakh-scanner"
     fi
 
     # RustScan

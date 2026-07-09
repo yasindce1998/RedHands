@@ -5,21 +5,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 
+	"github.com/yasindce1998/redhands/pkg/attackgraph"
 	"github.com/yasindce1998/redhands/pkg/audit"
 	"github.com/yasindce1998/redhands/pkg/auth"
 	"github.com/yasindce1998/redhands/pkg/cache"
 	"github.com/yasindce1998/redhands/pkg/config"
+	"github.com/yasindce1998/redhands/pkg/credstore"
+	"github.com/yasindce1998/redhands/pkg/dashboard"
+	"github.com/yasindce1998/redhands/pkg/dryrun"
+	"github.com/yasindce1998/redhands/pkg/engagement"
+	"github.com/yasindce1998/redhands/pkg/evidence"
 	"github.com/yasindce1998/redhands/pkg/executor"
+	"github.com/yasindce1998/redhands/pkg/loot"
 	"github.com/yasindce1998/redhands/pkg/mcp"
+	"github.com/yasindce1998/redhands/pkg/notify"
+	"github.com/yasindce1998/redhands/pkg/opsec"
 	"github.com/yasindce1998/redhands/pkg/plugin"
 	"github.com/yasindce1998/redhands/pkg/ratelimit"
 	"github.com/yasindce1998/redhands/pkg/report"
+	"github.com/yasindce1998/redhands/pkg/targetdb"
 	"github.com/yasindce1998/redhands/pkg/workflow"
+	"github.com/yasindce1998/redhands/tools/ad/bloodhound"
+	"github.com/yasindce1998/redhands/tools/ad/coercion"
+	"github.com/yasindce1998/redhands/tools/ad/evilwinrm"
+	"github.com/yasindce1998/redhands/tools/ad/responder"
 	"github.com/yasindce1998/redhands/tools/analysis/tshark"
+	"github.com/yasindce1998/redhands/tools/barzakh"
 	"github.com/yasindce1998/redhands/tools/c2/sliver"
+	"github.com/yasindce1998/redhands/tools/cloud"
 	"github.com/yasindce1998/redhands/tools/crack/hashcat"
 	"github.com/yasindce1998/redhands/tools/crack/john"
 	"github.com/yasindce1998/redhands/tools/exploit/certipy"
@@ -29,18 +46,23 @@ import (
 	"github.com/yasindce1998/redhands/tools/fuzz/feroxbuster"
 	"github.com/yasindce1998/redhands/tools/fuzz/ffuf"
 	"github.com/yasindce1998/redhands/tools/fuzz/gobuster"
-	"github.com/yasindce1998/redhands/tools/barzakh"
+	"github.com/yasindce1998/redhands/tools/intelligence"
 	"github.com/yasindce1998/redhands/tools/kubedagger"
+	"github.com/yasindce1998/redhands/tools/mobile"
+	"github.com/yasindce1998/redhands/tools/operations"
 	"github.com/yasindce1998/redhands/tools/recon/amass"
 	"github.com/yasindce1998/redhands/tools/recon/arjun"
 	"github.com/yasindce1998/redhands/tools/recon/dns"
 	"github.com/yasindce1998/redhands/tools/recon/gau"
 	"github.com/yasindce1998/redhands/tools/recon/subfinder"
 	"github.com/yasindce1998/redhands/tools/recon/wayback"
+	"github.com/yasindce1998/redhands/tools/reporting"
 	nmaptools "github.com/yasindce1998/redhands/tools/scan/nmap"
 	"github.com/yasindce1998/redhands/tools/scan/masscan"
 	"github.com/yasindce1998/redhands/tools/scan/rustscan"
+	"github.com/yasindce1998/redhands/tools/social/phishing"
 	"github.com/yasindce1998/redhands/tools/system/health"
+	targetdbtools "github.com/yasindce1998/redhands/tools/targetdb"
 	"github.com/yasindce1998/redhands/tools/tunnel/chisel"
 	"github.com/yasindce1998/redhands/tools/tunnel/ligolo"
 	"github.com/yasindce1998/redhands/tools/vuln/nuclei"
@@ -49,6 +71,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/web/nikto"
 	"github.com/yasindce1998/redhands/tools/web/testssl"
 	"github.com/yasindce1998/redhands/tools/web/whatweb"
+	"github.com/yasindce1998/redhands/tools/wireless"
 )
 
 var allBinaries = []string{
@@ -74,8 +97,19 @@ var allBinaries = []string{
 	// tshark
 	"tshark",
 	// Barzakh UEFI adversary toolkit
-	"barzakh-adversary",
-	"barzakh-scanner",
+	"barzakh-adversary", "barzakh-scanner",
+	// AD toolset
+	"bloodhound-python", "responder", "evil-winrm", "python3",
+	// Wireless
+	"airmon-ng", "airodump-ng", "aircrack-ng", "bettercap",
+	// Mobile
+	"frida", "objection", "apktool", "adb",
+	// Cloud
+	"scout", "prowler", "pacu", "roadtx",
+	// Evidence
+	"cutycapt",
+	// PDF
+	"wkhtmltopdf",
 }
 
 func main() {
@@ -100,7 +134,35 @@ func main() {
 	limiter := ratelimit.New(cfg.RateLimit, cfg.RateBurst)
 	resultCache := cache.New(cfg.CacheMaxSize, cfg.CacheTTL)
 
+	// Core stores
+	tdb := targetdb.NewStore(cfg.TargetDBFile, cfg.TargetDBAutoSave)
+	graph := attackgraph.New()
+	engMgr := engagement.NewManager(cfg.EngagementDir)
+	lootStore := loot.NewStore(cfg.LootDir)
+	notifier := notify.NewNotifier(cfg.WebhookURLs, cfg.WebhookEvents)
+
+	var credStore *credstore.Store
+	if cfg.CredStoreKey != "" {
+		credStore, err = credstore.NewStore(cfg.CredStoreFile, cfg.CredStoreKey)
+		if err != nil {
+			log.Printf("warning: credstore initialization failed: %v", err)
+		}
+	}
+
+	var evidenceStore *evidence.Store
+	evidenceStore, err = evidence.NewStore(cfg.EvidenceDir)
+	if err != nil {
+		log.Printf("warning: evidence store initialization failed: %v", err)
+	}
+
 	srv := mcp.NewServer("redhands", "0.1.0")
+
+	// Dry-run middleware (must be first - intercepts all tool calls)
+	if cfg.DryRun {
+		dryrunInterceptor := dryrun.NewInterceptor()
+		srv.Use(dryrunInterceptor.Middleware)
+	}
+
 	srv.Use(audit.Middleware(auditLogger))
 	srv.Use(ratelimit.Middleware(limiter))
 	srv.Use(cache.Middleware(resultCache))
@@ -109,7 +171,14 @@ func main() {
 		srv.Use(auth.Middleware(authCfg))
 	}
 
-	// Nmap toolset
+	// OPSEC middleware
+	if cfg.OpsecProfile != "" {
+		tracker := opsec.NewTracker(cfg.IOCFile)
+		opsecMw := opsec.NewMiddleware(cfg.OpsecProfile, tracker)
+		srv.Use(opsecMw.Wrap)
+	}
+
+	// ─── Nmap toolset ───
 	if cfg.ToolsetEnabled("nmap") {
 		srv.RegisterTool(nmaptools.NewPortScan(execr))
 		srv.RegisterTool(nmaptools.NewServiceDetect(execr))
@@ -117,7 +186,7 @@ func main() {
 		srv.RegisterTool(nmaptools.NewVulnScan(execr))
 	}
 
-	// Recon toolset
+	// ─── Recon toolset ───
 	if cfg.ToolsetEnabled("recon") {
 		srv.RegisterTool(subfinder.NewSubdomainEnum(execr))
 		srv.RegisterTool(amass.NewASNEnum(execr))
@@ -127,7 +196,7 @@ func main() {
 		srv.RegisterTool(arjun.NewArjun(execr))
 	}
 
-	// Web toolset
+	// ─── Web toolset ───
 	if cfg.ToolsetEnabled("web") {
 		srv.RegisterTool(httpx.NewHTTPProbe(execr))
 		srv.RegisterTool(katana.NewCrawl(execr))
@@ -136,30 +205,30 @@ func main() {
 		srv.RegisterTool(testssl.NewTLSScan(execr))
 	}
 
-	// Fuzzing toolset
+	// ─── Fuzzing toolset ───
 	if cfg.ToolsetEnabled("fuzz") {
 		srv.RegisterTool(ffuf.NewWebFuzz(execr))
 		srv.RegisterTool(gobuster.NewDirBust(execr))
 		srv.RegisterTool(feroxbuster.NewFeroxbuster(execr))
 	}
 
-	// Scanning toolset
+	// ─── Scanning toolset ───
 	if cfg.ToolsetEnabled("scan") {
 		srv.RegisterTool(masscan.NewMasscan(execr))
 		srv.RegisterTool(rustscan.NewRustScan(execr))
 	}
 
-	// Exploit toolset
+	// ─── Exploit toolset ───
 	if cfg.ToolsetEnabled("exploit") {
 		srv.RegisterTool(sqlmap.NewSQLMap(execr))
 	}
 
-	// Vuln toolset
+	// ─── Vuln toolset ───
 	if cfg.ToolsetEnabled("vuln") {
 		srv.RegisterTool(nuclei.NewNucleiScan(execr))
 	}
 
-	// Impacket toolset
+	// ─── Impacket toolset ───
 	if cfg.ToolsetEnabled("impacket") {
 		srv.RegisterTool(impacket.NewSecretsDump(execr))
 		srv.RegisterTool(impacket.NewPsExec(execr))
@@ -171,7 +240,7 @@ func main() {
 		srv.RegisterTool(impacket.NewNTLMRelay(execr))
 	}
 
-	// Sliver C2 toolset
+	// ─── Sliver C2 toolset ───
 	if cfg.ToolsetEnabled("sliver") {
 		srv.RegisterTool(sliver.NewGenerate(execr))
 		srv.RegisterTool(sliver.NewListeners(execr))
@@ -184,7 +253,7 @@ func main() {
 		srv.RegisterTool(sliver.NewPortFwd(execr))
 	}
 
-	// Chisel/Ligolo tunneling toolset
+	// ─── Chisel/Ligolo tunneling toolset ───
 	if cfg.ToolsetEnabled("tunnel") {
 		srv.RegisterTool(chisel.NewServer(execr))
 		srv.RegisterTool(chisel.NewClient(execr))
@@ -193,7 +262,7 @@ func main() {
 		srv.RegisterTool(ligolo.NewListener(execr))
 	}
 
-	// Hashcat/John cracking toolset
+	// ─── Hashcat/John cracking toolset ───
 	if cfg.ToolsetEnabled("crack") {
 		srv.RegisterTool(hashcat.NewCrack(execr))
 		srv.RegisterTool(hashcat.NewBenchmark(execr))
@@ -203,7 +272,7 @@ func main() {
 		srv.RegisterTool(john.NewFormats(execr))
 	}
 
-	// CrackMapExec toolset
+	// ─── CrackMapExec toolset ───
 	if cfg.ToolsetEnabled("crackmapexec") {
 		srv.RegisterTool(crackmapexec.NewSMB(execr))
 		srv.RegisterTool(crackmapexec.NewWinRM(execr))
@@ -212,7 +281,7 @@ func main() {
 		srv.RegisterTool(crackmapexec.NewSSH(execr))
 	}
 
-	// Certipy toolset
+	// ─── Certipy toolset ───
 	if cfg.ToolsetEnabled("certipy") {
 		srv.RegisterTool(certipy.NewFind(execr))
 		srv.RegisterTool(certipy.NewRequest(execr))
@@ -222,7 +291,7 @@ func main() {
 		srv.RegisterTool(certipy.NewRelay(execr))
 	}
 
-	// tshark toolset
+	// ─── tshark toolset ───
 	if cfg.ToolsetEnabled("tshark") {
 		srv.RegisterTool(tshark.NewCapture(execr))
 		srv.RegisterTool(tshark.NewRead(execr))
@@ -231,7 +300,7 @@ func main() {
 		srv.RegisterTool(tshark.NewFollow(execr))
 	}
 
-	// KubeDagger toolset
+	// ─── KubeDagger toolset ───
 	if cfg.ToolsetEnabled("kubedagger") {
 		srv.RegisterTool(kubedagger.NewNetworkScan(execr))
 		srv.RegisterTool(kubedagger.NewNetworkDiscovery(execr))
@@ -292,12 +361,136 @@ func main() {
 		srv.RegisterTool(kubedagger.NewOperatorTasks(execr))
 	}
 
-	// Barzakh UEFI toolset
+	// ─── Barzakh UEFI toolset ───
 	if cfg.ToolsetEnabled("barzakh") {
 		srv.RegisterTool(barzakh.NewList(execr))
 		srv.RegisterTool(barzakh.NewGenerate(execr))
 		srv.RegisterTool(barzakh.NewCorpus(execr))
 		srv.RegisterTool(barzakh.NewScan(execr))
+	}
+
+	// ─── BloodHound AD toolset ───
+	if cfg.ToolsetEnabled("bloodhound") {
+		srv.RegisterTool(bloodhound.NewCollect(execr))
+		srv.RegisterTool(bloodhound.NewFindPath(execr))
+		srv.RegisterTool(bloodhound.NewMarkOwned(execr))
+		srv.RegisterTool(bloodhound.NewAnalyze(execr))
+	}
+
+	// ─── Responder toolset ───
+	if cfg.ToolsetEnabled("responder") {
+		srv.RegisterTool(responder.NewStartTool(execr))
+		srv.RegisterTool(responder.NewAnalyzeTool(execr))
+		srv.RegisterTool(responder.NewLogsTool(execr))
+		srv.RegisterTool(responder.NewStatusTool(execr))
+	}
+
+	// ─── Evil-WinRM toolset ───
+	if cfg.ToolsetEnabled("evilwinrm") {
+		srv.RegisterTool(evilwinrm.NewShell(execr))
+		srv.RegisterTool(evilwinrm.NewUpload(execr))
+		srv.RegisterTool(evilwinrm.NewDownload(execr))
+		srv.RegisterTool(evilwinrm.NewDllInject(execr))
+		srv.RegisterTool(evilwinrm.NewPsExec(execr))
+	}
+
+	// ─── Coercion toolset ───
+	if cfg.ToolsetEnabled("coercion") {
+		srv.RegisterTool(coercion.NewPetitPotam(execr))
+		srv.RegisterTool(coercion.NewPrinterBug(execr))
+		srv.RegisterTool(coercion.NewDFSCoerce(execr))
+		srv.RegisterTool(coercion.NewCheck(execr))
+	}
+
+	// ─── Phishing toolset ───
+	if cfg.ToolsetEnabled("phishing") {
+		gophishURL := os.Getenv("REDHANDS_GOPHISH_URL")
+		gophishKey := os.Getenv("REDHANDS_GOPHISH_API_KEY")
+		if gophishURL != "" && gophishKey != "" {
+			client := phishing.NewClient(gophishURL, gophishKey)
+			srv.RegisterTool(phishing.NewCampaignCreate(client))
+			srv.RegisterTool(phishing.NewCampaignStatus(client))
+			srv.RegisterTool(phishing.NewTemplateCreate(client))
+			srv.RegisterTool(phishing.NewLandingPageCreate(client))
+			srv.RegisterTool(phishing.NewGroupsCreate(client))
+		}
+	}
+
+	// ─── Wireless toolset ───
+	if cfg.ToolsetEnabled("wireless") {
+		srv.RegisterTool(wireless.NewMonitor(execr))
+		srv.RegisterTool(wireless.NewScan(execr))
+		srv.RegisterTool(wireless.NewDeauth(execr))
+		srv.RegisterTool(wireless.NewCapture(execr))
+		srv.RegisterTool(wireless.NewCrack(execr))
+		srv.RegisterTool(wireless.NewBettercap(execr))
+	}
+
+	// ─── Mobile toolset ───
+	if cfg.ToolsetEnabled("mobile") {
+		srv.RegisterTool(mobile.NewFridaAttach(execr))
+		srv.RegisterTool(mobile.NewFridaSpawn(execr))
+		srv.RegisterTool(mobile.NewObjection(execr))
+		srv.RegisterTool(mobile.NewApkDecompile(execr))
+		srv.RegisterTool(mobile.NewApkRepackage(execr))
+		srv.RegisterTool(mobile.NewAdbShell(execr))
+	}
+
+	// ─── Cloud toolset ───
+	if cfg.ToolsetEnabled("cloud") {
+		srv.RegisterTool(cloud.NewScoutAWS(execr))
+		srv.RegisterTool(cloud.NewScoutAzure(execr))
+		srv.RegisterTool(cloud.NewProwler(execr))
+		srv.RegisterTool(cloud.NewPacuEnum(execr))
+		srv.RegisterTool(cloud.NewRoadtoolsAuth(execr))
+		srv.RegisterTool(cloud.NewRoadtoolsDump(execr))
+		srv.RegisterTool(cloud.NewEnumS3(execr))
+		srv.RegisterTool(cloud.NewEnumBlobs(execr))
+	}
+
+	// ─── Target Database tools ───
+	if cfg.ToolsetEnabled("targetdb") {
+		srv.RegisterTool(targetdbtools.NewAddHostTool(tdb))
+		srv.RegisterTool(targetdbtools.NewListHostsTool(tdb))
+		srv.RegisterTool(targetdbtools.NewAddFindingTool(tdb))
+		srv.RegisterTool(targetdbtools.NewQueryFindingsTool(tdb))
+		srv.RegisterTool(targetdbtools.NewAddCredTool(tdb))
+		srv.RegisterTool(targetdbtools.NewListCredsTool(tdb))
+	}
+
+	// ─── Intelligence tools ───
+	if cfg.ToolsetEnabled("intelligence") {
+		srv.RegisterTool(intelligence.NewCorrelationTool(tdb))
+		srv.RegisterTool(intelligence.NewAttackGraphBuildTool(tdb, graph))
+		srv.RegisterTool(intelligence.NewAttackGraphPathTool(graph))
+		srv.RegisterTool(intelligence.NewAttackGraphExportTool(graph))
+		srv.RegisterTool(intelligence.NewMitreLookupTool())
+		srv.RegisterTool(intelligence.NewRiskScoreTool())
+	}
+
+	// ─── Operations tools ───
+	if cfg.ToolsetEnabled("operations") {
+		srv.RegisterTool(operations.NewEngagementCreateTool(engMgr))
+		srv.RegisterTool(operations.NewEngagementSwitchTool(engMgr))
+		srv.RegisterTool(operations.NewEngagementListTool(engMgr))
+		srv.RegisterTool(operations.NewLootAddTool(lootStore))
+		srv.RegisterTool(operations.NewLootListTool(lootStore))
+		srv.RegisterTool(operations.NewLootSearchTool(lootStore))
+		if credStore != nil {
+			srv.RegisterTool(operations.NewCredstoreAddTool(credStore))
+			srv.RegisterTool(operations.NewCredstoreSearchTool(credStore))
+		}
+	}
+
+	// ─── Reporting tools ───
+	if cfg.ToolsetEnabled("reporting") {
+		srv.RegisterTool(reporting.NewSARIFTool(tdb))
+		srv.RegisterTool(reporting.NewExecutiveSummaryTool(tdb))
+		srv.RegisterTool(reporting.NewComplianceTool(tdb))
+		if evidenceStore != nil {
+			srv.RegisterTool(reporting.NewEvidenceListTool(evidenceStore))
+			srv.RegisterTool(reporting.NewEvidenceScreenshotTool(evidenceStore))
+		}
 	}
 
 	// Health (always registered)
@@ -307,6 +500,20 @@ func main() {
 	pluginTools := plugin.LoadPlugins(cfg.PluginsDir, execr)
 	for _, t := range pluginTools {
 		srv.RegisterTool(t)
+	}
+
+	// Plugin hot-reload watcher
+	if cfg.PluginsDir != "" {
+		watcher := plugin.NewWatcher(cfg.PluginsDir, cfg.PluginPollInterval, func(path string) error {
+			newTools := plugin.LoadPlugins(cfg.PluginsDir, execr)
+			for _, t := range newTools {
+				srv.RegisterTool(t)
+			}
+			log.Printf("hot-reloaded plugins (trigger: %s)", path)
+			return nil
+		})
+		watcher.Start()
+		defer watcher.Stop()
 	}
 
 	// Workflow engine
@@ -332,8 +539,38 @@ func main() {
 	// Report generator
 	srv.SetReportGenerator(report.NewGenerator())
 
+	// Suppress unused variable warnings for notifier
+	_ = notifier
+
 	// Start transport
 	ctx := context.Background()
+
+	// Dashboard HTTP server (if configured)
+	if cfg.DashboardAddr != "" {
+		dash := dashboard.New(tdb)
+		go func() {
+			log.Printf("starting dashboard on %s", cfg.DashboardAddr)
+			if err := http.ListenAndServe(cfg.DashboardAddr, dash); err != nil {
+				log.Printf("dashboard error: %v", err)
+			}
+		}()
+	}
+
+	// TCP transport (additional, runs alongside primary)
+	if cfg.TCPAddr != "" {
+		tcpTransport, err := mcp.NewTCPTransport(cfg.TCPAddr, srv.HandleRaw)
+		if err != nil {
+			log.Fatalf("failed to start TCP transport: %v", err)
+		}
+		defer tcpTransport.Close()
+		go func() {
+			log.Printf("starting TCP transport on %s", tcpTransport.Addr())
+			if err := tcpTransport.Serve(); err != nil {
+				log.Printf("TCP transport error: %v", err)
+			}
+		}()
+	}
+
 	switch cfg.Transport {
 	case "sse":
 		authCheck := auth.HTTPAuthCheck(authCfg)

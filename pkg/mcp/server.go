@@ -118,6 +118,28 @@ func (s *Server) serve(ctx context.Context, r io.Reader, w io.Writer) error {
 	return nil
 }
 
+func (s *Server) HandleRaw(msg json.RawMessage) json.RawMessage {
+	var req JSONRPCRequest
+	if err := json.Unmarshal(msg, &req); err != nil {
+		resp := s.errorResponse(nil, ErrCodeParse, "parse error")
+		data, _ := json.Marshal(resp)
+		return data
+	}
+
+	if req.JSONRPC != JSONRPCVersion {
+		resp := s.errorResponse(req.ID, ErrCodeInvalidRequest, "invalid jsonrpc version")
+		data, _ := json.Marshal(resp)
+		return data
+	}
+
+	resp := s.handleRequest(context.Background(), &req)
+	if resp == nil {
+		return nil
+	}
+	data, _ := json.Marshal(resp)
+	return data
+}
+
 func (s *Server) writeResponse(w io.Writer, resp *JSONRPCResponse) {
 	data, err := json.Marshal(resp)
 	if err != nil {

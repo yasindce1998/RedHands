@@ -20,7 +20,52 @@ type Config struct {
 	Transport      string
 	SSEAddr        string
 	WSAddr         string
+	TCPAddr        string
 	PluginsDir     string
+
+	// Target database
+	TargetDBFile     string
+	TargetDBAutoSave bool
+
+	// OPSEC
+	OpsecProfile string
+	OpsecProxies []string
+	IOCFile      string
+
+	// Engagement
+	EngagementDir string
+
+	// Credential store
+	CredStoreFile string
+	CredStoreKey  string
+
+	// Loot
+	LootDir string
+
+	// Notifications
+	WebhookURLs   []string
+	WebhookEvents []string
+
+	// Multi-operator
+	OperatorID string
+	SyncPeers  []string
+
+	// Evidence
+	EvidenceDir string
+
+	// Dashboard
+	DashboardAddr string
+
+	// Dry-run mode
+	DryRun bool
+
+	// Workflow
+	WorkflowStateDir    string
+	WorkflowTemplateDir string
+	WorkflowMaxParallel int
+
+	// Plugin watcher
+	PluginPollInterval time.Duration
 }
 
 func Load() Config {
@@ -101,7 +146,82 @@ func Load() Config {
 		cfg.PluginsDir = v
 	}
 
+	if v := os.Getenv("REDHANDS_TCP_ADDR"); v != "" {
+		cfg.TCPAddr = v
+	}
+
+	// Target database
+	cfg.TargetDBFile = envOr("REDHANDS_TARGETDB_FILE", "targetdb.json")
+	cfg.TargetDBAutoSave = envOr("REDHANDS_TARGETDB_AUTOSAVE", "true") == "true"
+
+	// OPSEC
+	cfg.OpsecProfile = os.Getenv("REDHANDS_OPSEC_PROFILE")
+	if v := os.Getenv("REDHANDS_OPSEC_PROXIES"); v != "" {
+		cfg.OpsecProxies = strings.Split(v, ",")
+	}
+	cfg.IOCFile = os.Getenv("REDHANDS_IOC_FILE")
+
+	// Engagement
+	cfg.EngagementDir = envOr("REDHANDS_ENGAGEMENT_DIR", "engagements")
+
+	// Credential store
+	cfg.CredStoreFile = envOr("REDHANDS_CREDSTORE_FILE", "credstore.enc")
+	cfg.CredStoreKey = os.Getenv("REDHANDS_CREDSTORE_KEY")
+
+	// Loot
+	cfg.LootDir = envOr("REDHANDS_LOOT_DIR", "loot")
+
+	// Notifications
+	if v := os.Getenv("REDHANDS_WEBHOOK_URLS"); v != "" {
+		cfg.WebhookURLs = strings.Split(v, ",")
+	}
+	if v := os.Getenv("REDHANDS_WEBHOOK_EVENTS"); v != "" {
+		cfg.WebhookEvents = strings.Split(v, ",")
+	}
+
+	// Multi-operator
+	cfg.OperatorID = os.Getenv("REDHANDS_OPERATOR_ID")
+	if v := os.Getenv("REDHANDS_SYNC_PEERS"); v != "" {
+		cfg.SyncPeers = strings.Split(v, ",")
+	}
+
+	// Evidence
+	cfg.EvidenceDir = envOr("REDHANDS_EVIDENCE_DIR", "evidence")
+
+	// Dashboard
+	cfg.DashboardAddr = os.Getenv("REDHANDS_DASHBOARD_ADDR")
+
+	// Dry-run
+	cfg.DryRun = os.Getenv("REDHANDS_DRY_RUN") == "true"
+
+	// Workflow
+	cfg.WorkflowStateDir = envOr("REDHANDS_WORKFLOW_STATE_DIR", "workflow_state")
+	cfg.WorkflowTemplateDir = envOr("REDHANDS_WORKFLOW_TEMPLATES_DIR", "workflow_templates")
+	if v := os.Getenv("REDHANDS_WORKFLOW_MAX_PARALLEL"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.WorkflowMaxParallel = n
+		}
+	}
+	if cfg.WorkflowMaxParallel == 0 {
+		cfg.WorkflowMaxParallel = 4
+	}
+
+	// Plugin watcher
+	cfg.PluginPollInterval = 5 * time.Second
+	if v := os.Getenv("REDHANDS_PLUGIN_POLL_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.PluginPollInterval = d
+		}
+	}
+
 	return cfg
+}
+
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }
 
 func (c Config) ToolsetEnabled(name string) bool {

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RedHands Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+.header { background: #16213e; padding: 1rem 2rem; border-bottom: 2px solid #c0392b; display: flex; align-items: center; gap: 1rem; }
+.header h1 { color: #c0392b; font-size: 1.5rem; }
+.header .status { margin-left: auto; padding: 0.3rem 0.8rem; border-radius: 4px; background: #27ae60; font-size: 0.8rem; }
+.container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.card { background: #16213e; border-radius: 8px; padding: 1.5rem; border: 1px solid #2c3e50; }
+.card h3 { color: #3498db; margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+.stat { font-size: 2.5rem; font-weight: 700; color: #ecf0f1; }
+.stat-label { color: #7f8c8d; font-size: 0.85rem; margin-top: 0.3rem; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid #2c3e50; font-size: 0.85rem; }
+.table th { color: #7f8c8d; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
+.sev-critical { color: #e74c3c; }
+.sev-high { color: #e67e22; }
+.sev-medium { color: #f1c40f; }
+.sev-low { color: #27ae60; }
+.sev-info { color: #3498db; }
+#error { color: #e74c3c; padding: 1rem; display: none; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>RedHands</h1>
+  <span>Offensive Security Platform</span>
+  <span class="status" id="status">Connected</span>
+</div>
+<div class="container">
+  <div id="error"></div>
+  <div class="grid">
+    <div class="card"><h3>Hosts</h3><div class="stat" id="host-count">-</div><div class="stat-label">Discovered</div></div>
+    <div class="card"><h3>Findings</h3><div class="stat" id="finding-count">-</div><div class="stat-label">Total</div></div>
+    <div class="card"><h3>Credentials</h3><div class="stat" id="cred-count">-</div><div class="stat-label">Captured</div></div>
+    <div class="card"><h3>Critical</h3><div class="stat sev-critical" id="critical-count">-</div><div class="stat-label">Findings</div></div>
+  </div>
+  <div class="card">
+    <h3>Recent Findings</h3>
+    <table class="table">
+      <thead><tr><th>Host</th><th>Severity</th><th>Title</th><th>Tool</th></tr></thead>
+      <tbody id="findings-table"><tr><td colspan="4">Loading...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+async function refresh() {
+  try {
+    const r = await fetch('/api/status');
+    const data = await r.json();
+    document.getElementById('host-count').textContent = data.hosts || 0;
+    document.getElementById('finding-count').textContent = data.findings || 0;
+    document.getElementById('cred-count').textContent = data.credentials || 0;
+    document.getElementById('critical-count').textContent = data.critical || 0;
+    if (data.recent_findings && data.recent_findings.length > 0) {
+      const tbody = document.getElementById('findings-table');
+      tbody.innerHTML = data.recent_findings.map(f =>
+        `<tr><td>${esc(f.host)}</td><td class="sev-${f.severity}">${f.severity}</td><td>${esc(f.title)}</td><td>${esc(f.tool)}</td></tr>`
+      ).join('');
+    }
+  } catch(e) {
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'Connection error: ' + e.message;
+    document.getElementById('status').textContent = 'Disconnected';
+    document.getElementById('status').style.background = '#e74c3c';
+  }
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

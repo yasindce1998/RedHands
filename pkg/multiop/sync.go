@@ -87,7 +87,7 @@ func (sm *SyncManager) Push() []error {
 			errs = append(errs, fmt.Errorf("push to %s: %w", peer.URL, err))
 			continue
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			errs = append(errs, fmt.Errorf("push to %s: status %d", peer.URL, resp.StatusCode))
 		}
@@ -129,7 +129,7 @@ func (sm *SyncManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/sync/pull":
 		state := sm.Export()
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(state)
+		_ = json.NewEncoder(w).Encode(state)
 
 	case "/sync/push":
 		body, _ := io.ReadAll(r.Body)

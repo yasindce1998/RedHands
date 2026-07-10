@@ -260,7 +260,7 @@ func (t *UploadTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
 	sb.WriteString("## Evil-WinRM Upload\n\n")
-	sb.WriteString(fmt.Sprintf("Uploaded `%s` -> `%s`\n\n", input.LocalPath, input.RemotePath))
+	fmt.Fprintf(&sb, "Uploaded `%s` -> `%s`\n\n", input.LocalPath, input.RemotePath)
 	if output != "" {
 		sb.WriteString("```\n")
 		sb.WriteString(output)
@@ -394,7 +394,7 @@ func (t *DownloadTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
 	sb.WriteString("## Evil-WinRM Download\n\n")
-	sb.WriteString(fmt.Sprintf("Downloaded `%s` -> `%s`\n\n", input.RemotePath, input.LocalPath))
+	fmt.Fprintf(&sb, "Downloaded `%s` -> `%s`\n\n", input.RemotePath, input.LocalPath)
 	if output != "" {
 		sb.WriteString("```\n")
 		sb.WriteString(output)
@@ -519,7 +519,7 @@ func (t *DllInjectTool) Execute(ctx context.Context, params json.RawMessage) (*m
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
 	sb.WriteString("## Evil-WinRM DLL Inject\n\n")
-	sb.WriteString(fmt.Sprintf("Injected DLL: `%s`\n\n", input.DllPath))
+	fmt.Fprintf(&sb, "Injected DLL: `%s`\n\n", input.DllPath)
 	if output != "" {
 		sb.WriteString("```\n")
 		sb.WriteString(output)

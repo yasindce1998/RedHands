@@ -201,7 +201,7 @@ func (e *Engine) credentialReuse() []Insight {
 			Type:        "credential_reuse",
 			Severity:    "medium",
 			Title:       fmt.Sprintf("Credential reuse: %s\\%s across %d hosts", k.domain, k.user, len(hosts)),
-			Description: fmt.Sprintf("Same credential found on multiple hosts suggesting password reuse"),
+			Description: "Same credential found on multiple hosts suggesting password reuse",
 			Hosts:       hosts,
 			Suggestion:  "Test this credential against all hosts with authentication services",
 		})

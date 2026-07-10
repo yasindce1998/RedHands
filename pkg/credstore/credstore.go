@@ -111,7 +111,7 @@ func (s *Store) save() {
 	if err != nil {
 		return
 	}
-	os.WriteFile(s.file, encrypted, 0600)
+	_ = os.WriteFile(s.file, encrypted, 0600)
 }
 
 func (s *Store) load() {
@@ -123,7 +123,7 @@ func (s *Store) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(decrypted, &s.entries)
+	_ = json.Unmarshal(decrypted, &s.entries)
 }
 
 func deriveKey(passphrase string) []byte {

@@ -102,7 +102,7 @@ func (w *Watcher) scan() {
 			} else {
 				log.Printf("[plugin] discovered: %s", path)
 				if w.onReload != nil {
-					w.onReload(path)
+					_ = w.onReload(path)
 				}
 			}
 		}

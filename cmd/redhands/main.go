@@ -562,7 +562,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to start TCP transport: %v", err)
 		}
-		defer tcpTransport.Close()
+		defer func() { _ = tcpTransport.Close() }()
 		go func() {
 			log.Printf("starting TCP transport on %s", tcpTransport.Addr())
 			if err := tcpTransport.Serve(); err != nil {

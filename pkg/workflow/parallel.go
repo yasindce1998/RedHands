@@ -9,11 +9,6 @@ import (
 
 // RunParallel executes multiple steps concurrently and collects results.
 func (e *EnhancedEngine) RunParallel(ctx context.Context, steps []EnhancedStep, results map[string]StepResult, allResults []StepResult) ([]StepResult, error) {
-	type indexedResult struct {
-		idx    int
-		result StepResult
-	}
-
 	var (
 		mu      sync.Mutex
 		wg      sync.WaitGroup

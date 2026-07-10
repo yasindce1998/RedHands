@@ -105,7 +105,7 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 		case <-ctx.Done():
 			state.Status = "paused"
 			state.NextIndex = i
-			e.state.Save(state)
+			_ = e.state.Save(state)
 			return buildResult(allResults, false), ctx.Err()
 		default:
 		}
@@ -133,7 +133,7 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 			if err != nil {
 				state.Status = "failed"
 				state.Error = err.Error()
-				e.state.Save(state)
+				_ = e.state.Save(state)
 				return buildResult(allResults, false), nil
 			}
 			allResults = append(allResults, results...)
@@ -158,13 +158,13 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 				case "stop":
 					state.Status = "failed"
 					state.NextIndex = i + 1
-					e.state.Save(state)
+					_ = e.state.Save(state)
 					return buildResult(allResults, false), nil
 				default:
 					// "goto:step_id" not implemented in first pass
 					state.Status = "failed"
 					state.NextIndex = i + 1
-					e.state.Save(state)
+					_ = e.state.Save(state)
 					return buildResult(allResults, false), nil
 				}
 			}
@@ -173,11 +173,11 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 		state.NextIndex = i + 1
 
 		// Checkpoint every step
-		e.state.Save(state)
+		_ = e.state.Save(state)
 	}
 
 	state.Status = "completed"
-	e.state.Save(state)
+	_ = e.state.Save(state)
 	return buildResult(allResults, true), nil
 }
 

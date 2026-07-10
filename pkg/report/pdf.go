@@ -36,7 +36,7 @@ func GeneratePDF(ctx context.Context, opts PDFOptions) (string, error) {
 	if err := os.WriteFile(htmlPath, []byte(htmlContent), 0600); err != nil {
 		return "", fmt.Errorf("write temp HTML: %w", err)
 	}
-	defer os.Remove(htmlPath)
+	defer func() { _ = os.Remove(htmlPath) }()
 
 	cmd := exec.CommandContext(ctx, "wkhtmltopdf",
 		"--page-size", opts.PageSize,

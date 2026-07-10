@@ -133,7 +133,7 @@ func (m *Manager) save() {
 	}{m.engagements, m.active}
 
 	b, _ := json.MarshalIndent(data, "", "  ")
-	os.WriteFile(filepath.Join(m.baseDir, "engagements.json"), b, 0600)
+	_ = os.WriteFile(filepath.Join(m.baseDir, "engagements.json"), b, 0600)
 }
 
 func (m *Manager) load() {

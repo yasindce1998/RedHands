@@ -123,14 +123,14 @@ func (s *Scheduler) checkAndRun(ctx context.Context, now time.Time) {
 
 	for _, e := range toRun {
 		go func(entry *ScheduleEntry) {
-			s.engine.RunEnhanced(ctx, &entry.Workflow)
+			_, _ = s.engine.RunEnhanced(ctx, &entry.Workflow)
 
 			s.mu.Lock()
 			entry.LastRun = time.Now().Unix()
 			entry.NextRun = nextCronTime(entry.Cron, time.Now()).Unix()
 			s.mu.Unlock()
 
-			s.save()
+			_ = s.save()
 		}(e)
 	}
 }

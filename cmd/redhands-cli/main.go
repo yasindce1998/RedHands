@@ -90,10 +90,10 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		body, _ := io.ReadAll(resp.Body)
 		var out bytes.Buffer
-		json.Indent(&out, body, "", "  ")
+		_ = json.Indent(&out, body, "", "  ")
 		fmt.Println(out.String())
 
 	case "version":
@@ -154,7 +154,7 @@ func listTools(serverURL string) {
 			Description string `json:"description"`
 		} `json:"tools"`
 	}
-	json.Unmarshal(result, &toolsList)
+	_ = json.Unmarshal(result, &toolsList)
 
 	if len(toolsList.Tools) > 0 {
 		maxName := 0
@@ -180,7 +180,7 @@ func rpcCall(serverURL string, req jsonRPCRequest) json.RawMessage {
 		fmt.Fprintf(os.Stderr, "Error connecting to %s: %v\n", serverURL, err)
 		os.Exit(1)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, _ := io.ReadAll(resp.Body)
 

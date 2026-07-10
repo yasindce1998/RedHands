@@ -59,7 +59,7 @@ func (t *TCPTransport) Close() error {
 
 	t.mu.Lock()
 	for _, c := range t.conns {
-		c.Close()
+		_ = c.Close()
 	}
 	t.conns = nil
 	t.mu.Unlock()
@@ -68,7 +68,7 @@ func (t *TCPTransport) Close() error {
 }
 
 func (t *TCPTransport) handleConn(conn net.Conn) {
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	for {
 		msg, err := readFrame(conn)

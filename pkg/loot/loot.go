@@ -28,7 +28,7 @@ type Store struct {
 }
 
 func NewStore(dataDir string) *Store {
-	os.MkdirAll(dataDir, 0700)
+	_ = os.MkdirAll(dataDir, 0700)
 	s := &Store{dataDir: dataDir}
 	s.load()
 	return s
@@ -93,7 +93,7 @@ func (s *Store) Count() int {
 
 func (s *Store) save() {
 	b, _ := json.MarshalIndent(s.items, "", "  ")
-	os.WriteFile(filepath.Join(s.dataDir, "loot.json"), b, 0600)
+	_ = os.WriteFile(filepath.Join(s.dataDir, "loot.json"), b, 0600)
 }
 
 func (s *Store) load() {
@@ -101,5 +101,5 @@ func (s *Store) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(b, &s.items)
+	_ = json.Unmarshal(b, &s.items)
 }

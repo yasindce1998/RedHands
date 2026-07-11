@@ -36,7 +36,11 @@ func (t *ListHostsTool) Execute(ctx context.Context, params json.RawMessage) (*m
 	var input struct {
 		Tag string `json:"tag"`
 	}
-	_ = json.Unmarshal(params, &input)
+	if len(params) > 0 {
+		if err := json.Unmarshal(params, &input); err != nil {
+			return errorResult(fmt.Sprintf("invalid params: %s", err)), nil
+		}
+	}
 
 	hosts := t.store.ListHosts()
 

@@ -3,6 +3,7 @@ package loot
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,14 +28,16 @@ type Store struct {
 	dataDir string
 }
 
-func NewStore(dataDir string) *Store {
-	_ = os.MkdirAll(dataDir, 0700)
+func NewStore(dataDir string) (*Store, error) {
+	if err := os.MkdirAll(dataDir, 0700); err != nil {
+		return nil, fmt.Errorf("loot: create dir: %w", err)
+	}
 	s := &Store{dataDir: dataDir}
 	s.load()
-	return s
+	return s, nil
 }
 
-func (s *Store) Add(item *Item) {
+func (s *Store) Add(item *Item) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -43,7 +46,7 @@ func (s *Store) Add(item *Item) {
 	}
 	item.CreatedAt = time.Now()
 	s.items = append(s.items, item)
-	s.save()
+	return s.save()
 }
 
 func (s *Store) List(lootType, host string) []*Item {
@@ -91,9 +94,12 @@ func (s *Store) Count() int {
 	return len(s.items)
 }
 
-func (s *Store) save() {
-	b, _ := json.MarshalIndent(s.items, "", "  ")
-	_ = os.WriteFile(filepath.Join(s.dataDir, "loot.json"), b, 0600)
+func (s *Store) save() error {
+	b, err := json.MarshalIndent(s.items, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(s.dataDir, "loot.json"), b, 0600)
 }
 
 func (s *Store) load() {
@@ -101,5 +107,7 @@ func (s *Store) load() {
 	if err != nil {
 		return
 	}
-	_ = json.Unmarshal(b, &s.items)
+	if err := json.Unmarshal(b, &s.items); err != nil {
+		log.Printf("loot: failed to parse loot.json: %v", err)
+	}
 }

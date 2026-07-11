@@ -68,7 +68,9 @@ func (m *Manager) Create(name, client string, scope []string) (*Engagement, erro
 	if m.active == "" {
 		m.active = id
 	}
-	m.save()
+	if err := m.save(); err != nil {
+		return nil, fmt.Errorf("save engagement: %w", err)
+	}
 	return eng, nil
 }
 
@@ -80,8 +82,7 @@ func (m *Manager) Switch(id string) error {
 		return fmt.Errorf("engagement %q not found", id)
 	}
 	m.active = id
-	m.save()
-	return nil
+	return m.save()
 }
 
 func (m *Manager) Active() *Engagement {
@@ -126,14 +127,17 @@ func matchScope(target, scope string) bool {
 	return matched
 }
 
-func (m *Manager) save() {
+func (m *Manager) save() error {
 	data := struct {
 		Engagements map[string]*Engagement `json:"engagements"`
 		Active      string                 `json:"active"`
 	}{m.engagements, m.active}
 
-	b, _ := json.MarshalIndent(data, "", "  ")
-	_ = os.WriteFile(filepath.Join(m.baseDir, "engagements.json"), b, 0600)
+	b, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(m.baseDir, "engagements.json"), b, 0600)
 }
 
 func (m *Manager) load() {

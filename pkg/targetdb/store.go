@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 )
@@ -26,12 +27,14 @@ func NewStore(filePath string, autoSave bool) *Store {
 		autoSave: autoSave,
 	}
 	if filePath != "" {
-		_ = s.Load()
+		if err := s.Load(); err != nil {
+			log.Printf("targetdb: failed to load %s: %v", filePath, err)
+		}
 	}
 	return s
 }
 
-func (s *Store) AddHost(h *Host) {
+func (s *Store) AddHost(h *Host) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -62,8 +65,9 @@ func (s *Store) AddHost(h *Host) {
 	}
 
 	if s.autoSave {
-		_ = s.save()
+		return s.save()
 	}
+	return nil
 }
 
 func (s *Store) GetHost(ip string) (*Host, bool) {
@@ -83,7 +87,7 @@ func (s *Store) ListHosts() []*Host {
 	return hosts
 }
 
-func (s *Store) AddService(svc *Service) {
+func (s *Store) AddService(svc *Service) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -100,16 +104,17 @@ func (s *Store) AddService(svc *Service) {
 				existing.Banner = svc.Banner
 			}
 			if s.autoSave {
-				_ = s.save()
+				return s.save()
 			}
-			return
+			return nil
 		}
 	}
 	s.services[key] = append(s.services[key], svc)
 
 	if s.autoSave {
-		_ = s.save()
+		return s.save()
 	}
+	return nil
 }
 
 func (s *Store) ListServices(host string) []*Service {
@@ -125,7 +130,7 @@ func (s *Store) ListServices(host string) []*Service {
 	return s.services[host]
 }
 
-func (s *Store) AddCredential(c *Credential) {
+func (s *Store) AddCredential(c *Credential) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -138,16 +143,17 @@ func (s *Store) AddCredential(c *Credential) {
 			existing.Source = c.Source
 			existing.Valid = c.Valid
 			if s.autoSave {
-				_ = s.save()
+				return s.save()
 			}
-			return
+			return nil
 		}
 	}
 	s.credentials = append(s.credentials, c)
 
 	if s.autoSave {
-		_ = s.save()
+		return s.save()
 	}
+	return nil
 }
 
 func (s *Store) ListCredentials() []*Credential {
@@ -158,7 +164,7 @@ func (s *Store) ListCredentials() []*Credential {
 	return result
 }
 
-func (s *Store) AddFinding(f *Finding) {
+func (s *Store) AddFinding(f *Finding) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -171,8 +177,9 @@ func (s *Store) AddFinding(f *Finding) {
 	s.findings = append(s.findings, f)
 
 	if s.autoSave {
-		_ = s.save()
+		return s.save()
 	}
+	return nil
 }
 
 func (s *Store) ListFindings() []*Finding {

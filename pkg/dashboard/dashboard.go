@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"io/fs"
+	"log"
 	"net/http"
 
 	"github.com/yasindce1998/redhands/pkg/targetdb"
@@ -66,5 +67,7 @@ func (d *Dashboard) handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("dashboard: encode status response failed: %v", err)
+	}
 }

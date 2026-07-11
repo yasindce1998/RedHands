@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -123,14 +124,18 @@ func (s *Scheduler) checkAndRun(ctx context.Context, now time.Time) {
 
 	for _, e := range toRun {
 		go func(entry *ScheduleEntry) {
-			_, _ = s.engine.RunEnhanced(ctx, &entry.Workflow)
+			if _, err := s.engine.RunEnhanced(ctx, &entry.Workflow); err != nil {
+				log.Printf("scheduler: workflow %s failed: %v", entry.ID, err)
+			}
 
 			s.mu.Lock()
 			entry.LastRun = time.Now().Unix()
 			entry.NextRun = nextCronTime(entry.Cron, time.Now()).Unix()
 			s.mu.Unlock()
 
-			_ = s.save()
+			if err := s.save(); err != nil {
+				log.Printf("scheduler: save state failed: %v", err)
+			}
 		}(e)
 	}
 }

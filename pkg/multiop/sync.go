@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -54,19 +55,28 @@ func (sm *SyncManager) Export() *SyncState {
 	}
 }
 
-func (sm *SyncManager) Import(state *SyncState) {
+func (sm *SyncManager) Import(state *SyncState) error {
 	for _, h := range state.Hosts {
-		sm.store.AddHost(h)
+		if err := sm.store.AddHost(h); err != nil {
+			return fmt.Errorf("import host %s: %w", h.IP, err)
+		}
 	}
 	for _, s := range state.Services {
-		sm.store.AddService(s)
+		if err := sm.store.AddService(s); err != nil {
+			return fmt.Errorf("import service %s:%d: %w", s.Host, s.Port, err)
+		}
 	}
 	for _, c := range state.Credentials {
-		sm.store.AddCredential(c)
+		if err := sm.store.AddCredential(c); err != nil {
+			return fmt.Errorf("import credential %s: %w", c.Username, err)
+		}
 	}
 	for _, f := range state.Findings {
-		sm.store.AddFinding(f)
+		if err := sm.store.AddFinding(f); err != nil {
+			return fmt.Errorf("import finding %s: %w", f.ID, err)
+		}
 	}
+	return nil
 }
 
 func (sm *SyncManager) Push() []error {
@@ -119,7 +129,9 @@ func (sm *SyncManager) Pull() []error {
 			continue
 		}
 
-		sm.Import(&state)
+		if err := sm.Import(&state); err != nil {
+			errs = append(errs, fmt.Errorf("import from %s: %w", peer.URL, err))
+		}
 	}
 	return errs
 }
@@ -129,7 +141,9 @@ func (sm *SyncManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/sync/pull":
 		state := sm.Export()
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(state)
+		if err := json.NewEncoder(w).Encode(state); err != nil {
+			log.Printf("sync: failed to encode pull response: %v", err)
+		}
 
 	case "/sync/push":
 		body, _ := io.ReadAll(r.Body)
@@ -138,7 +152,10 @@ func (sm *SyncManager) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		sm.Import(&state)
+		if err := sm.Import(&state); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 
 	default:

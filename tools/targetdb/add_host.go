@@ -56,7 +56,9 @@ func (t *AddHostTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		OS:       input.OS,
 		Tags:     input.Tags,
 	}
-	t.store.AddHost(host)
+	if err := t.store.AddHost(host); err != nil {
+		return errorResult(fmt.Sprintf("failed to save host: %s", err)), nil
+	}
 
 	return textResult(fmt.Sprintf("Host %s added/updated in target database", input.IP)), nil
 }

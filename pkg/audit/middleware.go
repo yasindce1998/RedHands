@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/yasindce1998/redhands/pkg/mcp"
@@ -38,7 +39,9 @@ func Middleware(logger Logger) mcp.Middleware {
 				event.Result = "success"
 			}
 
-			_ = logger.Log(ctx, event)
+			if err := logger.Log(ctx, event); err != nil {
+				log.Printf("audit: log event failed: %v", err)
+			}
 
 			return result, err
 		}

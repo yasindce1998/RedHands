@@ -102,7 +102,9 @@ func (w *Watcher) scan() {
 			} else {
 				log.Printf("[plugin] discovered: %s", path)
 				if w.onReload != nil {
-					_ = w.onReload(path)
+					if err := w.onReload(path); err != nil {
+						log.Printf("[plugin] initial load failed for %s: %v", path, err)
+					}
 				}
 			}
 		}

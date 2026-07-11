@@ -65,7 +65,9 @@ func (t *AddFindingTool) Execute(ctx context.Context, params json.RawMessage) (*
 		Evidence:    input.Evidence,
 		MITRE:       input.MITRE,
 	}
-	t.store.AddFinding(finding)
+	if err := t.store.AddFinding(finding); err != nil {
+		return errorResult(fmt.Sprintf("failed to save finding: %s", err)), nil
+	}
 
 	return textResult(fmt.Sprintf("Finding added: [%s] %s on %s", input.Severity, input.Title, input.Host)), nil
 }

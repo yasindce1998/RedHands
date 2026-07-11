@@ -40,7 +40,11 @@ func (t *QueryFindingsTool) Execute(ctx context.Context, params json.RawMessage)
 		Severity string `json:"severity"`
 		Tool     string `json:"tool"`
 	}
-	_ = json.Unmarshal(params, &input)
+	if len(params) > 0 {
+		if err := json.Unmarshal(params, &input); err != nil {
+			return errorResult(fmt.Sprintf("invalid params: %s", err)), nil
+		}
+	}
 
 	findings := t.store.QueryFindings(input.Host, input.Severity, input.Tool)
 	if len(findings) == 0 {

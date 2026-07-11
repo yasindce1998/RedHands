@@ -65,7 +65,9 @@ func (t *AddCredTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		Source:   input.Source,
 		Valid:    input.Valid,
 	}
-	t.store.AddCredential(cred)
+	if err := t.store.AddCredential(cred); err != nil {
+		return errorResult(fmt.Sprintf("failed to save credential: %s", err)), nil
+	}
 
 	display := input.Username
 	if input.Domain != "" {

@@ -40,7 +40,11 @@ func (t *ListCredsTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		Type      string `json:"type"`
 		ValidOnly bool   `json:"valid_only"`
 	}
-	_ = json.Unmarshal(params, &input)
+	if len(params) > 0 {
+		if err := json.Unmarshal(params, &input); err != nil {
+			return errorResult(fmt.Sprintf("invalid params: %s", err)), nil
+		}
+	}
 
 	creds := t.store.ListCredentials()
 

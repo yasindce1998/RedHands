@@ -39,11 +39,13 @@ func NewStore(file string, passphrase string) (*Store, error) {
 		key:  key,
 		file: file,
 	}
-	s.load()
+	if err := s.load(); err != nil {
+		return nil, fmt.Errorf("credstore load: %w", err)
+	}
 	return s, nil
 }
 
-func (s *Store) Add(e *Entry) {
+func (s *Store) Add(e *Entry) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -53,7 +55,7 @@ func (s *Store) Add(e *Entry) {
 		e.ID = hex.EncodeToString(b)
 	}
 	s.entries = append(s.entries, e)
-	s.save()
+	return s.save()
 }
 
 func (s *Store) Search(query string) []*Entry {
@@ -105,25 +107,34 @@ func (s *Store) Count() int {
 	return len(s.entries)
 }
 
-func (s *Store) save() {
-	data, _ := json.Marshal(s.entries)
+func (s *Store) save() error {
+	data, err := json.Marshal(s.entries)
+	if err != nil {
+		return fmt.Errorf("marshal: %w", err)
+	}
 	encrypted, err := encrypt(data, s.key)
 	if err != nil {
-		return
+		return fmt.Errorf("encrypt: %w", err)
 	}
-	_ = os.WriteFile(s.file, encrypted, 0600)
+	return os.WriteFile(s.file, encrypted, 0600)
 }
 
-func (s *Store) load() {
+func (s *Store) load() error {
 	data, err := os.ReadFile(s.file)
 	if err != nil {
-		return
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
 	}
 	decrypted, err := decrypt(data, s.key)
 	if err != nil {
-		return
+		return fmt.Errorf("decrypt: %w", err)
 	}
-	_ = json.Unmarshal(decrypted, &s.entries)
+	if err := json.Unmarshal(decrypted, &s.entries); err != nil {
+		return fmt.Errorf("unmarshal: %w", err)
+	}
+	return nil
 }
 
 func deriveKey(passphrase string) []byte {

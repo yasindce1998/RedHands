@@ -48,13 +48,15 @@ func (t *LootAddTool) Execute(_ context.Context, params json.RawMessage) (*mcp.T
 		return errorResult("invalid params: " + err.Error())
 	}
 
-	t.store.Add(&loot.Item{
+	if err := t.store.Add(&loot.Item{
 		Type:        input.Type,
 		Host:        input.Host,
 		Description: input.Description,
 		Data:        input.Data,
 		Tags:        input.Tags,
-	})
+	}); err != nil {
+		return errorResult("failed to save loot: " + err.Error())
+	}
 
 	return textResult("Loot added successfully")
 }

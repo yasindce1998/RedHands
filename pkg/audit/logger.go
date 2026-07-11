@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 )
@@ -58,7 +59,9 @@ func (l *FileLogger) writer() {
 	enc := json.NewEncoder(l.file)
 	for event := range l.events {
 		l.mu.Lock()
-		_ = enc.Encode(event)
+		if err := enc.Encode(event); err != nil {
+			log.Printf("audit: write event failed: %v", err)
+		}
 		l.mu.Unlock()
 	}
 }

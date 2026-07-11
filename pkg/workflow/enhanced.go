@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -105,7 +106,9 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 		case <-ctx.Done():
 			state.Status = "paused"
 			state.NextIndex = i
-			_ = e.state.Save(state)
+			if err := e.state.Save(state); err != nil {
+				log.Printf("workflow: checkpoint save failed: %v", err)
+			}
 			return buildResult(allResults, false), ctx.Err()
 		default:
 		}
@@ -133,7 +136,9 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 			if err != nil {
 				state.Status = "failed"
 				state.Error = err.Error()
-				_ = e.state.Save(state)
+				if err := e.state.Save(state); err != nil {
+					log.Printf("workflow: checkpoint save failed: %v", err)
+				}
 				return buildResult(allResults, false), nil
 			}
 			allResults = append(allResults, results...)
@@ -158,13 +163,17 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 				case "stop":
 					state.Status = "failed"
 					state.NextIndex = i + 1
-					_ = e.state.Save(state)
+					if err := e.state.Save(state); err != nil {
+						log.Printf("workflow: checkpoint save failed: %v", err)
+					}
 					return buildResult(allResults, false), nil
 				default:
 					// "goto:step_id" not implemented in first pass
 					state.Status = "failed"
 					state.NextIndex = i + 1
-					_ = e.state.Save(state)
+					if err := e.state.Save(state); err != nil {
+						log.Printf("workflow: checkpoint save failed: %v", err)
+					}
 					return buildResult(allResults, false), nil
 				}
 			}
@@ -173,11 +182,15 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 		state.NextIndex = i + 1
 
 		// Checkpoint every step
-		_ = e.state.Save(state)
+		if err := e.state.Save(state); err != nil {
+			log.Printf("workflow: checkpoint save failed: %v", err)
+		}
 	}
 
 	state.Status = "completed"
-	_ = e.state.Save(state)
+	if err := e.state.Save(state); err != nil {
+		log.Printf("workflow: checkpoint save failed: %v", err)
+	}
 	return buildResult(allResults, true), nil
 }
 

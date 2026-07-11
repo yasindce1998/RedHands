@@ -94,7 +94,10 @@ func (s *Server) handleWSConn(ctx context.Context, ws *wsConn) {
 			wsWriteClose(ws, 1000, "")
 			return
 		case wsOpPing:
-			_ = wsWriteFrame(ws, wsOpPong, payload)
+			if err := wsWriteFrame(ws, wsOpPong, payload); err != nil {
+				log.Printf("ws: pong write failed: %v", err)
+				return
+			}
 			continue
 		case wsOpPong:
 			continue
@@ -108,14 +111,20 @@ func (s *Server) handleWSConn(ctx context.Context, ws *wsConn) {
 		if err := json.Unmarshal(payload, &req); err != nil {
 			resp := s.errorResponse(nil, ErrCodeParse, "parse error")
 			data, _ := json.Marshal(resp)
-			_ = wsWriteFrame(ws, wsOpText, data)
+			if err := wsWriteFrame(ws, wsOpText, data); err != nil {
+				log.Printf("ws: write error response failed: %v", err)
+				return
+			}
 			continue
 		}
 
 		if req.JSONRPC != JSONRPCVersion {
 			resp := s.errorResponse(req.ID, ErrCodeInvalidRequest, "invalid jsonrpc version")
 			data, _ := json.Marshal(resp)
-			_ = wsWriteFrame(ws, wsOpText, data)
+			if err := wsWriteFrame(ws, wsOpText, data); err != nil {
+				log.Printf("ws: write error response failed: %v", err)
+				return
+			}
 			continue
 		}
 

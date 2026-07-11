@@ -53,7 +53,7 @@ func (t *CredstoreAddTool) Execute(_ context.Context, params json.RawMessage) (*
 		return errorResult("invalid params: " + err.Error())
 	}
 
-	t.store.Add(&credstore.Entry{
+	if err := t.store.Add(&credstore.Entry{
 		Host:     input.Host,
 		Username: input.Username,
 		Secret:   input.Secret,
@@ -61,7 +61,9 @@ func (t *CredstoreAddTool) Execute(_ context.Context, params json.RawMessage) (*
 		Domain:   input.Domain,
 		Source:   input.Source,
 		Valid:    input.Valid,
-	})
+	}); err != nil {
+		return errorResult("failed to save credential: " + err.Error())
+	}
 
 	return textResult(fmt.Sprintf("Credential stored: %s@%s (%s)", input.Username, input.Host, input.Type))
 }

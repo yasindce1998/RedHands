@@ -38,7 +38,7 @@ func (t *EvidenceListTool) Execute(_ context.Context, params json.RawMessage) (*
 		Host string `json:"host"`
 	}
 	if len(params) > 0 {
-		json.Unmarshal(params, &input)
+		_ = json.Unmarshal(params, &input)
 	}
 
 	var items []*evidence.Item

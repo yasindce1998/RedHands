@@ -51,7 +51,7 @@ func (s *Store) Add(e *Entry) error {
 
 	if e.ID == "" {
 		b := make([]byte, 8)
-		rand.Read(b)
+		_, _ = rand.Read(b)
 		e.ID = hex.EncodeToString(b)
 	}
 	s.entries = append(s.entries, e)

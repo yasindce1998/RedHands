@@ -94,7 +94,7 @@ func (t *Tracker) load() {
 	if err != nil {
 		return
 	}
-	json.Unmarshal(data, &t.iocs)
+	_ = json.Unmarshal(data, &t.iocs)
 }
 
 func (t *Tracker) save() {
@@ -102,5 +102,5 @@ func (t *Tracker) save() {
 		return
 	}
 	data, _ := json.MarshalIndent(t.iocs, "", "  ")
-	os.WriteFile(t.file, data, 0600)
+	_ = os.WriteFile(t.file, data, 0600)
 }

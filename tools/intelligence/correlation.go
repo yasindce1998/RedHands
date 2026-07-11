@@ -48,7 +48,7 @@ func (t *CorrelationTool) Execute(_ context.Context, params json.RawMessage) (*m
 		MinSeverity string `json:"min_severity"`
 	}
 	if len(params) > 0 {
-		json.Unmarshal(params, &input)
+		_ = json.Unmarshal(params, &input)
 	}
 
 	engine := correlation.NewEngine(t.store)

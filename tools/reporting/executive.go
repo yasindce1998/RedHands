@@ -39,7 +39,7 @@ func (t *ExecutiveSummaryTool) Execute(_ context.Context, params json.RawMessage
 		Format string `json:"format"`
 	}
 	if len(params) > 0 {
-		json.Unmarshal(params, &input)
+		_ = json.Unmarshal(params, &input)
 	}
 	if input.Format == "" {
 		input.Format = "markdown"

@@ -109,7 +109,7 @@ func extractTarget(params json.RawMessage) string {
 		Host   string `json:"host"`
 		IP     string `json:"ip"`
 	}
-	json.Unmarshal(params, &p)
+	_ = json.Unmarshal(params, &p)
 
 	if p.Target != "" {
 		return p.Target

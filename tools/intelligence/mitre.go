@@ -41,7 +41,7 @@ func (t *MitreLookupTool) Execute(_ context.Context, params json.RawMessage) (*m
 		Tactic    string `json:"tactic"`
 	}
 	if len(params) > 0 {
-		json.Unmarshal(params, &input)
+		_ = json.Unmarshal(params, &input)
 	}
 
 	if input.Tool == "" && input.Technique == "" && input.Tactic == "" {

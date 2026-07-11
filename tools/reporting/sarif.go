@@ -39,7 +39,7 @@ func (t *SARIFTool) Execute(_ context.Context, params json.RawMessage) (*mcp.Too
 		HostFilter     string `json:"host_filter"`
 	}
 	if len(params) > 0 {
-		json.Unmarshal(params, &input)
+		_ = json.Unmarshal(params, &input)
 	}
 
 	findings := t.store.QueryFindings("", input.HostFilter, input.SeverityFilter)

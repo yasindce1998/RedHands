@@ -99,6 +99,6 @@ func (sm *StateManager) Delete(workflowID string) error {
 // GenerateID creates a random workflow ID.
 func GenerateID() string {
 	b := make([]byte, 8)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }

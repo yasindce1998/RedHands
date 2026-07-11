@@ -98,7 +98,7 @@ func (t *StartTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.T
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
 	sb.WriteString("## Responder Started\n\n")
-	sb.WriteString(fmt.Sprintf("Interface: %s\n", input.Interface))
+	fmt.Fprintf(&sb, "Interface: %s\n", input.Interface)
 	if input.AnalyzeMode {
 		sb.WriteString("Mode: Analyze (passive)\n")
 	}
@@ -167,7 +167,7 @@ func (t *AnalyzeTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
 	sb.WriteString("## Responder Analyze Mode\n\n")
-	sb.WriteString(fmt.Sprintf("Interface: %s\n", input.Interface))
+	fmt.Fprintf(&sb, "Interface: %s\n", input.Interface)
 	sb.WriteString("Mode: Analyze (passive, no poisoning)\n")
 	if output != "" {
 		sb.WriteString("\n```\n")

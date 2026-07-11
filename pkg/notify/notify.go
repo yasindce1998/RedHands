@@ -70,7 +70,7 @@ func (n *Notifier) send(_ context.Context, url string, evt Event) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := n.client.Do(req)
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 

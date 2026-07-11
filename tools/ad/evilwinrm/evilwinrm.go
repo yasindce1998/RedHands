@@ -644,7 +644,7 @@ func (t *PsExecTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
 	sb.WriteString("## Evil-WinRM PowerShell Exec\n\n")
-	sb.WriteString(fmt.Sprintf("Script: `%s`\n\n", input.ScriptPath))
+	fmt.Fprintf(&sb, "Script: `%s`\n\n", input.ScriptPath)
 	if output == "" {
 		sb.WriteString("Script executed (no output).\n")
 	} else {

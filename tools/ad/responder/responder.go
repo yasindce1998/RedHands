@@ -255,9 +255,9 @@ func (t *LogsTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.To
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
 	sb.WriteString("## Responder Logs\n\n")
-	sb.WriteString(fmt.Sprintf("Directory: %s\n", logDir))
+	fmt.Fprintf(&sb, "Directory: %s\n", logDir)
 	if input.Filter != "" {
-		sb.WriteString(fmt.Sprintf("Filter: %s\n", input.Filter))
+		fmt.Fprintf(&sb, "Filter: %s\n", input.Filter)
 	}
 	if output == "" {
 		sb.WriteString("\nNo log entries found.\n")

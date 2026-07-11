@@ -53,11 +53,11 @@ func (t *MitreLookupTool) Execute(_ context.Context, params json.RawMessage) (*m
 	if input.Tool != "" {
 		techniques := mitre.Lookup(input.Tool)
 		if techniques == nil {
-			sb.WriteString(fmt.Sprintf("No MITRE mapping found for tool: %s\n", input.Tool))
+			fmt.Fprintf(&sb, "No MITRE mapping found for tool: %s\n", input.Tool)
 		} else {
-			sb.WriteString(fmt.Sprintf("## MITRE ATT&CK Mapping: %s\n\n", input.Tool))
+			fmt.Fprintf(&sb, "## MITRE ATT&CK Mapping: %s\n\n", input.Tool)
 			for _, tech := range techniques {
-				sb.WriteString(fmt.Sprintf("- **%s** - %s (Tactic: %s)\n", tech.ID, tech.Name, tech.Tactic))
+				fmt.Fprintf(&sb, "- **%s** - %s (Tactic: %s)\n", tech.ID, tech.Name, tech.Tactic)
 			}
 		}
 	}
@@ -65,11 +65,11 @@ func (t *MitreLookupTool) Execute(_ context.Context, params json.RawMessage) (*m
 	if input.Technique != "" {
 		tech, ok := mitre.GetTechnique(input.Technique)
 		if !ok {
-			sb.WriteString(fmt.Sprintf("Unknown technique: %s\n", input.Technique))
+			fmt.Fprintf(&sb, "Unknown technique: %s\n", input.Technique)
 		} else {
-			sb.WriteString(fmt.Sprintf("\n## Technique: %s\n", tech.ID))
-			sb.WriteString(fmt.Sprintf("- Name: %s\n", tech.Name))
-			sb.WriteString(fmt.Sprintf("- Tactic: %s\n", tech.Tactic))
+			fmt.Fprintf(&sb, "\n## Technique: %s\n", tech.ID)
+			fmt.Fprintf(&sb, "- Name: %s\n", tech.Name)
+			fmt.Fprintf(&sb, "- Tactic: %s\n", tech.Tactic)
 
 			// Find which tools map to this technique
 			var tools []string
@@ -82,7 +82,7 @@ func (t *MitreLookupTool) Execute(_ context.Context, params json.RawMessage) (*m
 				}
 			}
 			if len(tools) > 0 {
-				sb.WriteString(fmt.Sprintf("- Tools: %s\n", strings.Join(tools, ", ")))
+				fmt.Fprintf(&sb, "- Tools: %s\n", strings.Join(tools, ", "))
 			}
 		}
 	}
@@ -90,11 +90,11 @@ func (t *MitreLookupTool) Execute(_ context.Context, params json.RawMessage) (*m
 	if input.Tactic != "" {
 		techniques := mitre.TacticTechniques(input.Tactic)
 		if len(techniques) == 0 {
-			sb.WriteString(fmt.Sprintf("No techniques found for tactic: %s\n", input.Tactic))
+			fmt.Fprintf(&sb, "No techniques found for tactic: %s\n", input.Tactic)
 		} else {
-			sb.WriteString(fmt.Sprintf("\n## Tactic: %s (%d techniques)\n\n", input.Tactic, len(techniques)))
+			fmt.Fprintf(&sb, "\n## Tactic: %s (%d techniques)\n\n", input.Tactic, len(techniques))
 			for _, tech := range techniques {
-				sb.WriteString(fmt.Sprintf("- %s: %s\n", tech.ID, tech.Name))
+				fmt.Fprintf(&sb, "- %s: %s\n", tech.ID, tech.Name)
 			}
 		}
 	}

@@ -12,9 +12,9 @@ func newTestStore() *targetdb.Store {
 
 func TestEscalationChain_Triggered(t *testing.T) {
 	s := newTestStore()
-	s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
-	s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "critical", Title: "RCE", Tool: "exploit"})
-	s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "high", Title: "LPE", Tool: "enum"})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
+	_ = s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "critical", Title: "RCE", Tool: "exploit"})
+	_ = s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "high", Title: "LPE", Tool: "enum"})
 
 	e := NewEngine(s)
 	insights := e.Analyze()
@@ -38,9 +38,9 @@ func TestEscalationChain_Triggered(t *testing.T) {
 
 func TestEscalationChain_BelowThreshold(t *testing.T) {
 	s := newTestStore()
-	s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
-	s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "critical", Title: "RCE", Tool: "x"})
-	s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "low", Title: "Info", Tool: "x"})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
+	_ = s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "critical", Title: "RCE", Tool: "x"})
+	_ = s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "low", Title: "Info", Tool: "x"})
 
 	e := NewEngine(s)
 	insights := e.Analyze()
@@ -54,10 +54,10 @@ func TestEscalationChain_BelowThreshold(t *testing.T) {
 
 func TestLateralMovement(t *testing.T) {
 	s := newTestStore()
-	s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
-	s.AddHost(&targetdb.Host{IP: "10.0.0.2"})
-	s.AddService(&targetdb.Service{Host: "10.0.0.2", Port: 445, Protocol: "tcp"})
-	s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Secret: "pw", Valid: true})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.2"})
+	_ = s.AddService(&targetdb.Service{Host: "10.0.0.2", Port: 445, Protocol: "tcp"})
+	_ = s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Secret: "pw", Valid: true})
 
 	e := NewEngine(s)
 	insights := e.Analyze()
@@ -78,10 +78,10 @@ func TestLateralMovement(t *testing.T) {
 
 func TestLateralMovement_InvalidCred(t *testing.T) {
 	s := newTestStore()
-	s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
-	s.AddHost(&targetdb.Host{IP: "10.0.0.2"})
-	s.AddService(&targetdb.Service{Host: "10.0.0.2", Port: 445, Protocol: "tcp"})
-	s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Secret: "pw", Valid: false})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.2"})
+	_ = s.AddService(&targetdb.Service{Host: "10.0.0.2", Port: 445, Protocol: "tcp"})
+	_ = s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Secret: "pw", Valid: false})
 
 	e := NewEngine(s)
 	insights := e.Analyze()
@@ -95,10 +95,10 @@ func TestLateralMovement_InvalidCred(t *testing.T) {
 
 func TestHighRiskServices_Triggered(t *testing.T) {
 	s := newTestStore()
-	s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
-	s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 445, Protocol: "tcp"})
-	s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 3389, Protocol: "tcp"})
-	s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 22, Protocol: "tcp"})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
+	_ = s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 445, Protocol: "tcp"})
+	_ = s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 3389, Protocol: "tcp"})
+	_ = s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 22, Protocol: "tcp"})
 
 	e := NewEngine(s)
 	insights := e.Analyze()
@@ -116,9 +116,9 @@ func TestHighRiskServices_Triggered(t *testing.T) {
 
 func TestHighRiskServices_BelowThreshold(t *testing.T) {
 	s := newTestStore()
-	s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
-	s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 445, Protocol: "tcp"})
-	s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 22, Protocol: "tcp"})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
+	_ = s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 445, Protocol: "tcp"})
+	_ = s.AddService(&targetdb.Service{Host: "10.0.0.1", Port: 22, Protocol: "tcp"})
 
 	e := NewEngine(s)
 	insights := e.Analyze()
@@ -132,8 +132,8 @@ func TestHighRiskServices_BelowThreshold(t *testing.T) {
 
 func TestCredentialReuse(t *testing.T) {
 	s := newTestStore()
-	s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Domain: "CORP", Secret: "x"})
-	s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.2", Type: "password", Domain: "CORP", Secret: "y"})
+	_ = s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Domain: "CORP", Secret: "x"})
+	_ = s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.2", Type: "password", Domain: "CORP", Secret: "y"})
 
 	e := NewEngine(s)
 	insights := e.Analyze()
@@ -157,7 +157,7 @@ func TestCredentialReuse(t *testing.T) {
 
 func TestCredentialReuse_SingleHost(t *testing.T) {
 	s := newTestStore()
-	s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Domain: "CORP", Secret: "x"})
+	_ = s.AddCredential(&targetdb.Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Domain: "CORP", Secret: "x"})
 
 	e := NewEngine(s)
 	insights := e.Analyze()
@@ -171,14 +171,12 @@ func TestCredentialReuse_SingleHost(t *testing.T) {
 
 func TestAnalyze_SeveritySort(t *testing.T) {
 	s := newTestStore()
-	s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
-	s.AddHost(&targetdb.Host{IP: "10.0.0.2"})
-	// Trigger credential_reuse (medium)
-	s.AddCredential(&targetdb.Credential{Username: "u", Host: "10.0.0.1", Type: "t", Domain: "d", Secret: "a"})
-	s.AddCredential(&targetdb.Credential{Username: "u", Host: "10.0.0.2", Type: "t", Domain: "d", Secret: "b"})
-	// Trigger escalation_chain (critical)
-	s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "critical", Title: "A", Tool: "x"})
-	s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "high", Title: "B", Tool: "x"})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.1"})
+	_ = s.AddHost(&targetdb.Host{IP: "10.0.0.2"})
+	_ = s.AddCredential(&targetdb.Credential{Username: "u", Host: "10.0.0.1", Type: "t", Domain: "d", Secret: "a"})
+	_ = s.AddCredential(&targetdb.Credential{Username: "u", Host: "10.0.0.2", Type: "t", Domain: "d", Secret: "b"})
+	_ = s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "critical", Title: "A", Tool: "x"})
+	_ = s.AddFinding(&targetdb.Finding{Host: "10.0.0.1", Severity: "high", Title: "B", Tool: "x"})
 
 	e := NewEngine(s)
 	insights := e.Analyze()

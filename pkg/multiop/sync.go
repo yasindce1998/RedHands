@@ -121,7 +121,7 @@ func (sm *SyncManager) Pull() []error {
 		}
 
 		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		var state SyncState
 		if err := json.Unmarshal(body, &state); err != nil {

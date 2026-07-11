@@ -28,7 +28,7 @@ func extractTarget(params json.RawMessage) string {
 		IP     string `json:"ip"`
 		Domain string `json:"domain"`
 	}
-	json.Unmarshal(params, &p)
+	_ = json.Unmarshal(params, &p)
 
 	if p.Target != "" {
 		return p.Target

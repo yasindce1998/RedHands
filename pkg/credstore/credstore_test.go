@@ -37,7 +37,7 @@ func TestAdd_AutoID(t *testing.T) {
 	s, _ := NewStore(filepath.Join(dir, "c.enc"), "p")
 
 	e := &Entry{Host: "h", Username: "u", Secret: "s", Type: "t", Source: "src"}
-	s.Add(e)
+	_ = s.Add(e)
 	if e.ID == "" {
 		t.Error("ID should be auto-generated")
 	}
@@ -48,8 +48,8 @@ func TestPersistence_RoundTrip(t *testing.T) {
 	path := filepath.Join(dir, "creds.enc")
 
 	s1, _ := NewStore(path, "mykey")
-	s1.Add(&Entry{Host: "10.0.0.1", Username: "root", Secret: "toor", Type: "password", Source: "manual", Valid: true})
-	s1.Add(&Entry{Host: "10.0.0.2", Username: "admin", Secret: "admin", Type: "password", Source: "spray", Valid: false})
+	_ = s1.Add(&Entry{Host: "10.0.0.1", Username: "root", Secret: "toor", Type: "password", Source: "manual", Valid: true})
+	_ = s1.Add(&Entry{Host: "10.0.0.2", Username: "admin", Secret: "admin", Type: "password", Source: "spray", Valid: false})
 
 	s2, err := NewStore(path, "mykey")
 	if err != nil {
@@ -65,7 +65,7 @@ func TestPersistence_WrongKey(t *testing.T) {
 	path := filepath.Join(dir, "creds.enc")
 
 	s1, _ := NewStore(path, "correct")
-	s1.Add(&Entry{Host: "h", Username: "u", Secret: "s", Type: "t", Source: "x"})
+	_ = s1.Add(&Entry{Host: "h", Username: "u", Secret: "s", Type: "t", Source: "x"})
 
 	_, err := NewStore(path, "wrong")
 	if err == nil {
@@ -77,7 +77,7 @@ func TestPersistence_CorruptFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "creds.enc")
 
-	os.WriteFile(path, []byte("garbage data"), 0600)
+	_ = os.WriteFile(path, []byte("garbage data"), 0600)
 
 	_, err := NewStore(path, "anykey")
 	if err == nil {
@@ -88,9 +88,9 @@ func TestPersistence_CorruptFile(t *testing.T) {
 func TestSearch(t *testing.T) {
 	dir := t.TempDir()
 	s, _ := NewStore(filepath.Join(dir, "c.enc"), "k")
-	s.Add(&Entry{Host: "web.corp.local", Username: "admin", Secret: "x", Type: "password", Domain: "CORP", Source: "kerberoast"})
-	s.Add(&Entry{Host: "db.corp.local", Username: "sa", Secret: "y", Type: "password", Domain: "CORP", Source: "manual"})
-	s.Add(&Entry{Host: "10.0.0.5", Username: "root", Secret: "z", Type: "ssh_key", Source: "loot"})
+	_ = s.Add(&Entry{Host: "web.corp.local", Username: "admin", Secret: "x", Type: "password", Domain: "CORP", Source: "kerberoast"})
+	_ = s.Add(&Entry{Host: "db.corp.local", Username: "sa", Secret: "y", Type: "password", Domain: "CORP", Source: "manual"})
+	_ = s.Add(&Entry{Host: "10.0.0.5", Username: "root", Secret: "z", Type: "ssh_key", Source: "loot"})
 
 	tests := []struct {
 		query string
@@ -113,9 +113,9 @@ func TestSearch(t *testing.T) {
 func TestListByHost(t *testing.T) {
 	dir := t.TempDir()
 	s, _ := NewStore(filepath.Join(dir, "c.enc"), "k")
-	s.Add(&Entry{Host: "10.0.0.1", Username: "a", Secret: "x", Type: "t", Source: "s"})
-	s.Add(&Entry{Host: "10.0.0.1", Username: "b", Secret: "y", Type: "t", Source: "s"})
-	s.Add(&Entry{Host: "10.0.0.2", Username: "c", Secret: "z", Type: "t", Source: "s"})
+	_ = s.Add(&Entry{Host: "10.0.0.1", Username: "a", Secret: "x", Type: "t", Source: "s"})
+	_ = s.Add(&Entry{Host: "10.0.0.1", Username: "b", Secret: "y", Type: "t", Source: "s"})
+	_ = s.Add(&Entry{Host: "10.0.0.2", Username: "c", Secret: "z", Type: "t", Source: "s"})
 
 	got := s.ListByHost("10.0.0.1")
 	if len(got) != 2 {
@@ -126,9 +126,9 @@ func TestListByHost(t *testing.T) {
 func TestValidOnly(t *testing.T) {
 	dir := t.TempDir()
 	s, _ := NewStore(filepath.Join(dir, "c.enc"), "k")
-	s.Add(&Entry{Host: "h", Username: "a", Secret: "x", Type: "t", Source: "s", Valid: true})
-	s.Add(&Entry{Host: "h", Username: "b", Secret: "y", Type: "t", Source: "s", Valid: false})
-	s.Add(&Entry{Host: "h", Username: "c", Secret: "z", Type: "t", Source: "s", Valid: true})
+	_ = s.Add(&Entry{Host: "h", Username: "a", Secret: "x", Type: "t", Source: "s", Valid: true})
+	_ = s.Add(&Entry{Host: "h", Username: "b", Secret: "y", Type: "t", Source: "s", Valid: false})
+	_ = s.Add(&Entry{Host: "h", Username: "c", Secret: "z", Type: "t", Source: "s", Valid: true})
 
 	got := s.ValidOnly()
 	if len(got) != 2 {

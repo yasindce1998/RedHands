@@ -7,16 +7,20 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"github.com/yasindce1998/redhands/pkg/credstore"
 )
 
 type Store struct {
-	mu          sync.RWMutex
-	hosts       map[string]*Host
-	services    map[string][]*Service
-	credentials []*Credential
-	findings    []*Finding
-	filePath    string
-	autoSave    bool
+	mu              sync.RWMutex
+	hosts           map[string]*Host
+	services        map[string][]*Service
+	credentials     []*Credential
+	findings        []*Finding
+	filePath        string
+	autoSave        bool
+	credentialStore *credstore.Store
+	loadErr         error
 }
 
 func NewStore(filePath string, autoSave bool) *Store {
@@ -28,15 +32,35 @@ func NewStore(filePath string, autoSave bool) *Store {
 	}
 	if filePath != "" {
 		if err := s.Load(); err != nil {
+			s.loadErr = err
 			log.Printf("targetdb: failed to load %s: %v", filePath, err)
 		}
 	}
 	return s
 }
 
+func (s *Store) LoadError() error { return s.loadErr }
+
+func (s *Store) SetCredentialStore(store *credstore.Store) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.credentialStore = store
+	if store != nil {
+		entries := store.Search("")
+		for _, c := range s.credentials {
+			for _, entry := range entries {
+				if c.Host == entry.Host && c.Username == entry.Username && c.Domain == entry.Domain && c.Type == entry.Type {
+					c.Secret = entry.Secret
+				}
+			}
+		}
+	}
+}
+
 func (s *Store) AddHost(h *Host) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	h = cloneHost(h)
 
 	now := time.Now()
 	if existing, ok := s.hosts[h.IP]; ok {
@@ -74,7 +98,10 @@ func (s *Store) GetHost(ip string) (*Host, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	h, ok := s.hosts[ip]
-	return h, ok
+	if !ok {
+		return nil, false
+	}
+	return cloneHost(h), true
 }
 
 func (s *Store) ListHosts() []*Host {
@@ -82,7 +109,7 @@ func (s *Store) ListHosts() []*Host {
 	defer s.mu.RUnlock()
 	hosts := make([]*Host, 0, len(s.hosts))
 	for _, h := range s.hosts {
-		hosts = append(hosts, h)
+		hosts = append(hosts, cloneHost(h))
 	}
 	return hosts
 }
@@ -90,6 +117,8 @@ func (s *Store) ListHosts() []*Host {
 func (s *Store) AddService(svc *Service) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	copyService := *svc
+	svc = &copyService
 
 	key := svc.Host
 	for _, existing := range s.services[key] {
@@ -123,20 +152,36 @@ func (s *Store) ListServices(host string) []*Service {
 	if host == "" {
 		var all []*Service
 		for _, svcs := range s.services {
-			all = append(all, svcs...)
+			all = append(all, cloneServices(svcs)...)
 		}
 		return all
 	}
-	return s.services[host]
+	return cloneServices(s.services[host])
 }
 
 func (s *Store) AddCredential(c *Credential) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.filePath != "" && c.Secret != "" && s.credentialStore == nil {
+		return fmt.Errorf("REDHANDS_CREDSTORE_KEY is required to persist credentials")
+	}
 
+	for _, existing := range s.credentials {
+		if existing.Username == c.Username && existing.Host == c.Host && existing.Type == c.Type && existing.Domain == c.Domain {
+			c.ID = existing.ID
+			break
+		}
+	}
 	if c.ID == "" {
 		c.ID = generateID()
 	}
+	if s.credentialStore != nil && c.Secret != "" {
+		if err := s.credentialStore.Add(&credstore.Entry{ID: c.ID, Host: c.Host, Username: c.Username, Secret: c.Secret, Type: c.Type, Domain: c.Domain, Source: c.Source, Valid: c.Valid}); err != nil {
+			return err
+		}
+	}
+	copyCredential := *c
+	c = &copyCredential
 	for _, existing := range s.credentials {
 		if existing.Username == c.Username && existing.Host == c.Host && existing.Type == c.Type && existing.Domain == c.Domain {
 			existing.Secret = c.Secret
@@ -160,7 +205,10 @@ func (s *Store) ListCredentials() []*Credential {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	result := make([]*Credential, len(s.credentials))
-	copy(result, s.credentials)
+	for i, c := range s.credentials {
+		copyCredential := *c
+		result[i] = &copyCredential
+	}
 	return result
 }
 
@@ -174,7 +222,7 @@ func (s *Store) AddFinding(f *Finding) error {
 	if f.Timestamp.IsZero() {
 		f.Timestamp = time.Now()
 	}
-	s.findings = append(s.findings, f)
+	s.findings = append(s.findings, cloneFinding(f))
 
 	if s.autoSave {
 		return s.save()
@@ -186,7 +234,9 @@ func (s *Store) ListFindings() []*Finding {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	result := make([]*Finding, len(s.findings))
-	copy(result, s.findings)
+	for i, f := range s.findings {
+		result[i] = cloneFinding(f)
+	}
 	return result
 }
 
@@ -205,7 +255,7 @@ func (s *Store) QueryFindings(host, severity, tool string) []*Finding {
 		if tool != "" && f.Tool != tool {
 			continue
 		}
-		results = append(results, f)
+		results = append(results, cloneFinding(f))
 	}
 	return results
 }
@@ -216,16 +266,21 @@ func (s *Store) Snapshot() *Snapshot {
 
 	hosts := make(map[string]*Host, len(s.hosts))
 	for k, v := range s.hosts {
-		hosts[k] = v
+		hosts[k] = cloneHost(v)
 	}
 	services := make(map[string][]*Service, len(s.services))
 	for k, v := range s.services {
-		services[k] = v
+		services[k] = cloneServices(v)
 	}
 	creds := make([]*Credential, len(s.credentials))
-	copy(creds, s.credentials)
+	for i, c := range s.credentials {
+		copyCredential := *c
+		creds[i] = &copyCredential
+	}
 	findings := make([]*Finding, len(s.findings))
-	copy(findings, s.findings)
+	for i, f := range s.findings {
+		findings[i] = cloneFinding(f)
+	}
 
 	return &Snapshot{
 		Hosts:       hosts,
@@ -233,6 +288,34 @@ func (s *Store) Snapshot() *Snapshot {
 		Credentials: creds,
 		Findings:    findings,
 	}
+}
+
+func cloneHost(h *Host) *Host {
+	result := *h
+	result.Tags = append([]string(nil), h.Tags...)
+	if h.Meta != nil {
+		result.Meta = make(map[string]string, len(h.Meta))
+		for k, v := range h.Meta {
+			result.Meta[k] = v
+		}
+	}
+	return &result
+}
+
+func cloneServices(services []*Service) []*Service {
+	result := make([]*Service, len(services))
+	for i, s := range services {
+		copyService := *s
+		result[i] = &copyService
+	}
+	return result
+}
+
+func cloneFinding(f *Finding) *Finding {
+	result := *f
+	result.MITRE = append([]string(nil), f.MITRE...)
+	result.Raw = append([]byte(nil), f.Raw...)
+	return &result
 }
 
 func (s *Store) Stats() map[string]int {

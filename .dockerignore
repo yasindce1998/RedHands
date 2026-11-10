@@ -1,0 +1,14 @@
+.git
+.env
+bin
+targetdb.json
+credstore.enc
+audit.jsonl
+audit
+engagements
+loot
+evidence
+workflow_state
+tls
+*.pem
+*.key

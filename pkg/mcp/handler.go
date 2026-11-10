@@ -7,11 +7,18 @@ import (
 )
 
 func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSONRPCResponse {
+	if s.requestCheck != nil {
+		if err := s.requestCheck(ctx); err != nil {
+			return s.errorResponse(req.ID, ErrCodeUnauthorized, err.Error())
+		}
+	}
 	switch req.Method {
 	case MethodInitialize:
 		return s.handleInitialize(req)
 	case MethodInitialized:
+		s.mu.Lock()
 		s.initialized = true
+		s.mu.Unlock()
 		return nil
 	case MethodToolsList:
 		return s.handleToolsList(req)
@@ -51,8 +58,11 @@ func (s *Server) handleInitialize(req *JSONRPCRequest) *JSONRPCResponse {
 }
 
 func (s *Server) handleToolsList(req *JSONRPCRequest) *JSONRPCResponse {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	tools := make([]ToolDef, 0, len(s.tools))
-	for _, t := range s.tools {
+	for _, name := range s.toolOrder {
+		t := s.tools[name]
 		tools = append(tools, ToolDef{
 			Name:        t.Name(),
 			Description: t.Description(),
@@ -69,17 +79,12 @@ func (s *Server) handleToolsCall(ctx context.Context, req *JSONRPCRequest) *JSON
 		return s.errorResponse(req.ID, ErrCodeInvalidParams, "invalid tools/call params")
 	}
 
-	tool, ok := s.tools[params.Name]
+	_, ok := s.GetTool(params.Name)
 	if !ok {
 		return s.errorResponse(req.ID, ErrCodeInvalidParams, fmt.Sprintf("unknown tool: %s", params.Name))
 	}
 
-	handler := func(ctx context.Context, toolName string, args json.RawMessage) (*ToolResult, error) {
-		return tool.Execute(ctx, args)
-	}
-
-	chained := chainMiddleware(handler, s.middlewares)
-	result, err := chained(ctx, params.Name, params.Arguments)
+	result, err := s.ExecuteTool(ctx, params.Name, params.Arguments)
 	if err != nil {
 		return s.successResponse(req.ID, &ToolResult{
 			Content: []ContentBlock{{Type: "text", Text: fmt.Sprintf("Error: %s", err.Error())}},

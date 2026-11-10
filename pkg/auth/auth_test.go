@@ -145,13 +145,13 @@ func TestHTTPAuthCheck(t *testing.T) {
 			wantIdentity: "apikey",
 		},
 		{
-			name: "valid API key in query param",
+			name: "API key in query param is rejected",
 			cfg:  Config{Mode: "apikey", APIKey: "query-secret"},
 			setupReq: func() *http.Request {
 				return httptest.NewRequest(http.MethodGet, "/?api_key=query-secret", nil)
 			},
-			wantAuthed:   true,
-			wantIdentity: "apikey",
+			wantErr:    true,
+			wantErrMsg: "invalid or missing API key",
 		},
 		{
 			name: "header takes precedence over query param",
@@ -201,6 +201,7 @@ func TestHTTPAuthCheck(t *testing.T) {
 			setupReq: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, "/", nil)
 				req.TLS = &tls.ConnectionState{
+					VerifiedChains: [][]*x509.Certificate{{{Subject: pkix.Name{CommonName: "client.example.com"}}}},
 					PeerCertificates: []*x509.Certificate{
 						{Subject: pkix.Name{CommonName: "client.example.com"}},
 					},
@@ -208,7 +209,7 @@ func TestHTTPAuthCheck(t *testing.T) {
 				return req
 			},
 			wantAuthed:   true,
-			wantIdentity: "client.example.com",
+			wantIdentity: certificateIdentity(&x509.Certificate{Subject: pkix.Name{CommonName: "client.example.com"}}),
 		},
 		{
 			name: "mtls mode without TLS info returns error",
@@ -316,7 +317,8 @@ func TestMTLSConfig(t *testing.T) {
 			NotBefore:    time.Now().Add(-1 * time.Hour),
 			NotAfter:     time.Now().Add(1 * time.Hour),
 			KeyUsage:     x509.KeyUsageDigitalSignature,
-			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+			DNSNames:     []string{"localhost"},
 		}
 
 		caCert, err := x509.ParseCertificate(caCertDER)
@@ -375,6 +377,36 @@ func TestMTLSConfig(t *testing.T) {
 		}
 		if tlsCfg.ClientCAs == nil {
 			t.Error("ClientCAs should not be nil")
+		}
+
+		server := httptest.NewUnstartedServer(ProtectHTTP(cfg, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := CheckContext(cfg, r.Context()); err != nil {
+				t.Error(err)
+			}
+			w.WriteHeader(http.StatusOK)
+		})))
+		server.TLS = tlsCfg
+		server.StartTLS()
+		defer server.Close()
+		clientCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		caPEM, err := os.ReadFile(caPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pool := x509.NewCertPool()
+		pool.AppendCertsFromPEM(caPEM)
+		transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: pool, ServerName: "localhost", Certificates: []tls.Certificate{clientCert}, MinVersion: tls.VersionTLS12}}
+		defer transport.CloseIdleConnections()
+		response, err := (&http.Client{Transport: transport}).Get(server.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			t.Fatalf("verified mTLS client status: %d", response.StatusCode)
 		}
 	})
 

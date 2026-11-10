@@ -4,7 +4,7 @@ RUN apk add --no-cache git
 
 WORKDIR /src
 COPY go.mod ./
-RUN go mod download || true
+RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /redhands ./cmd/redhands
 
@@ -64,7 +64,9 @@ RUN curl -fsSL "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1
 
 COPY --from=builder /redhands /usr/local/bin/redhands
 
-RUN mkdir -p /opt/redhands/plugins
+RUN groupadd --system redhands && useradd --system --gid redhands --home-dir /opt/redhands redhands && \
+    mkdir -p /opt/redhands/plugins /opt/redhands/data && \
+    chown -R redhands:redhands /opt/redhands
 WORKDIR /opt/redhands
 
 ENV REDHANDS_TRANSPORT=stdio
@@ -72,4 +74,5 @@ ENV REDHANDS_PLUGINS_DIR=/opt/redhands/plugins
 
 EXPOSE 8080 8081
 
+USER redhands
 ENTRYPOINT ["redhands"]

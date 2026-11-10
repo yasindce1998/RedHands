@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 )
@@ -58,6 +59,17 @@ func TestSanitizeParams(t *testing.T) {
 
 			assertMapsEqual(t, tt.expected, got)
 		})
+	}
+}
+
+func TestSanitizeNestedArrays(t *testing.T) {
+	input := json.RawMessage(`{"steps":[{"params":{"password":"never-log-me"}},{"nested":[{"token":"also-secret"}]}]}`)
+	result := SanitizeParams(input)
+	if bytes.Contains(result, []byte("never-log-me")) || bytes.Contains(result, []byte("also-secret")) {
+		t.Fatalf("array secrets leaked: %s", result)
+	}
+	if !json.Valid(result) {
+		t.Fatalf("invalid JSON: %s", result)
 	}
 }
 

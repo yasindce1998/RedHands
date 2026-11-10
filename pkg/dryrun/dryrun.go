@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yasindce1998/redhands/pkg/audit"
 	"github.com/yasindce1998/redhands/pkg/mcp"
 )
 
@@ -27,6 +28,7 @@ func NewInterceptor() *Interceptor {
 
 func (d *Interceptor) Middleware(next mcp.ToolHandler) mcp.ToolHandler {
 	return func(ctx context.Context, toolName string, params json.RawMessage) (*mcp.ToolResult, error) {
+		params = audit.SanitizeParams(params)
 		d.mu.Lock()
 		d.entries = append(d.entries, LogEntry{
 			Timestamp: time.Now(),

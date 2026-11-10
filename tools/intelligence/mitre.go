@@ -19,6 +19,8 @@ func NewMitreLookupTool() *MitreLookupTool {
 
 func (t *MitreLookupTool) Name() string { return "mitre_lookup" }
 
+func (t *MitreLookupTool) Cacheable() bool { return true }
+
 func (t *MitreLookupTool) Description() string {
 	return "Look up MITRE ATT&CK technique mappings for a tool name, technique ID, or tactic"
 }

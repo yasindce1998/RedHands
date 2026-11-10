@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"slices"
 	"sync"
 	"syscall"
 )
@@ -24,15 +25,16 @@ type ReportGenerator interface {
 }
 
 type Server struct {
-	name        string
-	version     string
-	tools       map[string]Tool
-	toolOrder   []string
-	middlewares []Middleware
-	initialized bool
-	mu          sync.RWMutex
-	workflow    WorkflowRunner
-	reporter   ReportGenerator
+	name         string
+	version      string
+	tools        map[string]Tool
+	toolOrder    []string
+	middlewares  []Middleware
+	initialized  bool
+	mu           sync.RWMutex
+	workflow     WorkflowRunner
+	reporter     ReportGenerator
+	requestCheck func(context.Context) error
 }
 
 func NewServer(name, version string) *Server {
@@ -46,12 +48,55 @@ func NewServer(name, version string) *Server {
 func (s *Server) RegisterTool(t Tool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if _, exists := s.tools[t.Name()]; !exists {
+		s.toolOrder = append(s.toolOrder, t.Name())
+	}
 	s.tools[t.Name()] = t
-	s.toolOrder = append(s.toolOrder, t.Name())
 }
 
 func (s *Server) Use(m Middleware) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.middlewares = append(s.middlewares, m)
+}
+
+func (s *Server) UnregisterTool(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.tools, name)
+	s.toolOrder = slices.DeleteFunc(s.toolOrder, func(n string) bool { return n == name })
+}
+
+// SetRequestCheck protects all RPC methods, including workflows and reports.
+// Configure it before starting any transports.
+func (s *Server) SetRequestCheck(check func(context.Context) error) {
+	s.requestCheck = check
+}
+
+// ExecuteTool is the single execution path for direct calls and workflow steps.
+func (s *Server) ExecuteTool(ctx context.Context, name string, args json.RawMessage) (*ToolResult, error) {
+	if s.requestCheck != nil {
+		if err := s.requestCheck(ctx); err != nil {
+			return nil, err
+		}
+	}
+	s.mu.RLock()
+	tool, ok := s.tools[name]
+	middlewares := slices.Clone(s.middlewares)
+	s.mu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("unknown tool: %s", name)
+	}
+	if len(args) == 0 {
+		args = json.RawMessage(`{}`)
+	}
+	return chainMiddleware(func(ctx context.Context, _ string, args json.RawMessage) (*ToolResult, error) {
+		result, err := tool.Execute(ctx, args)
+		if result == nil && err == nil {
+			return nil, fmt.Errorf("tool %s returned no result", name)
+		}
+		return result, err
+	}, middlewares)(ctx, name, args)
 }
 
 func (s *Server) GetTool(name string) (Tool, bool) {
@@ -72,6 +117,8 @@ func (s *Server) SetReportGenerator(r ReportGenerator) {
 func (s *Server) ServeStdio(ctx context.Context) error {
 	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
+	stop := context.AfterFunc(ctx, func() { _ = os.Stdin.Close() })
+	defer stop()
 
 	return s.serve(ctx, os.Stdin, os.Stdout)
 }
@@ -112,6 +159,9 @@ func (s *Server) serve(ctx context.Context, r io.Reader, w io.Writer) error {
 	}
 
 	if err := scanner.Err(); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		return fmt.Errorf("reading stdin: %w", err)
 	}
 
@@ -119,6 +169,10 @@ func (s *Server) serve(ctx context.Context, r io.Reader, w io.Writer) error {
 }
 
 func (s *Server) HandleRaw(msg json.RawMessage) json.RawMessage {
+	return s.HandleRawContext(context.Background(), msg)
+}
+
+func (s *Server) HandleRawContext(ctx context.Context, msg json.RawMessage) json.RawMessage {
 	var req JSONRPCRequest
 	if err := json.Unmarshal(msg, &req); err != nil {
 		resp := s.errorResponse(nil, ErrCodeParse, "parse error")
@@ -132,7 +186,7 @@ func (s *Server) HandleRaw(msg json.RawMessage) json.RawMessage {
 		return data
 	}
 
-	resp := s.handleRequest(context.Background(), &req)
+	resp := s.handleRequest(ctx, &req)
 	if resp == nil {
 		return nil
 	}

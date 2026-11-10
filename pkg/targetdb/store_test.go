@@ -1,9 +1,14 @@
 package targetdb
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+
+	"github.com/yasindce1998/redhands/pkg/credstore"
 )
 
 func TestAddHost_New(t *testing.T) {
@@ -131,12 +136,31 @@ func TestPersistence_RoundTrip(t *testing.T) {
 	path := filepath.Join(dir, "targets.json")
 
 	s1 := NewStore(path, true)
+	cs, err := credstore.NewStore(filepath.Join(dir, "creds.enc"), "test-only-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s1.SetCredentialStore(cs)
 	_ = s1.AddHost(&Host{IP: "10.0.0.1", Hostname: "web01"})
 	_ = s1.AddService(&Service{Host: "10.0.0.1", Port: 80, Protocol: "tcp"})
-	_ = s1.AddCredential(&Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Secret: "x"})
+	if err := s1.AddCredential(&Credential{Username: "admin", Host: "10.0.0.1", Type: "password", Secret: "never-write-this-secret"}); err != nil {
+		t.Fatal(err)
+	}
 	_ = s1.AddFinding(&Finding{Host: "10.0.0.1", Tool: "test", Severity: "low", Title: "T"})
 
 	s2 := NewStore(path, false)
+	cs2, err := credstore.NewStore(filepath.Join(dir, "creds.enc"), "test-only-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s2.SetCredentialStore(cs2)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(data, []byte("never-write-this-secret")) {
+		t.Fatal("plaintext secret persisted")
+	}
 	if _, ok := s2.GetHost("10.0.0.1"); !ok {
 		t.Error("host not persisted")
 	}
@@ -145,6 +169,9 @@ func TestPersistence_RoundTrip(t *testing.T) {
 	}
 	if len(s2.ListCredentials()) != 1 {
 		t.Error("credential not persisted")
+	}
+	if s2.ListCredentials()[0].Secret != "never-write-this-secret" {
+		t.Fatal("encrypted secret not restored")
 	}
 	if len(s2.ListFindings()) != 1 {
 		t.Error("finding not persisted")
@@ -190,5 +217,60 @@ func TestSave_ExplicitSave(t *testing.T) {
 	}
 	if _, err := os.Stat(path); err != nil {
 		t.Fatal("file should exist after save")
+	}
+}
+
+func TestCredentialsRequireEncryption(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "db.json")
+	s := NewStore(path, true)
+	if err := s.AddCredential(&Credential{Username: "u", Secret: "secret"}); err == nil {
+		t.Fatal("plaintext credentials accepted")
+	}
+	if len(s.ListCredentials()) != 0 {
+		t.Fatal("failed operation changed state")
+	}
+}
+
+func TestLegacyPlaintextLoadDoesNotOverwrite(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "db.json")
+	data := []byte(`{"credentials":[{"username":"u","secret":"legacy-secret"}]}`)
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	s := NewStore(path, true)
+	if s.LoadError() == nil {
+		t.Fatal("legacy plaintext silently loaded")
+	}
+	if err := s.Save(); err == nil {
+		t.Fatal("overwrote failed-load database")
+	}
+	got, _ := os.ReadFile(path)
+	if !bytes.Equal(data, got) {
+		t.Fatal("legacy file modified")
+	}
+}
+
+func TestSnapshotConcurrentWithUpdates(t *testing.T) {
+	s := NewStore("", false)
+	if err := s.AddHost(&Host{IP: "192.0.2.1", Meta: map[string]string{"key": "initial"}}); err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		for range 100 {
+			_ = s.AddHost(&Host{IP: "192.0.2.1", Hostname: "updated", Meta: map[string]string{"key": "updated"}})
+		}
+	})
+	wg.Go(func() {
+		for range 100 {
+			_, _ = json.Marshal(s.Snapshot())
+			h, _ := s.GetHost("192.0.2.1")
+			h.Meta["key"] = "caller-owned"
+		}
+	})
+	wg.Wait()
+	h, _ := s.GetHost("192.0.2.1")
+	if h.Meta["key"] == "caller-owned" {
+		t.Fatal("caller mutated store through returned pointer")
 	}
 }

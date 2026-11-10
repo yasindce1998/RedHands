@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/yasindce1998/redhands/pkg/storage"
 )
 
 type Entry struct {
@@ -34,6 +36,9 @@ type Store struct {
 }
 
 func NewStore(file string, passphrase string) (*Store, error) {
+	if strings.TrimSpace(passphrase) == "" {
+		return nil, fmt.Errorf("credential store key must not be empty")
+	}
 	key := deriveKey(passphrase)
 	s := &Store{
 		key:  key,
@@ -54,8 +59,25 @@ func (s *Store) Add(e *Entry) error {
 		_, _ = rand.Read(b)
 		e.ID = hex.EncodeToString(b)
 	}
-	s.entries = append(s.entries, e)
-	return s.save()
+	copyEntry := *e
+	for i, old := range s.entries {
+		if old.ID == e.ID || (old.Host == e.Host && old.Username == e.Username && old.Domain == e.Domain && old.Type == e.Type) {
+			copyEntry.ID = old.ID
+			s.entries[i] = &copyEntry
+			if err := s.save(); err != nil {
+				s.entries[i] = old
+				return err
+			}
+			e.ID = copyEntry.ID
+			return nil
+		}
+	}
+	s.entries = append(s.entries, &copyEntry)
+	if err := s.save(); err != nil {
+		s.entries = s.entries[:len(s.entries)-1]
+		return err
+	}
+	return nil
 }
 
 func (s *Store) Search(query string) []*Entry {
@@ -69,7 +91,8 @@ func (s *Store) Search(query string) []*Entry {
 			strings.Contains(strings.ToLower(e.Username), q) ||
 			strings.Contains(strings.ToLower(e.Domain), q) ||
 			strings.Contains(strings.ToLower(e.Source), q) {
-			results = append(results, e)
+			copyEntry := *e
+			results = append(results, &copyEntry)
 		}
 	}
 	return results
@@ -82,7 +105,8 @@ func (s *Store) ListByHost(host string) []*Entry {
 	var results []*Entry
 	for _, e := range s.entries {
 		if e.Host == host {
-			results = append(results, e)
+			copyEntry := *e
+			results = append(results, &copyEntry)
 		}
 	}
 	return results
@@ -95,7 +119,8 @@ func (s *Store) ValidOnly() []*Entry {
 	var results []*Entry
 	for _, e := range s.entries {
 		if e.Valid {
-			results = append(results, e)
+			copyEntry := *e
+			results = append(results, &copyEntry)
 		}
 	}
 	return results
@@ -116,7 +141,7 @@ func (s *Store) save() error {
 	if err != nil {
 		return fmt.Errorf("encrypt: %w", err)
 	}
-	return os.WriteFile(s.file, encrypted, 0600)
+	return storage.WriteFile(s.file, encrypted)
 }
 
 func (s *Store) load() error {
@@ -133,6 +158,11 @@ func (s *Store) load() error {
 	}
 	if err := json.Unmarshal(decrypted, &s.entries); err != nil {
 		return fmt.Errorf("unmarshal: %w", err)
+	}
+	for _, entry := range s.entries {
+		if entry == nil {
+			return fmt.Errorf("invalid null credential record")
+		}
 	}
 	return nil
 }

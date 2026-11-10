@@ -17,14 +17,14 @@ import (
 )
 
 const (
-	wsGUID        = "258EAFA5-E914-47DA-95CA-5AB0DC85B11B"
-	wsOpText      = 1
-	wsOpClose     = 8
-	wsOpPing      = 9
-	wsOpPong      = 10
-	wsMaskBit     = 0x80
-	wsFinBit      = 0x80
-	wsMaxPayload  = 10 * 1024 * 1024
+	wsGUID       = "258EAFA5-E914-47DA-95CA-5AB0DC85B11B"
+	wsOpText     = 1
+	wsOpClose    = 8
+	wsOpPing     = 9
+	wsOpPong     = 10
+	wsMaskBit    = 0x80
+	wsFinBit     = 0x80
+	wsMaxPayload = 10 * 1024 * 1024
 )
 
 type wsConn struct {
@@ -33,9 +33,29 @@ type wsConn struct {
 }
 
 func (s *Server) ServeWebSocket(ctx context.Context, addr string) error {
+	return s.ServeWebSocketWithOptions(ctx, addr, HTTPOptions{})
+}
+
+func (s *Server) ServeWebSocketWithOptions(ctx context.Context, addr string, opts HTTPOptions) error {
+	return serveHTTP(ctx, addr, s.WebSocketHandler(ctx, opts), opts)
+}
+
+func (s *Server) WebSocketHandler(ctx context.Context, opts HTTPOptions) http.Handler {
 	mux := http.NewServeMux()
+	slots := make(chan struct{}, 256)
 
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		reqCtx, ok := checkHTTPRequest(w, r, opts)
+		if !ok {
+			return
+		}
+		select {
+		case slots <- struct{}{}:
+			defer func() { <-slots }()
+		default:
+			http.Error(w, "too many connections", http.StatusServiceUnavailable)
+			return
+		}
 		conn, err := upgradeWebSocket(w, r)
 		if err != nil {
 			log.Printf("ws: upgrade failed: %v", err)
@@ -43,33 +63,27 @@ func (s *Server) ServeWebSocket(ctx context.Context, addr string) error {
 		}
 		defer func() { _ = conn.conn.Close() }()
 
-		s.handleWSConn(ctx, conn)
+		done := make(chan struct{})
+		defer close(done)
+		go func() {
+			select {
+			case <-ctx.Done():
+				_ = conn.conn.Close()
+			case <-done:
+			}
+		}()
+		s.handleWSConn(reqCtx, conn)
 	})
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := checkHTTPRequest(w, r, opts); !ok {
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintf(w, `{"status":"ok","transport":"ws"}`)
 	})
 
-	server := &http.Server{
-		Addr:        addr,
-		Handler:     mux,
-		ReadTimeout: 30 * time.Second,
-		IdleTimeout: 120 * time.Second,
-	}
-
-	go func() {
-		<-ctx.Done()
-		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = server.Shutdown(shutCtx)
-	}()
-
-	log.Printf("WebSocket transport listening on %s", addr)
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("ws server: %w", err)
-	}
-	return nil
+	return mux
 }
 
 func (s *Server) handleWSConn(ctx context.Context, ws *wsConn) {
@@ -81,6 +95,7 @@ func (s *Server) handleWSConn(ctx context.Context, ws *wsConn) {
 		default:
 		}
 
+		_ = ws.conn.SetReadDeadline(time.Now().Add(2 * time.Minute))
 		opcode, payload, err := wsReadFrame(ws)
 		if err != nil {
 			if err != io.EOF {
@@ -144,6 +159,11 @@ func (s *Server) handleWSConn(ctx context.Context, ws *wsConn) {
 }
 
 func upgradeWebSocket(w http.ResponseWriter, r *http.Request) (*wsConn, error) {
+	decoded, err := base64.StdEncoding.DecodeString(r.Header.Get("Sec-WebSocket-Key"))
+	if r.Method != http.MethodGet || r.Header.Get("Sec-WebSocket-Version") != "13" || err != nil || len(decoded) != 16 {
+		http.Error(w, "invalid WebSocket handshake", http.StatusBadRequest)
+		return nil, fmt.Errorf("invalid WebSocket handshake")
+	}
 	if !strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
 		http.Error(w, "not a websocket request", http.StatusBadRequest)
 		return nil, fmt.Errorf("missing Upgrade: websocket header")
@@ -205,6 +225,9 @@ func wsReadFrame(ws *wsConn) (byte, []byte, error) {
 	opcode := header[0] & 0x0F
 	masked := (header[1] & wsMaskBit) != 0
 	length := uint64(header[1] & 0x7F)
+	if header[0]&wsFinBit == 0 || header[0]&0x70 != 0 || !masked {
+		return 0, nil, fmt.Errorf("fragmented, reserved or unmasked frame unsupported")
+	}
 
 	// Extended payload length
 	switch length {
@@ -224,6 +247,9 @@ func wsReadFrame(ws *wsConn) (byte, []byte, error) {
 
 	if length > wsMaxPayload {
 		return 0, nil, fmt.Errorf("payload too large: %d", length)
+	}
+	if opcode >= wsOpClose && length > 125 {
+		return 0, nil, fmt.Errorf("control frame too large")
 	}
 
 	// Read masking key
@@ -251,6 +277,7 @@ func wsReadFrame(ws *wsConn) (byte, []byte, error) {
 }
 
 func wsWriteFrame(ws *wsConn, opcode byte, payload []byte) error {
+	_ = ws.conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
 	length := len(payload)
 	var header []byte
 

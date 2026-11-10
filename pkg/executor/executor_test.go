@@ -86,8 +86,8 @@ func TestLimitWriter_OverLimit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Write error: %v", err)
 	}
-	if n != 5 {
-		t.Errorf("Write returns bytes written to buf: got %d, want 5", n)
+	if n != 11 {
+		t.Errorf("Write must consume the full input: got %d, want 11", n)
 	}
 	if buf.String() != "hello" {
 		t.Errorf("buf = %q, want %q", buf.String(), "hello")
@@ -180,5 +180,13 @@ func TestRun_NonZeroExit(t *testing.T) {
 	}
 	if result.ExitCode == 0 {
 		t.Error("exit code should be non-zero")
+	}
+}
+
+func TestRunOutputTruncation(t *testing.T) {
+	e := New(Config{Timeout: 5, AllowedBinaries: map[string]string{"echo": "/bin/echo"}, MaxOutputBytes: 4})
+	r, err := e.Run(context.Background(), "echo", "long-output")
+	if err == nil || !r.Truncated || len(r.Stdout) != 4 {
+		t.Fatalf("truncation not reported: %+v %v", r, err)
 	}
 }

@@ -5,10 +5,10 @@ import "encoding/json"
 const (
 	JSONRPCVersion = "2.0"
 
-	MethodInitialize          = "initialize"
-	MethodInitialized         = "notifications/initialized"
-	MethodToolsList           = "tools/list"
-	MethodToolsCall           = "tools/call"
+	MethodInitialize             = "initialize"
+	MethodInitialized            = "notifications/initialized"
+	MethodToolsList              = "tools/list"
+	MethodToolsCall              = "tools/call"
 	MethodPing                   = "ping"
 	MethodNotificationsCancelled = "notifications/cancelled"
 	MethodWorkflowRun            = "workflow/run"
@@ -19,6 +19,7 @@ const (
 	ErrCodeMethodNotFound = -32601
 	ErrCodeInvalidParams  = -32602
 	ErrCodeInternal       = -32603
+	ErrCodeUnauthorized   = -32001
 )
 
 type JSONRPCRequest struct {

@@ -34,14 +34,24 @@ func sanitizeMap(m map[string]any) map[string]any {
 			result[k] = redactedValue
 			continue
 		}
-		switch val := v.(type) {
-		case map[string]any:
-			result[k] = sanitizeMap(val)
-		default:
-			result[k] = val
-		}
+		result[k] = sanitizeValue(v)
 	}
 	return result
+}
+
+func sanitizeValue(v any) any {
+	switch val := v.(type) {
+	case map[string]any:
+		return sanitizeMap(val)
+	case []any:
+		result := make([]any, len(val))
+		for i, item := range val {
+			result[i] = sanitizeValue(item)
+		}
+		return result
+	default:
+		return v
+	}
 }
 
 func isSensitiveKey(key string) bool {

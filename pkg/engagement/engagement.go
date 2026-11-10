@@ -3,10 +3,16 @@ package engagement
 import (
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/netip"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/yasindce1998/redhands/pkg/storage"
 )
 
 type Engagement struct {
@@ -57,7 +63,7 @@ func (m *Manager) Create(name, client string, scope []string) (*Engagement, erro
 		ID:        id,
 		Name:      name,
 		Client:    client,
-		Scope:     scope,
+		Scope:     append([]string(nil), scope...),
 		StartDate: time.Now().Format("2006-01-02"),
 		Status:    "active",
 		DataDir:   dataDir,
@@ -71,7 +77,7 @@ func (m *Manager) Create(name, client string, scope []string) (*Engagement, erro
 	if err := m.save(); err != nil {
 		return nil, fmt.Errorf("save engagement: %w", err)
 	}
-	return eng, nil
+	return cloneEngagement(eng), nil
 }
 
 func (m *Manager) Switch(id string) error {
@@ -88,7 +94,7 @@ func (m *Manager) Switch(id string) error {
 func (m *Manager) Active() *Engagement {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.engagements[m.active]
+	return cloneEngagement(m.engagements[m.active])
 }
 
 func (m *Manager) List() []*Engagement {
@@ -97,9 +103,18 @@ func (m *Manager) List() []*Engagement {
 
 	result := make([]*Engagement, 0, len(m.engagements))
 	for _, e := range m.engagements {
-		result = append(result, e)
+		result = append(result, cloneEngagement(e))
 	}
 	return result
+}
+
+func cloneEngagement(e *Engagement) *Engagement {
+	if e == nil {
+		return nil
+	}
+	result := *e
+	result.Scope = append([]string(nil), e.Scope...)
+	return &result
 }
 
 func (m *Manager) InScope(target string) bool {
@@ -120,11 +135,37 @@ func (m *Manager) InScope(target string) bool {
 }
 
 func matchScope(target, scope string) bool {
+	target = normalizeTarget(target)
+	scope = strings.ToLower(strings.TrimSpace(scope))
+	if prefix, err := netip.ParsePrefix(scope); err == nil {
+		if ip, err := netip.ParseAddr(target); err == nil {
+			return prefix.Contains(ip)
+		}
+		if requested, err := netip.ParsePrefix(target); err == nil {
+			return requested.Addr().BitLen() == prefix.Addr().BitLen() && requested.Bits() >= prefix.Bits() && prefix.Contains(requested.Masked().Addr())
+		}
+		return false
+	}
+	if strings.Contains(scope, "://") {
+		scope = normalizeTarget(scope)
+	}
 	if target == scope {
 		return true
 	}
 	matched, _ := filepath.Match(scope, target)
 	return matched
+}
+
+func normalizeTarget(target string) string {
+	target = strings.TrimSpace(target)
+	if strings.Contains(target, "://") {
+		if u, err := url.Parse(target); err == nil {
+			target = u.Hostname()
+		}
+	} else if host, _, err := net.SplitHostPort(target); err == nil {
+		target = host
+	}
+	return strings.TrimSuffix(strings.ToLower(target), ".")
 }
 
 func (m *Manager) save() error {
@@ -137,7 +178,7 @@ func (m *Manager) save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(m.baseDir, "engagements.json"), b, 0600)
+	return storage.WriteFile(filepath.Join(m.baseDir, "engagements.json"), b)
 }
 
 func (m *Manager) load() {

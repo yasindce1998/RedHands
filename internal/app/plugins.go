@@ -10,23 +10,32 @@ import (
 )
 
 func SetupPlugins(srv *mcp.Server, cfg *config.Config, execr executor.Executor) func() {
-	pluginTools := plugin.LoadPlugins(cfg.PluginsDir, execr)
-	for _, t := range pluginTools {
-		srv.RegisterTool(t)
+	managed := make(map[string]bool)
+	reload := func(path string) error {
+		next := make(map[string]bool)
+		for _, tool := range plugin.LoadPlugins(cfg.PluginsDir, execr) {
+			if _, exists := srv.GetTool(tool.Name()); exists && !managed[tool.Name()] {
+				log.Printf("plugin %q conflicts with a built-in tool; skipped", tool.Name())
+				continue
+			}
+			srv.RegisterTool(tool)
+			next[tool.Name()] = true
+		}
+		for name := range managed {
+			if !next[name] {
+				srv.UnregisterTool(name)
+			}
+		}
+		managed = next
+		return nil
 	}
+	_ = reload("")
 
 	if cfg.PluginsDir == "" {
 		return func() {}
 	}
 
-	watcher := plugin.NewWatcher(cfg.PluginsDir, cfg.PluginPollInterval, func(path string) error {
-		newTools := plugin.LoadPlugins(cfg.PluginsDir, execr)
-		for _, t := range newTools {
-			srv.RegisterTool(t)
-		}
-		log.Printf("hot-reloaded plugins (trigger: %s)", path)
-		return nil
-	})
+	watcher := plugin.NewWatcher(cfg.PluginsDir, cfg.PluginPollInterval, reload)
 	watcher.Start()
 	return watcher.Stop
 }

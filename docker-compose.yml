@@ -1,35 +1,53 @@
 services:
   redhands:
     build: .
-    ports:
-      - "8080:8080"
-      - "8081:8081"
+    # Local MCP clients attach over stdio; no unauthenticated ports are published.
+    stdin_open: true
     environment:
-      - REDHANDS_TRANSPORT=sse
-      - REDHANDS_SSE_ADDR=:8080
-      - REDHANDS_WS_ADDR=:8081
-      - REDHANDS_AUTH=none
-      - REDHANDS_TIMEOUT=5m
-      - REDHANDS_RATE_LIMIT=10
-      - REDHANDS_RATE_BURST=20
-      - REDHANDS_PLUGINS_DIR=/opt/redhands/plugins
+      REDHANDS_TRANSPORT: stdio
+      REDHANDS_PLUGINS_DIR: /opt/redhands/plugins
+      REDHANDS_AUDIT_FILE: /opt/redhands/data/audit.jsonl
+      REDHANDS_TARGETDB_FILE: /opt/redhands/data/targetdb.json
+      REDHANDS_CREDSTORE_FILE: /opt/redhands/data/credstore.enc
+      REDHANDS_CREDSTORE_KEY: ${REDHANDS_CREDSTORE_KEY:-}
+      REDHANDS_ENGAGEMENT_DIR: /opt/redhands/data/engagements
+      REDHANDS_LOOT_DIR: /opt/redhands/data/loot
+      REDHANDS_EVIDENCE_DIR: /opt/redhands/data/evidence
     volumes:
       - ./plugins:/opt/redhands/plugins:ro
-      - ./audit:/opt/redhands/audit
-    restart: unless-stopped
+      - redhands-data:/opt/redhands/data
+    security_opt:
+      - no-new-privileges:true
 
   redhands-secure:
     build: .
     ports:
-      - "8443:8080"
+      - "127.0.0.1:8443:8443"
     environment:
-      - REDHANDS_TRANSPORT=sse
-      - REDHANDS_SSE_ADDR=:8080
-      - REDHANDS_AUTH=apikey
-      - REDHANDS_API_KEY=${REDHANDS_API_KEY:-changeme}
-      - REDHANDS_TIMEOUT=5m
+      REDHANDS_TRANSPORT: sse
+      REDHANDS_SSE_ADDR: :8443
+      REDHANDS_AUTH: apikey
+      # Missing secrets fail startup; there is no default password.
+      REDHANDS_API_KEY: ${REDHANDS_API_KEY:-}
+      REDHANDS_TLS_CERT: /opt/redhands/tls/server.crt
+      REDHANDS_TLS_KEY: /opt/redhands/tls/server.key
+      REDHANDS_AUDIT_FILE: /opt/redhands/data/audit.jsonl
+      REDHANDS_TARGETDB_FILE: /opt/redhands/data/targetdb.json
+      REDHANDS_CREDSTORE_FILE: /opt/redhands/data/credstore.enc
+      REDHANDS_CREDSTORE_KEY: ${REDHANDS_CREDSTORE_KEY:-}
+      REDHANDS_ENGAGEMENT_DIR: /opt/redhands/data/engagements
+      REDHANDS_LOOT_DIR: /opt/redhands/data/loot
+      REDHANDS_EVIDENCE_DIR: /opt/redhands/data/evidence
     volumes:
       - ./plugins:/opt/redhands/plugins:ro
+      - ./tls:/opt/redhands/tls:ro
+      - redhands-secure-data:/opt/redhands/data
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
     profiles:
       - secure
+
+volumes:
+  redhands-data:
+  redhands-secure-data:

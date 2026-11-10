@@ -55,3 +55,20 @@ func TestToolsetEnabled(t *testing.T) {
 		t.Error("empty toolsets means all enabled")
 	}
 }
+
+func TestValidateRejectsBadEnvironment(t *testing.T) {
+	for _, tc := range []struct{ key, value string }{
+		{"REDHANDS_TIMEOUT", "bogus"}, {"REDHANDS_TIMEOUT", "0s"},
+		{"REDHANDS_RATE_BURST", "-1"}, {"REDHANDS_RATE_LIMIT", "oops"},
+		{"REDHANDS_CACHE_SIZE", "-5"}, {"REDHANDS_PLUGIN_POLL_INTERVAL", "-1s"},
+		{"REDHANDS_TRANSPORT", "typo"},
+	} {
+		t.Run(tc.key+tc.value, func(t *testing.T) {
+			t.Setenv(tc.key, tc.value)
+			cfg := Load()
+			if err := cfg.Validate(); err == nil {
+				t.Fatalf("invalid %s=%q accepted", tc.key, tc.value)
+			}
+		})
+	}
+}

@@ -2,6 +2,18 @@
 bin/
 audit.jsonl
 
+# Sensitive runtime assessment data
+targetdb.json
+credstore.enc
+/engagements/
+/loot/
+/evidence/
+/workflow_state/
+/audit/
+*.pem
+*.key
+/tls/
+
 # If you prefer the allow list template instead of the deny list, see community template:
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #

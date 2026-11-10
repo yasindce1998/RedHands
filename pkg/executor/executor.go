@@ -3,8 +3,11 @@ package executor
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
+	"sync"
+	"time"
 )
 
 type Config struct {
@@ -14,9 +17,10 @@ type Config struct {
 }
 
 type Result struct {
-	Stdout   []byte
-	Stderr   []byte
-	ExitCode int
+	Stdout    []byte
+	Stderr    []byte
+	ExitCode  int
+	Truncated bool
 }
 
 type Executor interface {
@@ -46,16 +50,19 @@ func (e *BinaryExecutor) Run(ctx context.Context, binary string, args ...string)
 
 	cmd := exec.CommandContext(ctx, binPath, args...)
 	applySandbox(cmd)
+	cmd.WaitDelay = 2 * time.Second
 
 	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &limitWriter{buf: &stdout, limit: e.cfg.MaxOutputBytes}
-	cmd.Stderr = &limitWriter{buf: &stderr, limit: e.cfg.MaxOutputBytes}
+	budget := &outputBudget{remaining: e.cfg.MaxOutputBytes}
+	cmd.Stdout = &limitWriter{buf: &stdout, budget: budget}
+	cmd.Stderr = &limitWriter{buf: &stderr, budget: budget}
 
 	err := cmd.Run()
 
 	result := &Result{
-		Stdout: stdout.Bytes(),
-		Stderr: stderr.Bytes(),
+		Stdout:    stdout.Bytes(),
+		Stderr:    stderr.Bytes(),
+		Truncated: budget.truncated,
 	}
 
 	if cmd.ProcessState != nil {
@@ -63,7 +70,10 @@ func (e *BinaryExecutor) Run(ctx context.Context, binary string, args ...string)
 	}
 
 	if ctx.Err() != nil {
-		return result, fmt.Errorf("execution timed out")
+		return result, fmt.Errorf("execution cancelled or timed out: %w", ctx.Err())
+	}
+	if result.Truncated {
+		return result, errors.New("execution output exceeded configured limit; output truncated")
 	}
 
 	if err != nil {
@@ -77,9 +87,32 @@ type limitWriter struct {
 	buf     *bytes.Buffer
 	limit   int64
 	written int64
+	budget  *outputBudget
+}
+
+type outputBudget struct {
+	mu        sync.Mutex
+	remaining int64
+	truncated bool
 }
 
 func (w *limitWriter) Write(p []byte) (int, error) {
+	original := len(p)
+	if w.budget != nil {
+		w.budget.mu.Lock()
+		defer w.budget.mu.Unlock()
+		remaining := max(w.budget.remaining, 0)
+		if int64(len(p)) > remaining {
+			p = p[:remaining]
+			w.budget.truncated = true
+		}
+		n, err := w.buf.Write(p)
+		w.budget.remaining -= int64(n)
+		if err != nil {
+			return n, err
+		}
+		return original, nil
+	}
 	remaining := w.limit - w.written
 	if remaining <= 0 {
 		return len(p), nil
@@ -89,5 +122,8 @@ func (w *limitWriter) Write(p []byte) (int, error) {
 	}
 	n, err := w.buf.Write(p)
 	w.written += int64(n)
-	return n, err
+	if err != nil {
+		return n, err
+	}
+	return original, nil
 }

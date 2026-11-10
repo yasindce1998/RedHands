@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/yasindce1998/redhands/pkg/auth"
 	"github.com/yasindce1998/redhands/pkg/mcp"
 )
 
@@ -25,6 +26,9 @@ func Middleware(logger Logger) mcp.Middleware {
 				Tool:      toolName,
 				Params:    params,
 				Duration:  time.Since(start).Milliseconds(),
+			}
+			if identity, _ := ctx.Value(auth.ContextKeyIdentity).(string); identity != "" {
+				event.Actor = identity
 			}
 
 			if err != nil {

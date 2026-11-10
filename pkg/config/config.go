@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"slices"
 	"strconv"
@@ -78,8 +79,8 @@ func Load() Config {
 		CacheMaxSize:   100,
 		AuditFile:      "audit.jsonl",
 		Transport:      "stdio",
-		SSEAddr:        ":8080",
-		WSAddr:         ":8081",
+		SSEAddr:        "127.0.0.1:8080",
+		WSAddr:         "127.0.0.1:8081",
 		PluginsDir:     "./plugins",
 	}
 
@@ -215,6 +216,42 @@ func Load() Config {
 	}
 
 	return cfg
+}
+
+func (c Config) Validate() error {
+	if c.Transport != "stdio" && c.Transport != "sse" && c.Transport != "ws" {
+		return fmt.Errorf("unsupported transport %q", c.Transport)
+	}
+	if c.Timeout < time.Second || c.MaxOutputBytes <= 0 || c.RateLimit <= 0 || c.RateBurst <= 0 {
+		return fmt.Errorf("timeout must be at least 1s; output and rate limits must be positive")
+	}
+	if c.CacheTTL < 0 || c.CacheMaxSize < 0 || c.PluginPollInterval <= 0 || c.WorkflowMaxParallel <= 0 {
+		return fmt.Errorf("invalid cache, plugin polling or workflow limits")
+	}
+	// Load historically falls back on parse errors. Reject them before startup.
+	for _, key := range []string{"REDHANDS_TIMEOUT", "REDHANDS_CACHE_TTL", "REDHANDS_PLUGIN_POLL_INTERVAL"} {
+		if v := os.Getenv(key); v != "" {
+			if _, err := time.ParseDuration(v); err != nil {
+				return fmt.Errorf("%s: %w", key, err)
+			}
+		}
+	}
+	for _, key := range []string{"REDHANDS_MAX_OUTPUT", "REDHANDS_RATE_LIMIT", "REDHANDS_RATE_BURST", "REDHANDS_CACHE_SIZE", "REDHANDS_WORKFLOW_MAX_PARALLEL"} {
+		if v := os.Getenv(key); v != "" {
+			if _, err := strconv.ParseInt(v, 10, 64); err != nil {
+				return fmt.Errorf("%s: %w", key, err)
+			}
+		}
+	}
+	if os.Getenv("REDHANDS_WORKFLOW_MAX_PARALLEL") == "0" {
+		return fmt.Errorf("REDHANDS_WORKFLOW_MAX_PARALLEL must be positive")
+	}
+	for _, key := range []string{"REDHANDS_DRY_RUN", "REDHANDS_TARGETDB_AUTOSAVE"} {
+		if value := os.Getenv(key); value != "" && value != "true" && value != "false" {
+			return fmt.Errorf("%s must be true or false", key)
+		}
+	}
+	return nil
 }
 
 func envOr(key, fallback string) string {

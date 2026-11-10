@@ -5,7 +5,7 @@
 <h1 align="center">RedHands</h1>
 
 <p align="center">
-  <strong>Enterprise-grade MCP server for offensive security tools</strong>
+  <strong>MCP server for authorized security assessments</strong>
 </p>
 
 <p align="center">
@@ -93,13 +93,13 @@ Add to your MCP client config:
 redhands
 
 # SSE transport (remote/team use)
-REDHANDS_TRANSPORT=sse REDHANDS_SSE_ADDR=:8080 redhands
+REDHANDS_TRANSPORT=sse redhands  # loopback only; see secure remote setup below
 
 # WebSocket transport
-REDHANDS_TRANSPORT=ws REDHANDS_WS_ADDR=:8081 redhands
+REDHANDS_TRANSPORT=ws redhands  # loopback only
 
-# Docker (all tools pre-installed)
-docker compose up
+# Docker (selected tools pre-installed)
+docker compose run --rm -i redhands
 ```
 
 ### Installation Profiles
@@ -286,8 +286,8 @@ RedHands supports three transport modes:
 | Transport | Use Case | Config |
 |-----------|----------|--------|
 | **stdio** (default) | Local use with Claude Code, Cursor, VS Code | `REDHANDS_TRANSPORT=stdio` |
-| **SSE** | Remote/team deployment over HTTP | `REDHANDS_TRANSPORT=sse` + `REDHANDS_SSE_ADDR=:8080` |
-| **WebSocket** | Real-time bidirectional (raw frame protocol) | `REDHANDS_TRANSPORT=ws` + `REDHANDS_WS_ADDR=:8081` |
+| **SSE** | Local HTTP or authenticated remote HTTPS | `REDHANDS_TRANSPORT=sse` (loopback by default) |
+| **WebSocket** | Real-time bidirectional (raw frame protocol) | `REDHANDS_TRANSPORT=ws` (loopback by default) |
 
 ## Authentication
 
@@ -307,13 +307,15 @@ Chain tools sequentially with variable substitution:
   "params": {
     "steps": [
       {"tool": "nmap_port_scan", "params": {"target": "10.0.0.1"}},
-      {"tool": "nuclei_scan", "params": {"target": "$prev.text"}}
+      {"tool": "nuclei_scan", "params": {"target": "http://10.0.0.1"}}
     ]
   }
 }
 ```
 
 Variables: `$prev.text` (previous step output), `$step[N].text` (Nth step output).
+Substitutions contain the full formatted text, not extracted targets; only pass them
+to parameters that accept that format. All steps honor dry-run, rate limits and scope.
 
 ## Structured Output Parsing
 
@@ -332,7 +334,8 @@ Generate reports from workflow results:
   "method": "report/generate",
   "params": {
     "format": "markdown",
-    "data": { ... }
+    "title": "Assessment report",
+    "sections": [{"title": "Summary", "tool": "nmap_port_scan", "content": "Reviewed scan results"}]
   }
 }
 ```
@@ -373,17 +376,24 @@ All settings via environment variables:
 | `REDHANDS_RATE_LIMIT` | `10` | Token bucket refill rate (requests/sec) |
 | `REDHANDS_RATE_BURST` | `20` | Token bucket burst capacity |
 | `REDHANDS_CACHE_TTL` | `5m` | Result cache TTL |
-| `REDHANDS_CACHE_SIZE` | `100` | Max cached results (LRU eviction) |
+| `REDHANDS_CACHE_SIZE` | `100` | Max pure-function results (oldest-expiry eviction) |
 | `REDHANDS_AUDIT_FILE` | `audit.jsonl` | Audit log file path |
 | `REDHANDS_TRANSPORT` | `stdio` | Transport mode: `stdio`, `sse`, or `ws` |
-| `REDHANDS_SSE_ADDR` | `:8080` | SSE HTTP listen address |
-| `REDHANDS_WS_ADDR` | `:8081` | WebSocket listen address |
+| `REDHANDS_SSE_ADDR` | `127.0.0.1:8080` | SSE HTTP listen address |
+| `REDHANDS_WS_ADDR` | `127.0.0.1:8081` | WebSocket listen address |
 | `REDHANDS_AUTH` | `none` | Auth mode: `none`, `apikey`, or `mtls` |
 | `REDHANDS_API_KEY` | — | API key (required when auth=apikey) |
 | `REDHANDS_TLS_CERT` | — | TLS certificate path |
 | `REDHANDS_TLS_KEY` | — | TLS private key path |
 | `REDHANDS_TLS_CA` | — | CA certificate for mTLS client verification |
 | `REDHANDS_PLUGINS_DIR` | `./plugins` | Directory for JSON plugin definitions |
+| `REDHANDS_CREDSTORE_KEY` | — | Strong encryption key required for credential persistence |
+
+Non-loopback listeners require authentication **and TLS**. API keys are accepted only
+in the `X-API-Key` header. stdio uses local OS access controls, not API-key authentication.
+Caching is limited to pure MITRE/risk-score lookups, never scans or state-changing tools.
+See [security and deployment notes](docs/security-hardening.md) for HTTPS/mTLS setup,
+scope limitations, credential migration, and remaining release work.
 
 ### Toolset Filtering
 
@@ -406,13 +416,13 @@ export REDHANDS_TOOLSETS=
 ## Security
 
 - **Binary allowlist** — only known security tools can be executed
-- **Shell metacharacter rejection** on all inputs
-- **Target validation** — strict format checks for IPs, domains, URLs
+- **Argument validation** — shell metacharacter rejection for external-tool arguments
+- **Target validation and scope** — explicit network targets checked against active engagement scope; not a complete network sandbox
 - **Output size cap** — 10MB per execution
 - **Execution timeout** — configurable per tool call
 - **Rate limiting** — token bucket prevents abuse
 - **Authentication** — API key or mTLS for remote transports
-- **Full audit trail** — every tool invocation logged as JSONL
+- **Audit logging** — direct calls and workflow steps logged as JSONL; logging failures reported to stderr
 
 ## Development
 
@@ -433,16 +443,18 @@ make check-deps     # Check which tools are available
 docker build -t redhands .
 docker run -i redhands
 
-# With Docker Compose (SSE mode)
-docker compose up
+# With Docker Compose (local stdio mode; no published ports)
+docker compose run --rm -i redhands
 
 # With authentication
-REDHANDS_API_KEY=mysecret docker compose --profile secure up
+# Requires tls/server.crt, tls/server.key, and a strong REDHANDS_API_KEY
+docker compose --profile secure up redhands-secure
 ```
 
-The Docker image includes all supported security tools pre-installed:
-- **apt**: nmap, masscan, tshark, hashcat, john, nikto, whatweb
-- **pip**: impacket, certipy-ad, crackmapexec
+The Docker image includes a subset of supported security tools (check dependencies
+before use; some tools require additional installation or privileges):
+- **apt/source**: nmap, masscan, tshark, hashcat, john, nikto, whatweb
+- **pip**: impacket, certipy-ad
 - **Go tools**: subfinder, httpx, nuclei, ffuf, katana, gobuster, gau
 - **Releases**: chisel, ligolo-ng, kubedagger
 

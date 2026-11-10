@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/yasindce1998/redhands/internal/app"
 	"github.com/yasindce1998/redhands/internal/binaries"
@@ -17,9 +21,18 @@ import (
 
 func main() {
 	log.SetOutput(os.Stderr)
+	if err := run(); err != nil {
+		log.Printf("server error: %v", err)
+		os.Exit(1)
+	}
+}
 
+func run() error {
 	cfg := config.Load()
 	authCfg := auth.LoadConfig()
+	if err := app.ValidateConfig(&cfg, authCfg); err != nil {
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
 
 	execr := executor.New(executor.Config{
 		Timeout:         int64(cfg.Timeout.Seconds()),
@@ -29,7 +42,7 @@ func main() {
 
 	auditLogger, err := audit.NewFileLogger(cfg.AuditFile)
 	if err != nil {
-		log.Fatalf("failed to initialize audit logger: %v", err)
+		return fmt.Errorf("failed to initialize audit logger: %w", err)
 	}
 	defer func() { _ = auditLogger.Close() }()
 
@@ -37,7 +50,7 @@ func main() {
 
 	srv := mcp.NewServer("redhands", "0.1.0")
 
-	app.SetupMiddleware(srv, &cfg, auditLogger, authCfg)
+	app.SetupMiddleware(srv, &cfg, auditLogger, authCfg, stores.EngMgr)
 
 	registry.RegisterAll(srv, &registry.Deps{
 		Exec:      execr,
@@ -55,5 +68,12 @@ func main() {
 
 	app.SetupWorkflow(srv)
 
-	app.RunTransport(context.Background(), srv, &cfg, authCfg, stores.TargetDB)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+	if err := app.RunTransport(ctx, srv, &cfg, authCfg, stores.TargetDB); err != nil {
+		if !errors.Is(err, context.Canceled) {
+			return err
+		}
+	}
+	return nil
 }

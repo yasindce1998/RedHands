@@ -1,32 +1,53 @@
 package mcp
 
 import (
+	"context"
+	"crypto/tls"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type TCPTransport struct {
-	listener net.Listener
-	handler  func(json.RawMessage) json.RawMessage
-	mu       sync.Mutex
-	conns    []net.Conn
-	done     chan struct{}
+	listener       net.Listener
+	mu             sync.Mutex
+	conns          map[net.Conn]struct{}
+	done           chan struct{}
+	once           sync.Once
+	ctx            context.Context
+	contextHandler func(context.Context, json.RawMessage) json.RawMessage
+	authenticate   func(context.Context, net.Conn) (context.Context, error)
+}
+
+type TCPOptions struct {
+	TLSConfig    *tls.Config
+	Authenticate func(context.Context, net.Conn) (context.Context, error)
 }
 
 func NewTCPTransport(addr string, handler func(json.RawMessage) json.RawMessage) (*TCPTransport, error) {
+	return NewTCPTransportWithOptions(context.Background(), addr, func(_ context.Context, msg json.RawMessage) json.RawMessage { return handler(msg) }, TCPOptions{})
+}
+
+func NewTCPTransportWithOptions(ctx context.Context, addr string, handler func(context.Context, json.RawMessage) json.RawMessage, opts TCPOptions) (*TCPTransport, error) {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("tcp listen: %w", err)
 	}
+	if opts.TLSConfig != nil {
+		ln = tls.NewListener(ln, opts.TLSConfig)
+	}
 
 	return &TCPTransport{
-		listener: ln,
-		handler:  handler,
-		done:     make(chan struct{}),
+		listener:       ln,
+		contextHandler: handler,
+		authenticate:   opts.Authenticate,
+		ctx:            ctx,
+		conns:          make(map[net.Conn]struct{}),
+		done:           make(chan struct{}),
 	}, nil
 }
 
@@ -47,7 +68,19 @@ func (t *TCPTransport) Serve() error {
 		}
 
 		t.mu.Lock()
-		t.conns = append(t.conns, conn)
+		select {
+		case <-t.done:
+			t.mu.Unlock()
+			_ = conn.Close()
+			return nil
+		default:
+		}
+		if len(t.conns) >= 256 {
+			t.mu.Unlock()
+			_ = conn.Close()
+			continue
+		}
+		t.conns[conn] = struct{}{}
 		t.mu.Unlock()
 
 		go t.handleConn(conn)
@@ -55,28 +88,50 @@ func (t *TCPTransport) Serve() error {
 }
 
 func (t *TCPTransport) Close() error {
-	close(t.done)
-
-	t.mu.Lock()
-	for _, c := range t.conns {
-		_ = c.Close()
-	}
-	t.conns = nil
-	t.mu.Unlock()
-
-	return t.listener.Close()
+	var err error
+	t.once.Do(func() {
+		close(t.done)
+		err = t.listener.Close()
+		t.mu.Lock()
+		defer t.mu.Unlock()
+		for c := range t.conns {
+			_ = c.Close()
+		}
+	})
+	return err
 }
 
 func (t *TCPTransport) handleConn(conn net.Conn) {
-	defer func() { _ = conn.Close() }()
+	ctx, cancel := context.WithCancel(t.ctx)
+	defer cancel()
+	defer func() {
+		_ = conn.Close()
+		t.mu.Lock()
+		delete(t.conns, conn)
+		t.mu.Unlock()
+	}()
+	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
+	if t.authenticate != nil {
+		var err error
+		ctx, err = t.authenticate(ctx, conn)
+		if err != nil {
+			return
+		}
+	}
 
 	for {
+		_ = conn.SetReadDeadline(time.Now().Add(2 * time.Minute))
+		_ = conn.SetWriteDeadline(time.Time{})
 		msg, err := readFrame(conn)
 		if err != nil {
 			return
 		}
 
-		resp := t.handler(msg)
+		resp := t.contextHandler(ctx, msg)
+		if resp == nil {
+			continue
+		}
+		_ = conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
 
 		if err := writeFrame(conn, resp); err != nil {
 			return

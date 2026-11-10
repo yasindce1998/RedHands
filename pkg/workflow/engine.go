@@ -66,6 +66,9 @@ func (e *Engine) Run(ctx context.Context, req *WorkflowRequest) (*WorkflowResult
 	if len(req.Steps) == 0 {
 		return nil, fmt.Errorf("workflow has no steps")
 	}
+	if len(req.Steps) > 128 {
+		return nil, fmt.Errorf("workflow exceeds maximum of 128 steps")
+	}
 
 	results := make([]StepResult, 0, len(req.Steps))
 

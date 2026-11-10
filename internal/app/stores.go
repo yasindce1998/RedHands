@@ -27,6 +27,9 @@ func InitStores(cfg *config.Config) *Stores {
 	s := &Stores{}
 
 	s.TargetDB = targetdb.NewStore(cfg.TargetDBFile, cfg.TargetDBAutoSave)
+	if err := s.TargetDB.LoadError(); err != nil {
+		log.Fatalf("target database: %v", err)
+	}
 	s.Graph = attackgraph.New()
 	s.EngMgr = engagement.NewManager(cfg.EngagementDir)
 	s.Notifier = notify.NewNotifier(cfg.WebhookURLs, cfg.WebhookEvents)
@@ -40,8 +43,9 @@ func InitStores(cfg *config.Config) *Stores {
 	if cfg.CredStoreKey != "" {
 		s.CredStore, err = credstore.NewStore(cfg.CredStoreFile, cfg.CredStoreKey)
 		if err != nil {
-			log.Printf("warning: credstore initialization failed: %v", err)
+			log.Fatalf("credstore initialization failed: %v", err)
 		}
+		s.TargetDB.SetCredentialStore(s.CredStore)
 	}
 
 	s.Evidence, err = evidence.NewStore(cfg.EvidenceDir)

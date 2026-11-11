@@ -65,8 +65,69 @@ func TestPersistenceRoundTripAndPortablePaths(t *testing.T) {
 	if err != nil || string(data) != "scan output" {
 		t.Fatalf("artifact not restored: %s %v", data, err)
 	}
-	if !strings.HasPrefix(items[0].Path, other+string(filepath.Separator)) {
-		t.Fatal("relocation retained old path")
+	canonicalOther, err := filepath.EvalSymlinks(other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedPath := filepath.Join(canonicalOther, filepath.Base(output.Path))
+	if items[0].Path != expectedPath {
+		t.Fatalf("relocated artifact path = %q, want %q", items[0].Path, expectedPath)
+	}
+}
+
+// macOS temporary directories commonly have a symlinked parent (/var ->
+// /private/var). Reproduce that layout explicitly on every symlink-capable OS.
+func TestRelocationThroughSymlinkedParent(t *testing.T) {
+	parent := t.TempDir()
+	realParent := filepath.Join(parent, "real")
+	if err := os.Mkdir(realParent, 0700); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(parent, "alias")
+	if err := os.Symlink(realParent, alias); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	s, err := NewStore(filepath.Join(alias, "original"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	item, err := s.SaveOutput("tool", "host", "preserved")
+	if err != nil {
+		t.Fatal(err)
+	}
+	moved := filepath.Join(alias, "moved")
+	if err := os.Rename(s.Dir(), moved); err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := NewStore(moved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalMoved, err := filepath.EvalSymlinks(moved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	items := reopened.List()
+	if len(items) != 1 || items[0].ID != item.ID {
+		t.Fatalf("relocation lost evidence: %+v", items)
+	}
+	if items[0].Path != filepath.Join(canonicalMoved, filepath.Base(item.Path)) {
+		t.Fatalf("artifact path not canonicalized after relocation: %q", items[0].Path)
+	}
+	data, err := os.ReadFile(items[0].Path)
+	if err != nil || string(data) != "preserved" {
+		t.Fatalf("relocated artifact unreadable: %q %v", data, err)
+	}
+	index, err := os.ReadFile(filepath.Join(moved, indexFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var persisted diskIndex
+	if err := json.Unmarshal(index, &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Items) != 1 || persisted.Items[0].Path != filepath.Base(item.Path) {
+		t.Fatalf("index did not retain portable filename: %s", index)
 	}
 }
 

@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "go": {
+    "subfinder": "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.17.0",
+    "httpx": "github.com/projectdiscovery/httpx/cmd/httpx@v1.12.0",
+    "nuclei": "github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.11.1",
+    "ffuf": "github.com/ffuf/ffuf/v2@v2.3.0",
+    "katana": "github.com/projectdiscovery/katana/cmd/katana@v1.8.0",
+    "gobuster": "github.com/OJ/gobuster/v3@v3.8.2",
+    "gau": "github.com/lc/gau/v2/cmd/gau@v2.2.4",
+    "waybackurls": "github.com/tomnomnom/waybackurls@v0.1.0"
+  },
+  "python": {
+    "impacket": "impacket==0.13.1",
+    "certipy": "certipy-ad==4.8.2",
+    "arjun": "arjun==2.2.7"
+  },
+  "sources": {
+    "nikto": {"url": "https://github.com/sullo/nikto.git", "commit": "312645d873478a77986627ab1fc8cffe595e85d4"}
+  },
+  "artifacts": {
+    "go": {
+      "linux-amd64": ["https://go.dev/dl/go1.26.11.linux-amd64.tar.gz", "9849f4e04ee35303714e34fbc3ac8ab44ea3e448a95aa182f91e3b9b79c710ec"],
+      "linux-arm64": ["https://go.dev/dl/go1.26.11.linux-arm64.tar.gz", "6c2f29b458b5add0835f18b776f69c8881a6d88428f1484a6da55755e620757e"],
+      "darwin-amd64": ["https://go.dev/dl/go1.26.11.darwin-amd64.tar.gz", "394baae971332f2bc783d6e2004ae57101479bd3b06ed8209a3fe3570d4ce498"],
+      "darwin-arm64": ["https://go.dev/dl/go1.26.11.darwin-arm64.tar.gz", "e3a42e67a7a8acf450ebada2b074c7ca863000ca514907b7185b45e8f5cdff57"]
+    },
+    "chisel": {
+      "linux-amd64": ["https://github.com/jpillora/chisel/releases/download/v1.11.5/chisel_1.11.5_linux_amd64.gz", "2506226c4710a3c8d3b332f83d0f3b412fe2a8436b710ea0dbec44b288ab309b"],
+      "linux-arm64": ["https://github.com/jpillora/chisel/releases/download/v1.11.5/chisel_1.11.5_linux_arm64.gz", "1a4f16aad733f022b9aa90903268d730bfb20b03f9484f7ab4863e442737fa9a"],
+      "darwin-amd64": ["https://github.com/jpillora/chisel/releases/download/v1.11.5/chisel_1.11.5_darwin_amd64.gz", "210a3739940d004faa655ec92a7fb1b7b19190ababf5d38f17a2d8117afa46d4"],
+      "darwin-arm64": ["https://github.com/jpillora/chisel/releases/download/v1.11.5/chisel_1.11.5_darwin_arm64.gz", "96613f3da9e377d9f66e85325e7e9ecbb9ff5ab38ce7801d41198d360b3ba93b"],
+      "windows-amd64": ["https://github.com/jpillora/chisel/releases/download/v1.11.5/chisel_1.11.5_windows_amd64.zip", "b1bdaaa148c36236a71410fede2539417136d1152646c9fc5e2dac0f04216a68"]
+    },
+    "ligolo-proxy": {
+      "linux-amd64": ["https://github.com/nicocha30/ligolo-ng/releases/download/v0.8.3/ligolo-ng_proxy_0.8.3_linux_amd64.tar.gz", "a07ed234cba8714e8ea4d48f77dd25e1cae7aa5456fe0d1ed79e6cdf698c0d8e"],
+      "linux-arm64": ["https://github.com/nicocha30/ligolo-ng/releases/download/v0.8.3/ligolo-ng_proxy_0.8.3_linux_arm64.tar.gz", "6b37314f852a6b4e400435f9feb6a010696b6af99999994acd71b945cc31086a"],
+      "darwin-amd64": ["https://github.com/nicocha30/ligolo-ng/releases/download/v0.8.3/ligolo-ng_proxy_0.8.3_darwin_amd64.tar.gz", "de3c69f7db6cd64cb467ae817bff490686cb9033d40da35d5beac5c2e8468d60"],
+      "darwin-arm64": ["https://github.com/nicocha30/ligolo-ng/releases/download/v0.8.3/ligolo-ng_proxy_0.8.3_darwin_arm64.tar.gz", "b32a8e1112c06a51f1550a6645b5d94db69664be857f437a214e77874fdd14be"],
+      "windows-amd64": ["https://github.com/nicocha30/ligolo-ng/releases/download/v0.8.3/ligolo-ng_proxy_0.8.3_windows_amd64.zip", "8a8af6827dd4bc579be2bb0207697a3482bcb2d6e9d73b7d30cc2d64f113c185"]
+    },
+    "kubedagger-client": {
+      "linux-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-client-linux-amd64", "c97b6a64802520194fc4a5591184b96d2a44dac86a3f888ab714bc3a32e96fb5"],
+      "linux-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-client-linux-arm64", "01ea286913da5dc8db7a3efe47c64351d64d4a1217e7ca938fd2e1be0776d791"]
+    },
+    "kubedagger-operator": {
+      "linux-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-linux-amd64", "b0adbd893510cb0bd0ce1c2cbcf0d73da76a6162206d2cf03fd65e1cf584f662"],
+      "linux-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-linux-arm64", "a70bc3d309b11d02d8c30e2fa8aaced830a83b565aaf7533c2d4e5301dfe9d5c"],
+      "darwin-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-darwin-amd64", "80ed8588c2453dfa2d2f9721b4cde80c861bafceac1d9c199a2525a06ba1a12b"],
+      "darwin-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-darwin-arm64", "9d959c59c7008a70825d69c84996ef5436ade60401cc26ddf11fef27d13deedf"],
+      "windows-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-windows-amd64.exe", "353d0c6c08d72ad4580e4d7133b3541646582eb2fd19e1218ba545efc0af7ef4"]
+    },
+    "barzakh-adversary": {
+      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-linux-x86_64", "057771a913648bcb21198a331fb5bb357cc17491bc30502a7881efec6775016b"],
+      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-linux-aarch64", "c8c52ed5c0e4ffb5ee2e50b066a96a431452c517d85b03ccbfdd7f62c1bafb5e"],
+      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-macos-x86_64", "5a707358d47603997f101b5f8c0bc97e9589b2a06d7946e2311c68d50fa82b7b"],
+      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-macos-aarch64", "42ee0da3666f81cc8cfc38fffb626fa7b764c7af77bb927422b130c51f605eef"],
+      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-windows-x86_64.exe", "17c05cf87b73c1c6ff836b90a94b27e5b550f812feeca009b01c67cc9cc70ad8"]
+    },
+    "barzakh-scanner": {
+      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-linux-x86_64", "fb9d80a3925351fd4916da0d828001edec9dd0d8cfa8b34f404c44398803af99"],
+      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-linux-aarch64", "3b3cbfa4111c6826f7b55eb5f4ddd18293bc26879954e35041d4d8948568b92e"],
+      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-macos-x86_64", "9910cf1c28dd226d27659658c6ce60f6648184a263bd6d5a2a0f742b991abff1"],
+      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-macos-aarch64", "dff6d76b73660a217ca9ade4685934660e50b023298a644d1c4f459ea845c2f3"],
+      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-windows-x86_64.exe", "9bc7fe4fcf81dee8bd01586bc217f85795e7cdaf16f97ff10aed758db418b4bd"]
+    },
+    "feroxbuster": {
+      "linux-amd64": ["https://github.com/epi052/feroxbuster/releases/download/v2.13.1/x86_64-linux-feroxbuster.zip", "0978619a10049ccaad290b2d1241bc4d8a6aac18da07d6231186fb9d343f99de"],
+      "linux-arm64": ["https://github.com/epi052/feroxbuster/releases/download/v2.13.1/aarch64-linux-feroxbuster.zip", "1e5244e1f52e55a647b65e0c76ae7afe0b9983c1fbea30ed7c67e477175eb381"],
+      "darwin-amd64": ["https://github.com/epi052/feroxbuster/releases/download/v2.13.1/x86_64-macos-feroxbuster.zip", "db50a69896845c0aa1b837c097ff205e3a4bfcca8db1869cb182b57128c132fb"],
+      "darwin-arm64": ["https://github.com/epi052/feroxbuster/releases/download/v2.13.1/aarch64-macos-feroxbuster.zip", "cc5b17041aadd775af5dec60fdd82df8f98ace03a9df5dd84c76792d2294887a"],
+      "windows-amd64": ["https://github.com/epi052/feroxbuster/releases/download/v2.13.1/x86_64-windows-feroxbuster.exe.zip", "6255fc1998220833d22b221e5c740895ada2a5fbaf31587e799276c59da7dab2"]
+    }
+  }
+}

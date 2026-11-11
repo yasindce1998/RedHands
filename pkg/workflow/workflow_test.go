@@ -1,9 +1,11 @@
 package workflow
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -309,5 +311,83 @@ func TestContextCancellation(t *testing.T) {
 	}
 	if result.Success {
 		t.Error("expected failure on cancellation")
+	}
+}
+
+func TestSubstitutionDoesNotRewriteOutputOrKeys(t *testing.T) {
+	params := json.RawMessage(`{"$prev.text":{"nested":["$prev.text","$step[0].text"],"number":9007199254740993}}`)
+	result := substituteVars(params, []StepResult{{Text: `literal $step[1].text "quoted"`}, {Text: "second"}}, 2)
+	var got map[string]any
+	if err := json.Unmarshal(result, &got); err != nil {
+		t.Fatal(err)
+	}
+	nested, ok := got["$prev.text"].(map[string]any)
+	if !ok {
+		t.Fatalf("key rewritten: %s", result)
+	}
+	values := nested["nested"].([]any)
+	if values[0] != "second" || values[1] != `literal $step[1].text "quoted"` {
+		t.Fatalf("recursive replacement: %s", result)
+	}
+	if !bytes.Contains(result, []byte("9007199254740993")) {
+		t.Fatal("number precision lost")
+	}
+}
+
+func TestUnsupportedWorkflowOptionsFailBeforeExecution(t *testing.T) {
+	calls := 0
+	e := NewEngine(func(context.Context, string, json.RawMessage) (string, bool, error) { calls++; return "ok", true, nil })
+	for _, input := range []string{`{"steps":[{"tool":"a","params":{}},{"tool":"b","params":null}]}`, `{"steps":[{"tool":"a","params":{}}],"template":"ignored-before"}`, `{"steps":[{"tool":"a","params":{},"retries":3}]}`} {
+		if _, err := e.RunFromJSON(context.Background(), json.RawMessage(input)); err == nil {
+			t.Fatalf("accepted %s", input)
+		}
+	}
+	if calls != 0 {
+		t.Fatal("invalid plan partially executed")
+	}
+}
+
+func FuzzWorkflowStringSubstitution(f *testing.F) {
+	f.Add(`literal $step[1].text "quoted"`, `line\nvalue`)
+	f.Add("", "")
+	f.Fuzz(func(t *testing.T, previous, first string) {
+		if len(previous)+len(first) > 32*1024 {
+			t.Skip()
+		}
+		params := json.RawMessage(`{"value":"$prev.text","nested":["$step[0].text"]}`)
+		output := substituteVars(params, []StepResult{{Text: first}, {Text: previous}}, 2)
+		var decoded struct {
+			Value  string   `json:"value"`
+			Nested []string `json:"nested"`
+		}
+		if err := json.Unmarshal(output, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		// JSON replaces invalid UTF-8 by design; compare through the same encoding.
+		encoded, _ := json.Marshal(previous)
+		var expected string
+		_ = json.Unmarshal(encoded, &expected)
+		if decoded.Value != expected {
+			t.Fatal("previous output was recursively substituted")
+		}
+	})
+}
+
+func TestWorkflowAggregateOutputBound(t *testing.T) {
+	calls := 0
+	e := NewEngine(func(context.Context, string, json.RawMessage) (string, bool, error) {
+		calls++
+		return strings.Repeat("x", maxWorkflowOutputBytes/2+1), true, nil
+	})
+	result, err := e.Run(context.Background(), &WorkflowRequest{Steps: []Step{{Tool: "a"}, {Tool: "b"}, {Tool: "c"}}})
+	if err == nil || result.Success || calls != 2 {
+		t.Fatal("aggregate output limit did not stop subsequent steps")
+	}
+}
+
+func TestSubstitutionExpansionBound(t *testing.T) {
+	_, err := substituteVarsBounded(json.RawMessage(`{"value":"$prev.text$prev.text"}`), []StepResult{{Text: strings.Repeat("x", 6*1024*1024)}}, 1)
+	if err == nil {
+		t.Fatal("unbounded substitution expansion")
 	}
 }

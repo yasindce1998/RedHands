@@ -40,7 +40,9 @@ func (t *ComplianceTool) Execute(_ context.Context, params json.RawMessage) (*mc
 		TechniqueID string `json:"technique_id"`
 	}
 	if len(params) > 0 {
-		_ = json.Unmarshal(params, &input)
+		if err := json.Unmarshal(params, &input); err != nil {
+			return errorResult("invalid params: " + err.Error())
+		}
 	}
 
 	if input.TechniqueID != "" {

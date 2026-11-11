@@ -17,6 +17,7 @@ import (
 	"github.com/yasindce1998/redhands/pkg/config"
 	"github.com/yasindce1998/redhands/pkg/executor"
 	"github.com/yasindce1998/redhands/pkg/mcp"
+	"github.com/yasindce1998/redhands/pkg/version"
 )
 
 func main() {
@@ -46,9 +47,12 @@ func run() error {
 	}
 	defer func() { _ = auditLogger.Close() }()
 
-	stores := app.InitStores(&cfg)
+	stores, err := app.InitStores(&cfg)
+	if err != nil {
+		return err
+	}
 
-	srv := mcp.NewServer("redhands", "0.1.0")
+	srv := mcp.NewServer("redhands", version.Version)
 
 	app.SetupMiddleware(srv, &cfg, auditLogger, authCfg, stores.EngMgr)
 

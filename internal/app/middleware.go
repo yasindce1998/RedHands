@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+
 	"github.com/yasindce1998/redhands/pkg/audit"
 	"github.com/yasindce1998/redhands/pkg/auth"
 	"github.com/yasindce1998/redhands/pkg/cache"
 	"github.com/yasindce1998/redhands/pkg/config"
 	"github.com/yasindce1998/redhands/pkg/dryrun"
 	"github.com/yasindce1998/redhands/pkg/engagement"
+	"github.com/yasindce1998/redhands/pkg/execution"
 	"github.com/yasindce1998/redhands/pkg/mcp"
 	"github.com/yasindce1998/redhands/pkg/opsec"
 	"github.com/yasindce1998/redhands/pkg/ratelimit"
@@ -26,6 +28,13 @@ func SetupMiddleware(srv *mcp.Server, cfg *config.Config, auditLogger *audit.Fil
 	if cfg.DryRun {
 		srv.Use(dryrun.NewInterceptor().Middleware)
 	}
+	srv.Use(execution.Approval(cfg.ApprovedTools))
+	limiter, err := execution.NewLimiter(cfg.MaxConcurrent, cfg.MaxQueued, cfg.Timeout)
+	if err != nil {
+		panic(err)
+	} // Configuration is validated before startup.
+	srv.Use(limiter.Middleware)
+	srv.SetWorkflowTimeout(cfg.WorkflowTimeout)
 	srv.Use(cache.MiddlewareWithPolicy(cache.New(cfg.CacheMaxSize, cfg.CacheTTL), func(ctx context.Context, name string) (string, bool) {
 		identity, _ := ctx.Value(auth.ContextKeyIdentity).(string)
 		engagementID := ""
@@ -34,9 +43,8 @@ func SetupMiddleware(srv *mcp.Server, cfg *config.Config, auditLogger *audit.Fil
 				engagementID = active.ID
 			}
 		}
-		tool, _ := srv.GetTool(name)
-		pure, optedIn := tool.(interface{ Cacheable() bool })
-		return identity + ":" + engagementID, optedIn && pure.Cacheable() && cache.SafeTool(name)
+		policy := mcp.PolicyFromContext(ctx)
+		return identity + ":" + engagementID, policy.ReadOnly && policy.Cacheable
 	}))
 
 	if cfg.OpsecProfile != "" {

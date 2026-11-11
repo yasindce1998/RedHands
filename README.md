@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/yasindce1998/redhands/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/yasindce1998/redhands/ci.yml?style=flat-square&logo=github&logoColor=white&label=CI&color=00c853" alt="CI"></a>
-  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26+"></a>
+  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
   <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-125-00fff2?style=flat-square" alt="125 Tools"></a>
@@ -33,10 +33,13 @@ go install github.com/yasindce1998/redhands/cmd/redhands@latest
 curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/install.sh | bash
 ```
 
-This downloads the `redhands` binary and prints MCP configuration instructions. To also install security tools:
+This verifies a release archive against its published `SHA256SUMS` and prints MCP
+configuration instructions. Older releases without checksums must be built from source.
+To install security tools, use a reviewed checkout containing the dependency lock:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/install.sh | bash -s -- --with-tools --profile=web
+git clone https://github.com/yasindce1998/redhands.git && cd redhands
+sudo ./scripts/install-tools.sh --profile web
 ```
 
 ### Install from Source
@@ -92,7 +95,7 @@ Add to your MCP client config:
 # stdio (default, for MCP clients)
 redhands
 
-# SSE transport (remote/team use)
+# SSE transport (local CLI or remote use with TLS/auth)
 REDHANDS_TRANSPORT=sse redhands  # loopback only; see secure remote setup below
 
 # WebSocket transport
@@ -115,9 +118,34 @@ docker compose run --rm -i redhands
 | `recon` | minimal + amass, gau, waybackurls, arjun, whatweb | Deep reconnaissance |
 | `all` | Everything | Full offensive toolkit |
 
+Profiles describe desired dependencies, not a guarantee every dependency is available
+on every OS. RustScan, testssl.sh, and CrackMapExec currently need manual installation;
+KubeDagger client is Linux-only. Installers report missing tools rather than downloading
+unverified replacements. See [dependency maintenance](docs/dependencies.md).
+
+### Command-line client
+
+`make build` produces `redhands`, `redhands-cli`, and `redhands-creds` in `bin/`.
+The CLI uses the same authenticated SSE transport as MCP clients:
+
+```sh
+# Terminal 1
+REDHANDS_TRANSPORT=sse ./bin/redhands
+# Terminal 2
+./bin/redhands-cli tools
+./bin/redhands-cli targets add 192.0.2.1 lab-host
+./bin/redhands-cli status
+```
+
+For HTTPS, set `REDHANDS_URL=https://your-server:8443`, `REDHANDS_API_KEY`, and
+`REDHANDS_CLIENT_CA=/path/to/ca.pem`. For mTLS, also set `REDHANDS_CLIENT_CERT`
+and `REDHANDS_CLIENT_KEY`. The CLI rejects untrusted certificates, redirects, and
+non-loopback plain HTTP. `REDHANDS_CLIENT_TIMEOUT` sets its total deadline (default `6m`).
+Tool failures return a nonzero exit status; calls are never retried automatically.
+
 ## Requirements
 
-- Go 1.26+ (for building from source)
+- Go 1.26.11+ (for building from source; if using Go 1.27, use 1.27.4+)
 - Security tools on PATH (installed via scripts above, Docker, or manually)
 
 ## Available Tools
@@ -370,7 +398,7 @@ All settings via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `REDHANDS_TOOLSETS` | (all) | Comma-separated toolsets to enable |
+| `REDHANDS_TOOLSETS` | (all) | Comma-separated toolsets to register (approval still applies) |
 | `REDHANDS_TIMEOUT` | `5m` | Execution timeout per tool call |
 | `REDHANDS_MAX_OUTPUT` | `10485760` | Max output bytes per execution (10MB) |
 | `REDHANDS_RATE_LIMIT` | `10` | Token bucket refill rate (requests/sec) |
@@ -388,10 +416,17 @@ All settings via environment variables:
 | `REDHANDS_TLS_CA` | — | CA certificate for mTLS client verification |
 | `REDHANDS_PLUGINS_DIR` | `./plugins` | Directory for JSON plugin definitions |
 | `REDHANDS_CREDSTORE_KEY` | — | Strong encryption key required for credential persistence |
+| `REDHANDS_MAX_CONCURRENT` | `4` | Maximum active tool calls across clients and workflows |
+| `REDHANDS_MAX_QUEUED` | `16` | Maximum queued calls; further requests fail without executing |
+| `REDHANDS_APPROVED_TOOLS` | — | Exact comma-separated names approved by the operator for high-impact/unclassified tools |
+| `REDHANDS_WORKFLOW_TIMEOUT` | `30m` | Total deadline for a sequential workflow |
 
 Non-loopback listeners require authentication **and TLS**. API keys are accepted only
 in the `X-API-Key` header. stdio uses local OS access controls, not API-key authentication.
 Caching is limited to pure MITRE/risk-score lookups, never scans or state-changing tools.
+High-impact, mixed-mode, and unclassified tools (including plugins) require explicit
+operator approval via `REDHANDS_APPROVED_TOOLS`. Dry-run previews do not require this
+approval and never execute tools. `tools/list` publishes policy metadata and MCP safety hints.
 See [security and deployment notes](docs/security-hardening.md) for HTTPS/mTLS setup,
 scope limitations, credential migration, and remaining release work.
 
@@ -434,6 +469,14 @@ make docker         # Build Docker image
 make install        # Install binary to /usr/local/bin
 make install-tools  # Install security tools (PROFILE=minimal|web|network|ad|all)
 make check-deps     # Check which tools are available
+```
+
+Additional regression checks:
+
+```sh
+go vet ./...
+python3 -m unittest discover -s scripts -p 'test_*.py'
+go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 ```
 
 ## Docker

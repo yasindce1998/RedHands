@@ -102,14 +102,9 @@ func MakeKey(toolName string, params json.RawMessage) string {
 func Middleware(c *Cache) mcp.Middleware {
 	return MiddlewareWithPolicy(c, func(ctx context.Context, name string) (string, bool) {
 		identity, _ := ctx.Value(auth.ContextKeyIdentity).(string)
-		return identity, SafeTool(name)
+		policy := mcp.PolicyFromContext(ctx)
+		return identity, policy.ReadOnly && policy.Cacheable
 	})
-}
-
-// SafeTool is deliberately limited to pure functions of their input. Database
-// reads, scans, credential operations and mutations must never use this cache.
-func SafeTool(name string) bool {
-	return name == "mitre_lookup" || name == "risk_score_calculate"
 }
 
 func MiddlewareWithPolicy(c *Cache, policy func(context.Context, string) (string, bool)) mcp.Middleware {

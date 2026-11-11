@@ -12,7 +12,10 @@ import (
 
 func TestOnlyPureToolsAreCachedPerIdentity(t *testing.T) {
 	count := 0
-	h := Middleware(New(10, time.Minute))(func(context.Context, string, json.RawMessage) (*mcp.ToolResult, error) {
+	h := MiddlewareWithPolicy(New(10, time.Minute), func(ctx context.Context, name string) (string, bool) {
+		identity, _ := ctx.Value(auth.ContextKeyIdentity).(string)
+		return identity, name == "mitre_lookup"
+	})(func(context.Context, string, json.RawMessage) (*mcp.ToolResult, error) {
 		count++
 		return &mcp.ToolResult{Content: []mcp.ContentBlock{{Type: "text", Text: "ok"}}}, nil
 	})

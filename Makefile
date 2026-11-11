@@ -8,6 +8,8 @@ PROFILE := minimal
 
 build:
 	go build -o $(BUILD_DIR)/$(BINARY) ./cmd/redhands
+	go build -o $(BUILD_DIR)/redhands-cli ./cmd/redhands-cli
+	go build -o $(BUILD_DIR)/redhands-creds ./cmd/redhands-creds
 
 test:
 	go test -race -cover ./...
@@ -25,10 +27,12 @@ docker:
 	docker build -t $(IMAGE) .
 
 docker-compose:
-	docker compose up --build
+	docker compose run --build --rm -i redhands
 
 install: build
 	install -m 755 $(BUILD_DIR)/$(BINARY) $(INSTALL_DIR)/$(BINARY)
+	install -m 755 $(BUILD_DIR)/redhands-cli $(INSTALL_DIR)/redhands-cli
+	install -m 755 $(BUILD_DIR)/redhands-creds $(INSTALL_DIR)/redhands-creds
 	@echo ""
 	@echo "RedHands installed to $(INSTALL_DIR)/$(BINARY)"
 	@echo "Run 'make check-deps' to verify tool availability."

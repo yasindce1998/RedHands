@@ -23,37 +23,37 @@ TOOL_INSTALL_HINT[nmap]="apt: nmap | brew: nmap | choco: nmap"
 
 # Recon
 TOOL_CATEGORY[subfinder]="recon"
-TOOL_INSTALL_HINT[subfinder]="go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
+TOOL_INSTALL_HINT[subfinder]="sudo ./scripts/install-tools.sh --profile minimal (locked version)"
 TOOL_CATEGORY[amass]="recon"
-TOOL_INSTALL_HINT[amass]="apt: amass | brew: amass | go install github.com/owasp-amass/amass/v4/...@master"
+TOOL_INSTALL_HINT[amass]="apt: amass | brew: amass (review compatibility)"
 TOOL_CATEGORY[dig]="recon"
 TOOL_INSTALL_HINT[dig]="apt: dnsutils | brew: bind | dnf: bind-utils"
 TOOL_CATEGORY[waybackurls]="recon"
-TOOL_INSTALL_HINT[waybackurls]="go install github.com/tomnomnom/waybackurls@latest"
+TOOL_INSTALL_HINT[waybackurls]="sudo ./scripts/install-tools.sh --profile recon (locked version)"
 TOOL_CATEGORY[gau]="recon"
-TOOL_INSTALL_HINT[gau]="go install github.com/lc/gau/v2/cmd/gau@latest"
+TOOL_INSTALL_HINT[gau]="sudo ./scripts/install-tools.sh --profile recon (locked version)"
 TOOL_CATEGORY[arjun]="recon"
-TOOL_INSTALL_HINT[arjun]="pip install arjun"
+TOOL_INSTALL_HINT[arjun]="sudo ./scripts/install-tools.sh --profile recon (locked version)"
 
 # Web
 TOOL_CATEGORY[httpx]="web"
-TOOL_INSTALL_HINT[httpx]="go install github.com/projectdiscovery/httpx/cmd/httpx@latest"
+TOOL_INSTALL_HINT[httpx]="sudo ./scripts/install-tools.sh --profile minimal (locked version)"
 TOOL_CATEGORY[katana]="web"
-TOOL_INSTALL_HINT[katana]="go install github.com/projectdiscovery/katana/cmd/katana@latest"
+TOOL_INSTALL_HINT[katana]="sudo ./scripts/install-tools.sh --profile web (locked version)"
 TOOL_CATEGORY[nikto]="web"
-TOOL_INSTALL_HINT[nikto]="git clone https://github.com/sullo/nikto /opt/nikto && ln -s /opt/nikto/program/nikto.pl /usr/local/bin/nikto"
+TOOL_INSTALL_HINT[nikto]="sudo ./scripts/install-tools.sh --profile web (pinned source)"
 TOOL_CATEGORY[whatweb]="web"
 TOOL_INSTALL_HINT[whatweb]="apt: whatweb | brew: whatweb"
 TOOL_CATEGORY[testssl.sh]="web"
-TOOL_INSTALL_HINT[testssl.sh]="git clone https://github.com/drwetter/testssl.sh /opt/testssl && ln -s /opt/testssl/testssl.sh /usr/local/bin/testssl.sh"
+TOOL_INSTALL_HINT[testssl.sh]="Install manually from a reviewed package/source release"
 
 # Fuzz
 TOOL_CATEGORY[ffuf]="fuzz"
-TOOL_INSTALL_HINT[ffuf]="go install github.com/ffuf/ffuf/v2@latest"
+TOOL_INSTALL_HINT[ffuf]="sudo ./scripts/install-tools.sh --profile web (locked version)"
 TOOL_CATEGORY[gobuster]="fuzz"
-TOOL_INSTALL_HINT[gobuster]="go install github.com/OJ/gobuster/v3@latest"
+TOOL_INSTALL_HINT[gobuster]="sudo ./scripts/install-tools.sh --profile web (locked version)"
 TOOL_CATEGORY[feroxbuster]="fuzz"
-TOOL_INSTALL_HINT[feroxbuster]="curl -sL https://raw.githubusercontent.com/epi052/feroxbuster/main/install-nix.sh | bash"
+TOOL_INSTALL_HINT[feroxbuster]="sudo ./scripts/install-tools.sh --profile web (checksum verified)"
 
 # Scan
 TOOL_CATEGORY[masscan]="scan"
@@ -63,7 +63,7 @@ TOOL_INSTALL_HINT[rustscan]="cargo install rustscan | brew: rustscan"
 
 # Vuln
 TOOL_CATEGORY[nuclei]="vuln"
-TOOL_INSTALL_HINT[nuclei]="go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"
+TOOL_INSTALL_HINT[nuclei]="sudo ./scripts/install-tools.sh --profile minimal (locked version)"
 
 # Exploit
 TOOL_CATEGORY[sqlmap]="exploit"
@@ -103,7 +103,7 @@ TOOL_INSTALL_HINT[john]="apt: john | brew: john | choco: john"
 
 # CME / Certipy
 TOOL_CATEGORY[crackmapexec]="crackmapexec"
-TOOL_INSTALL_HINT[crackmapexec]="pip install crackmapexec"
+TOOL_INSTALL_HINT[crackmapexec]="Unavailable on PyPI; install a reviewed compatible version manually"
 TOOL_CATEGORY[certipy]="certipy"
 TOOL_INSTALL_HINT[certipy]="pip install certipy-ad"
 
@@ -137,6 +137,14 @@ total=0
 missing_tools=()
 current_category=""
 
+resolve_tool() {
+    if command -v "$1" &>/dev/null; then command -v "$1"; return; fi
+    case "$1" in
+        impacket-*) command -v "${1#impacket-}.py" 2>/dev/null ;;
+        *) return 1 ;;
+    esac
+}
+
 # Sort tools by category for display
 for tool in $(echo "${!TOOL_CATEGORY[@]}" | tr ' ' '\n' | sort); do
     cat="${TOOL_CATEGORY[$tool]}"
@@ -147,8 +155,7 @@ for tool in $(echo "${!TOOL_CATEGORY[@]}" | tr ' ' '\n' | sort); do
     fi
 
     total=$((total + 1))
-    if command -v "$tool" &>/dev/null; then
-        path=$(command -v "$tool")
+    if path=$(resolve_tool "$tool"); then
         printf "    %-25s ${GREEN}%-10s${NC} ${DIM}%s${NC}\n" "$tool" "OK" "$path"
         installed=$((installed + 1))
     else

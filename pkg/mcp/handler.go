@@ -4,13 +4,30 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSONRPCResponse {
+	if req.JSONRPC != JSONRPCVersion || req.Method == "" {
+		return s.errorResponse(req.ID, ErrCodeInvalidRequest, "invalid JSON-RPC request")
+	}
 	if s.requestCheck != nil {
 		if err := s.requestCheck(ctx); err != nil {
+			if len(req.ID) == 0 {
+				return nil
+			}
 			return s.errorResponse(req.ID, ErrCodeUnauthorized, err.Error())
 		}
+	}
+	// JSON-RPC notifications execute without a response. Never emit ID-less replies.
+	if len(req.ID) == 0 && req.Method != MethodInitialized {
+		if strings.HasPrefix(req.Method, "notifications/") {
+			return nil
+		}
+		silent := *req
+		silent.ID = json.RawMessage(`null`)
+		_ = s.handleRequest(ctx, &silent)
+		return nil
 	}
 	switch req.Method {
 	case MethodInitialize:
@@ -63,10 +80,13 @@ func (s *Server) handleToolsList(req *JSONRPCRequest) *JSONRPCResponse {
 	tools := make([]ToolDef, 0, len(s.tools))
 	for _, name := range s.toolOrder {
 		t := s.tools[name]
+		policy := s.policies[name]
 		tools = append(tools, ToolDef{
 			Name:        t.Name(),
 			Description: t.Description(),
 			InputSchema: t.InputSchema(),
+			Policy:      policy,
+			Annotations: ToolAnnotations{ReadOnlyHint: policy.ReadOnly, DestructiveHint: !policy.ReadOnly, IdempotentHint: policy.RetrySafe, OpenWorldHint: policy.NetworkAccess},
 		})
 	}
 
@@ -96,6 +116,8 @@ func (s *Server) handleToolsCall(ctx context.Context, req *JSONRPCRequest) *JSON
 }
 
 func (s *Server) handleWorkflowRun(ctx context.Context, req *JSONRPCRequest) *JSONRPCResponse {
+	ctx, cancel := context.WithTimeout(ctx, s.workflowTimeout)
+	defer cancel()
 	if s.workflow == nil {
 		return s.errorResponse(req.ID, ErrCodeMethodNotFound, "workflow engine not configured")
 	}

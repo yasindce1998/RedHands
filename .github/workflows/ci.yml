@@ -74,7 +74,7 @@ jobs:
           go-version-file: go.mod
           check-latest: true
       - run: go build ./...
-      - run: go test ./pkg/mcpclient ./pkg/execution ./pkg/mcp ./cmd/redhands-cli ./cmd/redhands-creds
+      - run: go test ./pkg/mcpclient ./pkg/execution ./pkg/mcp ./pkg/evidence ./pkg/loot ./tools/reporting ./tools/operations ./cmd/redhands-cli ./cmd/redhands-creds
       - name: Parse PowerShell installer
         if: runner.os == 'Windows'
         shell: pwsh

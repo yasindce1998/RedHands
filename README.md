@@ -420,6 +420,8 @@ All settings via environment variables:
 | `REDHANDS_MAX_QUEUED` | `16` | Maximum queued calls; further requests fail without executing |
 | `REDHANDS_APPROVED_TOOLS` | — | Exact comma-separated names approved by the operator for high-impact/unclassified tools |
 | `REDHANDS_WORKFLOW_TIMEOUT` | `30m` | Total deadline for a sequential workflow |
+| `REDHANDS_EVIDENCE_DIR` | `evidence` | Artifact directory with persistent metadata index |
+| `REDHANDS_LOOT_DIR` | `loot` | Directory containing the atomic `loot.json` store |
 
 Non-loopback listeners require authentication **and TLS**. API keys are accepted only
 in the `X-API-Key` header. stdio uses local OS access controls, not API-key authentication.
@@ -429,6 +431,26 @@ operator approval via `REDHANDS_APPROVED_TOOLS`. Dry-run previews do not require
 approval and never execute tools. `tools/list` publishes policy metadata and MCP safety hints.
 See [security and deployment notes](docs/security-hardening.md) for HTTPS/mTLS setup,
 scope limitations, credential migration, and remaining release work.
+
+### Evidence and loot
+
+Evidence metadata persists in `REDHANDS_EVIDENCE_DIR/index.json`. Artifacts use random
+IDs rather than host/tool text in filenames, and are checked against recorded size and
+SHA-256 values when the store opens. Old files with no index remain untouched and are
+not automatically listed. Corrupt metadata or missing/changed indexed artifacts stop
+startup instead of silently losing their history.
+
+Loot writes are atomic, and malformed `loot.json` files fail startup. Both stores are
+single-process stores: do not point multiple servers at the same directories. Artifacts
+and loot are private files, **not encrypted storage**; protect their directories and backups.
+
+`evidence_screenshot` requires operator approval and `cutycapt` installed on PATH at
+startup. It uses the shared executor, private staging, HTTP(S)-only URLs, and PNG
+validation. CutyCapt may require a display/headless environment; it is not bundled in
+the current Docker image. Browser redirects and subresources still need network isolation.
+
+See [evidence and loot recovery](docs/evidence-storage.md) before moving stores,
+repairing corrupt files, or handling legacy/unindexed artifacts.
 
 ### Toolset Filtering
 

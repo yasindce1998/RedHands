@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/yasindce1998/redhands/pkg/evidence"
+	"github.com/yasindce1998/redhands/pkg/executor"
 	"github.com/yasindce1998/redhands/pkg/mcp"
 )
 
@@ -38,18 +39,11 @@ func (t *EvidenceListTool) Execute(_ context.Context, params json.RawMessage) (*
 		Host string `json:"host"`
 	}
 	if len(params) > 0 {
-		_ = json.Unmarshal(params, &input)
+		if err := json.Unmarshal(params, &input); err != nil {
+			return errorResult("invalid params: " + err.Error())
+		}
 	}
-
-	var items []*evidence.Item
-	switch {
-	case input.Tool != "":
-		items = t.store.ListByTool(input.Tool)
-	case input.Host != "":
-		items = t.store.ListByHost(input.Host)
-	default:
-		items = t.store.List()
-	}
+	items := t.store.Query(input.Tool, input.Host)
 
 	if len(items) == 0 {
 		return textResult("No evidence items found")
@@ -59,10 +53,11 @@ func (t *EvidenceListTool) Execute(_ context.Context, params json.RawMessage) (*
 
 type EvidenceScreenshotTool struct {
 	store *evidence.Store
+	exec  executor.Executor
 }
 
-func NewEvidenceScreenshotTool(store *evidence.Store) *EvidenceScreenshotTool {
-	return &EvidenceScreenshotTool{store: store}
+func NewEvidenceScreenshotTool(store *evidence.Store, exec executor.Executor) *EvidenceScreenshotTool {
+	return &EvidenceScreenshotTool{store: store, exec: exec}
 }
 
 func (t *EvidenceScreenshotTool) Name() string { return "evidence_screenshot" }
@@ -92,7 +87,7 @@ func (t *EvidenceScreenshotTool) Execute(ctx context.Context, params json.RawMes
 		return errorResult("url is required")
 	}
 
-	item, err := t.store.Screenshot(ctx, input.URL)
+	item, err := t.store.Screenshot(ctx, input.URL, t.exec)
 	if err != nil {
 		return errorResult("screenshot failed: " + err.Error())
 	}

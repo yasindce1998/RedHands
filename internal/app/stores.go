@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/yasindce1998/redhands/pkg/attackgraph"
 	"github.com/yasindce1998/redhands/pkg/config"
@@ -48,7 +47,7 @@ func InitStores(cfg *config.Config) (*Stores, error) {
 
 	s.Evidence, err = evidence.NewStore(cfg.EvidenceDir)
 	if err != nil {
-		log.Printf("warning: evidence store initialization failed: %v", err)
+		return nil, fmt.Errorf("evidence store initialization failed: %w", err)
 	}
 
 	return s, nil

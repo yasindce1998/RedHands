@@ -108,6 +108,43 @@ server's key after rotation. Migration is deliberately not automatic at server s
 Database, credential-store, and engagement updates use private same-directory temporary
 files and atomic replacement to avoid partially overwriting the previous file.
 
+## Evidence and loot storage
+
+- Evidence artifacts and metadata now survive restarts. A versioned `index.json` stores
+  relative filenames, tool/host/timestamp metadata, size and SHA-256. Opening the store
+  verifies every indexed artifact; missing, modified, symlinked or invalid records fail
+  startup. The checksum is an integrity check, not a signature or tamper-proof audit log.
+- Artifact names are random IDs with validated extensions, never user-supplied host or
+  tool strings. Filesystem reads/writes use Go's rooted filesystem operations, private
+  temporary files, and atomic replacement. Store directories must be trusted and owned
+  by the server; this is not protection against a hostile administrator or bind mounts.
+- Evidence files from older versions have no saved metadata. They remain untouched and
+  unlisted; do not delete them simply because the index does not mention them. A crash
+  between committing an artifact and its index can also leave an unindexed file. No
+  automatic orphan deletion is performed. Back up index and artifacts together.
+- Evidence is limited to 10,000 indexed items, a 16 MiB index, and 32 MiB per artifact.
+  Verification scans indexed contents at startup, so startup time grows with stored data.
+  Loot is limited to 10,000 items and a 32 MiB `loot.json` file. Loot parsing, duplicate
+  IDs, null records and missing required fields are validated at load, not merely logged.
+- Failed writes do not publish new in-memory records. If replacement committed but
+  directory syncing fails, memory retains the committed value and the caller receives
+  a durability warning. A returned error does not always mean nothing was committed;
+  inspect the store before manually retrying. There are no automatic retries.
+- Screenshots use the same allowlisted executor, timeout, process cancellation and
+  stdout/stderr bounds as other external tools. Captures are staged privately and only
+  valid PNG files (up to 32 MiB / 16 megapixels) are indexed. Missing output, symlinks,
+  failed commands and cancellation do not publish artifacts. Captures do not hold the
+  metadata lock while the external tool runs.
+- Screenshots require `cutycapt` plus a suitable display/headless runtime, installed and
+  discoverable at startup. The default image does not bundle it. Only HTTP(S) URLs
+  without embedded credentials are accepted. Initial target scope checks still apply;
+  redirects, subresources and browser disk usage require external isolation and quotas.
+
+These are single-process stores, not transactional multi-process databases. Loot content
+and evidence are **not encrypted** by `REDHANDS_CREDSTORE_KEY`; treat them and their backups
+as sensitive assessment data. Valid legacy loot arrays/IDs remain supported; malformed
+legacy records must be repaired from a private backup rather than silently discarded.
+
 ## Scope and isolation limitations
 
 When an active engagement has scope entries, explicit targets (including target lists,

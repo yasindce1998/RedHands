@@ -29,6 +29,11 @@ The initial binary digests were taken from upstream GitHub release metadata and 
 published download metadata. This is trust-on-review: pinning detects later changes,
 but is not an independent publisher signature or a guarantee a binary is benign.
 Go installs retain Go's normal module checksum database verification.
+CI and release builds read their Go version from `go.mod` with `check-latest: true`,
+so setup-go does not silently reuse an older cached patch. Docker's Go stages and
+the downloaded toolchain are pinned to the same patched 1.26.11 baseline. This fixes
+GO-2026-6859 (CVE-2026-97054), which affects Go 1.26.10 and earlier and Go 1.27 before
+1.27.4. Keep vulnerability scanning enabled when updating any toolchain.
 The application itself still uses only Go's standard library; passphrase derivation
 uses its PBKDF2 implementation rather than adding a cryptography dependency.
 

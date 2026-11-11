@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/yasindce1998/redhands/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/yasindce1998/redhands/ci.yml?style=flat-square&logo=github&logoColor=white&label=CI&color=00c853" alt="CI"></a>
-  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26+"></a>
+  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
   <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-125-00fff2?style=flat-square" alt="125 Tools"></a>
@@ -145,7 +145,7 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 
 ## Requirements
 
-- Go 1.26+ (for building from source)
+- Go 1.26.11+ (for building from source; if using Go 1.27, use 1.27.4+)
 - Security tools on PATH (installed via scripts above, Docker, or manually)
 
 ## Available Tools

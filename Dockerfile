@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26.11-alpine AS builder
 WORKDIR /src
 COPY go.mod ./
 RUN go mod download
@@ -9,7 +9,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /redhands ./cmd/redhand
 
 # Build pinned Go tools with the image toolchain instead of downloading an
 # unchecked, hard-coded amd64 Go archive in the runtime image.
-FROM golang:1.26-alpine AS go-tools
+FROM golang:1.26.11-alpine AS go-tools
 RUN apk add --no-cache git python3
 COPY scripts/dependencies.json scripts/dependencies.py /locks/
 RUN mkdir -p /out && \

@@ -93,7 +93,7 @@ if [[ "$VERSION" == "latest" ]]; then
             log_ok "RedHands installed to $INSTALL_DIR/redhands (built from source)"
             INSTALLED=true
         else
-            log_error "Go not found. Install Go 1.26+ or download a release binary manually."
+            log_error "Go not found. Install Go 1.26.11+ (or 1.27.4+) or download a release binary manually."
             exit 1
         fi
     fi
@@ -129,7 +129,7 @@ if [[ -n "$VERSION" ]] && ! $INSTALLED; then
             log_ok "RedHands installed to $INSTALL_DIR/redhands (built from source)"
         else
             log_error "Neither release binary nor Go compiler available."
-            log_error "Install Go 1.26+ from https://go.dev/dl/ and retry."
+            log_error "Install Go 1.26.11+ (or 1.27.4+) from https://go.dev/dl/ and retry."
             exit 1
         fi
     fi

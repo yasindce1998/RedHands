@@ -353,7 +353,7 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(reporting.NewComplianceTool(d.TargetDB))
 		if d.Evidence != nil {
 			srv.RegisterTool(reporting.NewEvidenceListTool(d.Evidence))
-			srv.RegisterTool(reporting.NewEvidenceScreenshotTool(d.Evidence))
+			srv.RegisterTool(reporting.NewEvidenceScreenshotTool(d.Evidence, d.Exec))
 		}
 	}
 

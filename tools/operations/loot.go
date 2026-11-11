@@ -91,7 +91,9 @@ func (t *LootListTool) Execute(_ context.Context, params json.RawMessage) (*mcp.
 		Host string `json:"host"`
 	}
 	if len(params) > 0 {
-		_ = json.Unmarshal(params, &input)
+		if err := json.Unmarshal(params, &input); err != nil {
+			return errorResult("invalid params: " + err.Error())
+		}
 	}
 
 	items := t.store.List(input.Type, input.Host)

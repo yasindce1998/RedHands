@@ -12,6 +12,7 @@ import (
 	"slices"
 	"sync"
 	"syscall"
+	"time"
 )
 
 // WorkflowRunner executes a workflow from raw JSON params.
@@ -25,23 +26,27 @@ type ReportGenerator interface {
 }
 
 type Server struct {
-	name         string
-	version      string
-	tools        map[string]Tool
-	toolOrder    []string
-	middlewares  []Middleware
-	initialized  bool
-	mu           sync.RWMutex
-	workflow     WorkflowRunner
-	reporter     ReportGenerator
-	requestCheck func(context.Context) error
+	name            string
+	version         string
+	tools           map[string]Tool
+	policies        map[string]ToolPolicy
+	toolOrder       []string
+	middlewares     []Middleware
+	initialized     bool
+	mu              sync.RWMutex
+	workflow        WorkflowRunner
+	reporter        ReportGenerator
+	requestCheck    func(context.Context) error
+	workflowTimeout time.Duration
 }
 
 func NewServer(name, version string) *Server {
 	return &Server{
-		name:    name,
-		version: version,
-		tools:   make(map[string]Tool),
+		name:            name,
+		version:         version,
+		tools:           make(map[string]Tool),
+		policies:        make(map[string]ToolPolicy),
+		workflowTimeout: 30 * time.Minute,
 	}
 }
 
@@ -52,6 +57,7 @@ func (s *Server) RegisterTool(t Tool) {
 		s.toolOrder = append(s.toolOrder, t.Name())
 	}
 	s.tools[t.Name()] = t
+	s.policies[t.Name()] = ConservativePolicy()
 }
 
 func (s *Server) Use(m Middleware) {
@@ -64,6 +70,7 @@ func (s *Server) UnregisterTool(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.tools, name)
+	delete(s.policies, name)
 	s.toolOrder = slices.DeleteFunc(s.toolOrder, func(n string) bool { return n == name })
 }
 
@@ -82,6 +89,7 @@ func (s *Server) ExecuteTool(ctx context.Context, name string, args json.RawMess
 	}
 	s.mu.RLock()
 	tool, ok := s.tools[name]
+	policy := s.policies[name]
 	middlewares := slices.Clone(s.middlewares)
 	s.mu.RUnlock()
 	if !ok {
@@ -90,6 +98,11 @@ func (s *Server) ExecuteTool(ctx context.Context, name string, args json.RawMess
 	if len(args) == 0 {
 		args = json.RawMessage(`{}`)
 	}
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(args, &object); err != nil || object == nil {
+		return nil, fmt.Errorf("tool arguments must be a JSON object")
+	}
+	ctx = context.WithValue(ctx, toolPolicyContextKey{}, policy)
 	return chainMiddleware(func(ctx context.Context, _ string, args json.RawMessage) (*ToolResult, error) {
 		result, err := tool.Execute(ctx, args)
 		if result == nil && err == nil {
@@ -97,6 +110,12 @@ func (s *Server) ExecuteTool(ctx context.Context, name string, args json.RawMess
 		}
 		return result, err
 	}, middlewares)(ctx, name, args)
+}
+
+func (s *Server) SetWorkflowTimeout(timeout time.Duration) {
+	if timeout > 0 {
+		s.workflowTimeout = timeout
+	}
 }
 
 func (s *Server) GetTool(name string) (Tool, bool) {

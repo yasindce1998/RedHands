@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/yasindce1998/redhands/pkg/targetdb"
+	"github.com/yasindce1998/redhands/pkg/version"
 )
 
 type sarifLog struct {
@@ -53,10 +54,10 @@ type sarifMessage struct {
 }
 
 type sarifResult struct {
-	RuleID    string           `json:"ruleId"`
-	Level     string           `json:"level"`
-	Message   sarifMessage     `json:"message"`
-	Locations []sarifLocation  `json:"locations,omitempty"`
+	RuleID     string           `json:"ruleId"`
+	Level      string           `json:"level"`
+	Message    sarifMessage     `json:"message"`
+	Locations  []sarifLocation  `json:"locations,omitempty"`
 	Properties sarifResultProps `json:"properties,omitempty"`
 }
 
@@ -101,12 +102,12 @@ func severityToLevel(severity string) string {
 
 func GenerateSARIF(findings []*targetdb.Finding, toolVersion string) ([]byte, error) {
 	if toolVersion == "" {
-		toolVersion = "1.0.0"
+		toolVersion = version.Version
 	}
 
 	ruleMap := make(map[string]bool)
 	var rules []sarifRule
-	var results []sarifResult
+	results := make([]sarifResult, 0, len(findings))
 
 	for _, f := range findings {
 		ruleID := fmt.Sprintf("RH-%s", f.ID)

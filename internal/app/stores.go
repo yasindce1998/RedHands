@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/yasindce1998/redhands/pkg/attackgraph"
@@ -9,7 +10,6 @@ import (
 	"github.com/yasindce1998/redhands/pkg/engagement"
 	"github.com/yasindce1998/redhands/pkg/evidence"
 	"github.com/yasindce1998/redhands/pkg/loot"
-	"github.com/yasindce1998/redhands/pkg/notify"
 	"github.com/yasindce1998/redhands/pkg/targetdb"
 )
 
@@ -20,30 +20,28 @@ type Stores struct {
 	Loot      *loot.Store
 	CredStore *credstore.Store
 	Evidence  *evidence.Store
-	Notifier  *notify.Notifier
 }
 
-func InitStores(cfg *config.Config) *Stores {
+func InitStores(cfg *config.Config) (*Stores, error) {
 	s := &Stores{}
 
 	s.TargetDB = targetdb.NewStore(cfg.TargetDBFile, cfg.TargetDBAutoSave)
 	if err := s.TargetDB.LoadError(); err != nil {
-		log.Fatalf("target database: %v", err)
+		return nil, fmt.Errorf("target database: %w", err)
 	}
 	s.Graph = attackgraph.New()
 	s.EngMgr = engagement.NewManager(cfg.EngagementDir)
-	s.Notifier = notify.NewNotifier(cfg.WebhookURLs, cfg.WebhookEvents)
 
 	var err error
 	s.Loot, err = loot.NewStore(cfg.LootDir)
 	if err != nil {
-		log.Fatalf("loot store: %v", err)
+		return nil, fmt.Errorf("loot store: %w", err)
 	}
 
 	if cfg.CredStoreKey != "" {
 		s.CredStore, err = credstore.NewStore(cfg.CredStoreFile, cfg.CredStoreKey)
 		if err != nil {
-			log.Fatalf("credstore initialization failed: %v", err)
+			return nil, fmt.Errorf("credstore initialization failed: %w", err)
 		}
 		s.TargetDB.SetCredentialStore(s.CredStore)
 	}
@@ -53,5 +51,5 @@ func InitStores(cfg *config.Config) *Stores {
 		log.Printf("warning: evidence store initialization failed: %v", err)
 	}
 
-	return s
+	return s, nil
 }

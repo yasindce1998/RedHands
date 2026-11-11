@@ -17,6 +17,7 @@ type sseClient struct {
 	events   chan []byte
 	done     chan struct{}
 	identity string
+	ctx      context.Context
 }
 
 func (s *Server) ServeSSE(ctx context.Context, addr string) error {
@@ -62,7 +63,9 @@ func (s *Server) SSEHandler(ctx context.Context, opts HTTPOptions) http.Handler 
 			return
 		}
 		id := hex.EncodeToString(token[:])
-		client := &sseClient{events: make(chan []byte, 64), done: make(chan struct{}), identity: identity(reqCtx)}
+		sessionCtx, cancelSession := context.WithCancel(reqCtx)
+		defer cancelSession()
+		client := &sseClient{events: make(chan []byte, 64), done: make(chan struct{}), identity: identity(reqCtx), ctx: sessionCtx}
 		mu.Lock()
 		if len(clients) >= 256 {
 			mu.Unlock()
@@ -82,18 +85,34 @@ func (s *Server) SSEHandler(ctx context.Context, opts HTTPOptions) http.Handler 
 		w.Header().Set("X-Client-ID", id)
 		_, _ = fmt.Fprintf(w, "event: endpoint\ndata: /message?clientId=%s\n\n", id)
 		flusher.Flush()
+		heartbeat := time.NewTicker(15 * time.Second)
+		defer heartbeat.Stop()
+		write := func(text string) bool {
+			controller := http.NewResponseController(w)
+			_ = controller.SetWriteDeadline(time.Now().Add(30 * time.Second))
+			if _, err := io.WriteString(w, text); err != nil {
+				return false
+			}
+			if err := controller.Flush(); err != nil {
+				return false
+			}
+			_ = controller.SetWriteDeadline(time.Time{})
+			return true
+		}
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-r.Context().Done():
 				return
-			case data := <-client.events:
-				_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(30 * time.Second))
-				if _, err := fmt.Fprintf(w, "event: message\ndata: %s\n\n", data); err != nil {
+			case <-heartbeat.C:
+				if !write(": keepalive\n\n") {
 					return
 				}
-				flusher.Flush()
+			case data := <-client.events:
+				if !write(fmt.Sprintf("event: message\ndata: %s\n\n", data)) {
+					return
+				}
 			}
 		}
 	})
@@ -113,6 +132,10 @@ func (s *Server) SSEHandler(ctx context.Context, opts HTTPOptions) http.Handler 
 			http.Error(w, "unknown session", http.StatusNotFound)
 			return
 		}
+		reqCtx, cancel := context.WithCancel(reqCtx)
+		defer cancel()
+		stop := context.AfterFunc(client.ctx, cancel)
+		defer stop()
 		if !client.requests.TryLock() {
 			http.Error(w, "session already executing a request", http.StatusTooManyRequests)
 			return

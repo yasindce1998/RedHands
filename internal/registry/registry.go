@@ -41,8 +41,8 @@ import (
 	"github.com/yasindce1998/redhands/tools/recon/subfinder"
 	"github.com/yasindce1998/redhands/tools/recon/wayback"
 	"github.com/yasindce1998/redhands/tools/reporting"
-	nmaptools "github.com/yasindce1998/redhands/tools/scan/nmap"
 	"github.com/yasindce1998/redhands/tools/scan/masscan"
+	nmaptools "github.com/yasindce1998/redhands/tools/scan/nmap"
 	"github.com/yasindce1998/redhands/tools/scan/rustscan"
 	"github.com/yasindce1998/redhands/tools/social/phishing"
 	"github.com/yasindce1998/redhands/tools/system/health"
@@ -358,4 +358,7 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 	}
 
 	srv.RegisterTool(health.NewHealthCheck(binaries.All))
+	for name, policy := range builtinPolicies() {
+		srv.SetToolPolicy(name, policy)
+	}
 }

@@ -39,10 +39,15 @@ func (t *ExecutiveSummaryTool) Execute(_ context.Context, params json.RawMessage
 		Format string `json:"format"`
 	}
 	if len(params) > 0 {
-		_ = json.Unmarshal(params, &input)
+		if err := json.Unmarshal(params, &input); err != nil {
+			return errorResult("invalid params: " + err.Error())
+		}
 	}
 	if input.Format == "" {
 		input.Format = "markdown"
+	}
+	if input.Format != "markdown" && input.Format != "json" {
+		return errorResult("format must be markdown or json")
 	}
 
 	findings := t.store.QueryFindings("", "", "")

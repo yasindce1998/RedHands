@@ -11,6 +11,21 @@ Caching is intentionally limited to `mitre_lookup` and `risk_score_calculate`, w
 are pure functions of their inputs. Cache keys include identity and active engagement.
 Scans, database reads, secrets, and mutations are never cached.
 
+`tools/list` includes `x-redhands-policy` and MCP safety annotations. Policies are
+server-owned and reset to conservative defaults when a tool is replaced. Mixed-mode
+wrappers and unclassified tools/plugins require operator approval. Approve exact names
+using `REDHANDS_APPROVED_TOOLS=tool_one,tool_two` only after reviewing all supported modes;
+model-provided `approved` fields and wildcard approval do not bypass this check.
+Read-only/network/privilege/retry fields describe capabilities; they do not grant OS
+privileges or implement a network sandbox. No tool call is automatically retried.
+
+Execution is bounded to `REDHANDS_MAX_CONCURRENT` active calls (default 4) and
+`REDHANDS_MAX_QUEUED` waiting calls (default 16) across the server. Queue overflow fails
+before execution. `REDHANDS_TIMEOUT` includes queue wait and execution;
+`REDHANDS_WORKFLOW_TIMEOUT` bounds the complete workflow (default 30m). Tools must honor
+context cancellation; external commands use process cancellation. This is not a durable
+background-job system.
+
 ## Network access
 
 - stdio is for trusted local clients and uses OS access controls. Use `REDHANDS_AUTH=none`.
@@ -62,16 +77,33 @@ deployment. Do not use `--privileged` as a general workaround.
 ## Credentials and existing databases
 
 Set a strong, randomly generated `REDHANDS_CREDSTORE_KEY` before storing credentials.
+For new deployments, use `export REDHANDS_CREDSTORE_KEY="hex:$(openssl rand -hex 32)"`.
+`hex:` keys must encode exactly 32 random bytes. Human passphrases use PBKDF2-HMAC-SHA256
+with a random 16-byte salt and 600,000 iterations. New files have a versioned envelope
+and AES-GCM encryption. Legacy SHA-256-derived stores remain readable; opening them
+does not rewrite them, while explicit upgrades and subsequent writes use the new format.
 Secrets are kept in `credstore.enc`; the target database contains credential metadata
 only. Keep the key backed up separately. Reopening the stores with the same key restores
 secrets for credential queries. A wrong key aborts startup.
 
 Existing target databases containing plaintext secrets are rejected without modification.
-To migrate, stop the server, make a private offline backup, import each credential into
-the encrypted store using its existing credential-store API/tools, and replace the
-`secret` values in the JSON database with empty strings. Retain all metadata. Verify
-that credentials can be recovered with the key before retiring the backup. Old backups
-remain sensitive even after migration. Migration is deliberately not automatic.
+Stop the server and make a private offline backup before any maintenance. The
+`redhands-creds` utility reads paths/keys from environment variables, never command-line
+secrets, and supports:
+
+```sh
+redhands-creds migrate-targetdb # Verify encrypted copies, then clear JSON secrets
+redhands-creds verify           # Reopen/decrypt without printing secrets
+redhands-creds upgrade          # Upgrade a legacy encrypted file explicitly
+# Set REDHANDS_CREDSTORE_NEW_KEY separately before rotation
+redhands-creds rotate
+```
+
+Migration preserves unknown metadata fields and leaves the source JSON untouched if
+verification fails. Stop all writers: it is an offline tool, not a multi-process
+transaction. Keep the old backup and key until the migrated/rotated store has been
+verified independently. Old backups remain sensitive even after migration. Update the
+server's key after rotation. Migration is deliberately not automatic at server startup.
 
 Database, credential-store, and engagement updates use private same-directory temporary
 files and atomic replacement to avoid partially overwriting the previous file.
@@ -90,14 +122,20 @@ need operator review and external network restrictions. Engagement switching doe
 create isolated databases or per-user permissions. Only trusted operators should have access.
 
 Output is bounded across stdout and stderr together; truncation is reported as an error.
-Sequential workflows are limited to 128 steps per request.
+Sequential workflows are limited to 128 steps and 16 MiB aggregate text output per request.
+Expanded parameters are bounded to 10 MiB, including repeated output substitutions.
 On Linux, cancellation kills the tool's process group. These controls are not a full
 OS sandbox. Use dedicated environments and only authorized targets.
 
-## Remaining release work
+## Unsupported configuration and remaining work
 
-The Dockerfile/tool installers still contain unpinned or unverified third-party downloads.
-A complete lock manifest with independently verified checksums, multi-architecture image
-builds, and tests against real external binaries remain release requirements. The current
-unit/mock integration suite does not validate those external tools. The MCP implementation
-still uses the legacy SSE protocol; Streamable HTTP compatibility is separate work.
+The running server currently supports only sequential workflows. Enhanced workflow
+state/templates/parallelism, proxy profiles, multi-operator sync, and webhook notifications
+are not wired into startup. Their environment settings now cause a configuration error,
+rather than being silently ignored. Do not assume the underlying library prototypes are
+production features.
+
+See [dependency maintenance](dependencies.md) for lock/checksum coverage and its limits.
+Engagement data isolation, durable job scheduling, complete real-binary compatibility
+coverage, and Streamable HTTP remain separate work. This patch fixes the existing legacy
+SSE client/server path; it does not claim modern MCP transport support.

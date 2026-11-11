@@ -17,8 +17,6 @@ func NewRiskScoreTool() *RiskScoreTool {
 
 func (t *RiskScoreTool) Name() string { return "risk_score_calculate" }
 
-func (t *RiskScoreTool) Cacheable() bool { return true }
-
 func (t *RiskScoreTool) Description() string {
 	return "Calculate a risk score from exploitability, impact, and exposure values (0-10 scale)"
 }

@@ -25,9 +25,17 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      - name: Go vulnerability analysis
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
       - name: Shell syntax
         run: |
           for script in scripts/*.sh; do bash -n "$script"; done
+
+      - name: Validate locked dependencies
+        run: |
+          python3 scripts/dependencies.py validate
+          python3 -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -52,6 +60,26 @@ jobs:
       - name: Integration Tests
         run: go test -race -v -run 'Test' ./tools/
 
+  cross-platform:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+      - run: go build ./...
+      - run: go test ./pkg/mcpclient ./pkg/execution ./pkg/mcp ./cmd/redhands-cli ./cmd/redhands-creds
+      - name: Parse PowerShell installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$pwd/scripts/install-tools.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
+
   docker:
     runs-on: ubuntu-latest
     steps:
@@ -59,3 +87,5 @@ jobs:
 
       - name: Build Docker Image
         run: docker build -t redhands:ci .
+      - name: Isolated real-binary smoke test
+        run: docker run --rm --network none -i --entrypoint python3 redhands:ci - < scripts/smoke.py

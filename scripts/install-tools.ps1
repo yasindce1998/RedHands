@@ -30,6 +30,8 @@ param(
 )
 
 $ErrorActionPreference = "Continue"
+$DependencyLock = Get-Content (Join-Path $PSScriptRoot "dependencies.json") -Raw | ConvertFrom-Json
+if ($DependencyLock.schema_version -ne 1) { throw "Unsupported dependency manifest version" }
 
 # ─── Colors and Output ─────────────────────────────────────────────────────────
 
@@ -81,7 +83,9 @@ if ($List) {
 
 function Test-Tool {
     param([string]$Name)
-    $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+    if ($null -ne (Get-Command $Name -ErrorAction SilentlyContinue)) { return $true }
+    if ($Name.StartsWith("impacket-")) { return $null -ne (Get-Command ($Name.Substring(9) + ".py") -ErrorAction SilentlyContinue) }
+    return $false
 }
 
 function Show-ToolStatus {
@@ -97,6 +101,7 @@ function Show-ToolStatus {
 
     foreach ($tool in $tools) {
         $cmd = Get-Command $tool -ErrorAction SilentlyContinue
+        if (-not $cmd -and $tool.StartsWith("impacket-")) { $cmd = Get-Command ($tool.Substring(9) + ".py") -ErrorAction SilentlyContinue }
         if ($cmd) {
             Write-Host ("  {0,-25} " -f $tool) -NoNewline
             Write-Host "installed" -ForegroundColor Green -NoNewline
@@ -135,11 +140,7 @@ function Ensure-PackageManager {
         } elseif (Test-Tool "scoop") {
             $script:PM = "scoop"
         } else {
-            Write-Info "No package manager found. Installing Chocolatey..."
-            Set-ExecutionPolicy Bypass -Scope Process -Force
-            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-            Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-            $script:PM = "choco"
+            throw "Install Chocolatey or Scoop from its trusted instructions first; downloaded scripts are not executed automatically."
         }
     } else {
         $script:PM = $PackageManager
@@ -212,21 +213,15 @@ function Install-GoTools {
     Write-Ok "Go available: $(go version)"
 
     $goTools = @{}
-    $goTools["subfinder"] = "github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
-    $goTools["httpx"] = "github.com/projectdiscovery/httpx/cmd/httpx@latest"
-    $goTools["nuclei"] = "github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"
-    $goTools["ffuf"] = "github.com/ffuf/ffuf/v2@latest"
-    $goTools["katana"] = "github.com/projectdiscovery/katana/cmd/katana@latest"
-    $goTools["gobuster"] = "github.com/OJ/gobuster/v3@latest"
-    $goTools["gau"] = "github.com/lc/gau/v2/cmd/gau@latest"
-    $goTools["waybackurls"] = "github.com/tomnomnom/waybackurls@latest"
+    foreach ($entry in $DependencyLock.go.PSObject.Properties) { $goTools[$entry.Name] = $entry.Value }
 
     foreach ($tool in $goTools.Keys) {
         if ($tools -contains $tool) {
             if (-not (Test-Tool $tool)) {
                 Write-Step "Installing $tool..."
-                go install $goTools[$tool] 2>$null
-                if ($?) { Write-Ok "$tool installed" } else { Write-Warn "Failed to install $tool" }
+                $module = $goTools[$tool]
+                go install $module
+                if ($LASTEXITCODE -eq 0) { Write-Ok "$tool installed" } else { throw "Failed to install pinned $tool" }
             } else {
                 Write-Ok "$tool already installed"
             }
@@ -248,147 +243,40 @@ function Install-PythonTools {
     }
 
     $pipPkgs = @()
-    if ($tools -contains "impacket-secretsdump") { $pipPkgs += "impacket" }
-    if ($tools -contains "certipy") { $pipPkgs += "certipy-ad" }
-    if ($tools -contains "crackmapexec") { $pipPkgs += "crackmapexec" }
-    if ($tools -contains "arjun") { $pipPkgs += "arjun" }
+    if ($tools -contains "impacket-secretsdump") { $pipPkgs += $DependencyLock.python.impacket }
+    if ($tools -contains "certipy") { $pipPkgs += $DependencyLock.python.certipy }
+    if ($tools -contains "crackmapexec") { Write-Warn "crackmapexec is unavailable from PyPI; install a reviewed compatible version manually." }
+    if ($tools -contains "arjun") { $pipPkgs += $DependencyLock.python.arjun }
 
     if ($pipPkgs.Count -gt 0) {
         Write-Step "Installing Python tools: $($pipPkgs -join ', ')"
-        $pipCmd = "python -m pip install $($pipPkgs -join ' ')"
-        Invoke-Expression $pipCmd 2>$null
+        $python = if (Test-Tool "python") { "python" } else { "python3" }
+        & $python -m pip install @pipPkgs
         if ($?) { Write-Ok "Python tools installed" } else { Write-Warn "Some Python tools may have failed" }
     }
 }
 
 function Install-BinaryReleases {
     $tools = $ToolProfiles[$Profile]
-    $arch = if ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "386" }
-
-    # Chisel
-    if ($tools -contains "chisel" -and -not (Test-Tool "chisel")) {
-        Write-Step "Installing chisel..."
-        $chiselVer = "1.11.5"
-        $url = "https://github.com/jpillora/chisel/releases/download/v$chiselVer/chisel_${chiselVer}_windows_${arch}.gz"
-        $outPath = "$env:TEMP\chisel.gz"
-        try {
-            Invoke-WebRequest -Uri $url -OutFile $outPath -UseBasicParsing
-            # Extract gzip - PowerShell native
-            $inStream = [System.IO.File]::OpenRead($outPath)
-            $gzStream = New-Object System.IO.Compression.GZipStream($inStream, [System.IO.Compression.CompressionMode]::Decompress)
-            $outStream = [System.IO.File]::Create("C:\Windows\System32\chisel.exe")
-            $gzStream.CopyTo($outStream)
-            $outStream.Close(); $gzStream.Close(); $inStream.Close()
-            Remove-Item $outPath -Force
-            Write-Ok "chisel installed"
-        } catch {
-            Write-Warn "Failed to install chisel: $_"
+    # Reuse the same checksum-verifying installer as Linux/Docker.
+    $python = if (Test-Tool "python") { "python" } elseif (Test-Tool "python3") { "python3" } else { $null }
+    if (-not $python) { throw "Python 3 is required for verified binary installation" }
+    $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } elseif ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "386" }
+    foreach ($name in @("chisel", "ligolo-proxy", "kubedagger-client", "kubedagger-operator", "barzakh-adversary", "barzakh-scanner", "feroxbuster")) {
+        if (($tools -contains $name) -and -not (Test-Tool $name)) {
+            $variants = $DependencyLock.artifacts.$name
+            if (-not $variants."windows-$arch") {
+                Write-Warn "No verified $name release for windows-$arch; install manually."
+                continue
+            }
+            & $python (Join-Path $PSScriptRoot "dependencies.py") install $name --platform "windows-$arch" --output "$env:ProgramFiles\RedHands\bin"
+            if ($LASTEXITCODE -ne 0) { throw "Verified installation failed for $name" }
         }
     }
-
-    # Ligolo-ng
-    if ($tools -contains "ligolo-proxy" -and -not (Test-Tool "ligolo-proxy")) {
-        Write-Step "Installing ligolo-ng..."
-        $ligoloVer = "0.8.3"
-        $url = "https://github.com/nicocha30/ligolo-ng/releases/download/v$ligoloVer/ligolo-ng_proxy_${ligoloVer}_windows_${arch}.zip"
-        $outPath = "$env:TEMP\ligolo.zip"
-        try {
-            Invoke-WebRequest -Uri $url -OutFile $outPath -UseBasicParsing
-            Expand-Archive -Path $outPath -DestinationPath "$env:TEMP\ligolo" -Force
-            Move-Item "$env:TEMP\ligolo\proxy.exe" "C:\Windows\System32\ligolo-proxy.exe" -Force
-            Remove-Item $outPath -Force
-            Remove-Item "$env:TEMP\ligolo" -Recurse -Force
-            Write-Ok "ligolo-ng installed"
-        } catch {
-            Write-Warn "Failed to install ligolo-ng: $_"
-        }
-    }
-
-    # KubeDagger
-    if ($tools -contains "kubedagger-client" -and -not (Test-Tool "kubedagger-client")) {
-        Write-Step "Installing kubedagger-client..."
-        $url = "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-client-windows-${arch}.exe"
-        try {
-            Invoke-WebRequest -Uri $url -OutFile "C:\Windows\System32\kubedagger-client.exe" -UseBasicParsing
-            Write-Ok "kubedagger-client installed"
-        } catch {
-            Write-Warn "Failed to install kubedagger-client: $_"
-        }
-    }
-
-    if ($tools -contains "kubedagger-operator" -and -not (Test-Tool "kubedagger-operator")) {
-        Write-Step "Installing kubedagger-operator..."
-        $url = "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-windows-${arch}.exe"
-        try {
-            Invoke-WebRequest -Uri $url -OutFile "C:\Windows\System32\kubedagger-operator.exe" -UseBasicParsing
-            Write-Ok "kubedagger-operator installed"
-        } catch {
-            Write-Warn "Failed to install kubedagger-operator: $_"
-        }
-    }
-
-    # Barzakh
-    if ($tools -contains "barzakh-adversary" -and -not (Test-Tool "barzakh-adversary")) {
-        Write-Step "Installing barzakh-adversary..."
-        $barzakhArch = if ($arch -eq "amd64") { "x86_64" } else { "x86_64" }
-        $url = "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-windows-${barzakhArch}.exe"
-        try {
-            Invoke-WebRequest -Uri $url -OutFile "C:\Windows\System32\barzakh-adversary.exe" -UseBasicParsing
-            Write-Ok "barzakh-adversary installed"
-        } catch {
-            Write-Warn "Failed to install barzakh-adversary: $_"
-        }
-    }
-
-    if ($tools -contains "barzakh-scanner" -and -not (Test-Tool "barzakh-scanner")) {
-        Write-Step "Installing barzakh-scanner..."
-        $barzakhArch = if ($arch -eq "amd64") { "x86_64" } else { "x86_64" }
-        $url = "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-windows-${barzakhArch}.exe"
-        try {
-            Invoke-WebRequest -Uri $url -OutFile "C:\Windows\System32\barzakh-scanner.exe" -UseBasicParsing
-            Write-Ok "barzakh-scanner installed"
-        } catch {
-            Write-Warn "Failed to install barzakh-scanner: $_"
-        }
-    }
-
-    # RustScan
-    if ($tools -contains "rustscan" -and -not (Test-Tool "rustscan")) {
-        Write-Step "Installing rustscan..."
-        if ($script:PM -eq "scoop") {
-            scoop install rustscan 2>$null
-        } elseif ($script:PM -eq "choco") {
-            choco install rustscan -y --no-progress 2>$null
-        }
-        if (Test-Tool "rustscan") { Write-Ok "rustscan installed" } else { Write-Warn "rustscan: install manually from GitHub releases" }
-    }
-
-    # Masscan
-    if ($tools -contains "masscan" -and -not (Test-Tool "masscan")) {
-        Write-Step "Installing masscan..."
-        if ($script:PM -eq "choco") {
-            choco install masscan -y --no-progress 2>$null
-        }
-        if (Test-Tool "masscan") { Write-Ok "masscan installed" } else { Write-Warn "masscan: install manually" }
-    }
-
-    # Feroxbuster
-    if ($tools -contains "feroxbuster" -and -not (Test-Tool "feroxbuster")) {
-        Write-Step "Installing feroxbuster..."
-        if ($script:PM -eq "choco") {
-            choco install feroxbuster -y --no-progress 2>$null
-        }
-        if (Test-Tool "feroxbuster") { Write-Ok "feroxbuster installed" } else { Write-Warn "feroxbuster: install manually from GitHub releases" }
-    }
-
-    # Nikto
-    if ($tools -contains "nikto" -and -not (Test-Tool "nikto")) {
-        Write-Warn "nikto: requires Perl on Windows. Consider using WSL or Docker for nikto."
-    }
-
-    # testssl.sh
-    if ($tools -contains "testssl.sh" -and -not (Test-Tool "testssl.sh")) {
-        Write-Warn "testssl.sh: requires bash. Use WSL or Git Bash to run testssl.sh"
+    $env:Path = "$env:ProgramFiles\RedHands\bin;" + $env:Path
+    Write-Info "Verified binaries are in $env:ProgramFiles\RedHands\bin; add this directory to your persistent PATH."
+    foreach ($name in @("rustscan", "masscan", "testssl.sh", "nikto")) {
+        if (($tools -contains $name) -and -not (Test-Tool $name)) { Write-Warn "${name}: install manually from a trusted package manager." }
     }
 }
 

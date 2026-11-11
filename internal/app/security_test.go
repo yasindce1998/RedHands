@@ -40,6 +40,8 @@ func setupTestServer(t *testing.T, dryRun bool) (*mcp.Server, *targetdb.Store, s
 	db := targetdb.NewStore(filepath.Join(dir, "db.json"), true)
 	srv.RegisterTool(targettools.NewAddHostTool(db))
 	srv.RegisterTool(targettools.NewListHostsTool(db))
+	srv.SetToolPolicy("targetdb_add_host", mcp.ToolPolicy{})
+	srv.SetToolPolicy("targetdb_list_hosts", mcp.ToolPolicy{ReadOnly: true})
 	SetupWorkflow(srv)
 	return srv, db, path, ac
 }
@@ -95,6 +97,7 @@ func TestWorkflowAuthorizationAndNoMutationCaching(t *testing.T) {
 func TestWarmPureCacheStillRequiresAuthentication(t *testing.T) {
 	srv, _, _, _ := setupTestServer(t, false)
 	srv.RegisterTool(intelligence.NewMitreLookupTool())
+	srv.SetToolPolicy("mitre_lookup", mcp.ToolPolicy{ReadOnly: true, Cacheable: true})
 	ctx := auth.InjectAuthContext(context.Background(), "operator")
 	args := json.RawMessage(`{"technique_id":"T1046"}`)
 	if _, err := srv.ExecuteTool(ctx, "mitre_lookup", args); err != nil {
@@ -125,6 +128,7 @@ func TestWorkflowHonorsRateLimitAndScope(t *testing.T) {
 		SetupMiddleware(srv, &cfg, logger, auth.Config{Mode: "none"}, mgr)
 		db := targetdb.NewStore("", false)
 		srv.RegisterTool(targettools.NewAddHostTool(db))
+		srv.SetToolPolicy("targetdb_add_host", mcp.ToolPolicy{})
 		SetupWorkflow(srv)
 		response := srv.HandleRaw(json.RawMessage(`{"jsonrpc":"2.0","id":1,"method":"workflow/run","params":{"steps":[{"tool":"targetdb_add_host","params":{"ip":"192.0.2.1"}},{"tool":"targetdb_add_host","params":{"ip":"192.0.2.2"}}]}}`))
 		if !bytes.Contains(response, []byte(`"success":false`)) {

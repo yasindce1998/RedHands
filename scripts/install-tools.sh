@@ -23,7 +23,8 @@ PROFILE="all"
 CHECK_ONLY=false
 LIST_PROFILES=false
 SKIP_CONFIRM=false
-GO_VERSION="1.26.0"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+DEPENDENCIES="$SCRIPT_DIR/dependencies.py"
 
 usage() {
     cat <<EOF
@@ -185,7 +186,7 @@ check_root() {
 }
 
 check_tool() {
-    command -v "$1" &>/dev/null
+    command -v "$1" &>/dev/null || { [[ "$1" == impacket-* ]] && command -v "${1#impacket-}.py" &>/dev/null; }
 }
 
 check_all_tools() {
@@ -203,7 +204,7 @@ check_all_tools() {
     for tool in $tools; do
         total=$((total + 1))
         if check_tool "$tool"; then
-            printf "  %-25s ${GREEN}installed${NC} (%s)\n" "$tool" "$(command -v "$tool")"
+            printf "  %-25s ${GREEN}installed${NC} (%s)\n" "$tool" "$(command -v "$tool" || command -v "${tool#impacket-}.py")"
             installed=$((installed + 1))
         else
             printf "  %-25s ${RED}missing${NC}\n" "$tool"
@@ -253,6 +254,10 @@ if ! $SKIP_CONFIRM; then
 fi
 
 check_root
+if [[ ! -f "$DEPENDENCIES" || ! -f "$SCRIPT_DIR/dependencies.json" ]]; then
+    log_error "Run this installer from a complete checkout containing dependencies.py and dependencies.json."
+    exit 1
+fi
 
 # ─── Package Manager Install ───────────────────────────────────────────────────
 
@@ -338,7 +343,7 @@ install_brew_packages() {
 
     if [[ ${#pkgs[@]} -gt 0 ]]; then
         log_step "Installing brew packages: ${pkgs[*]}"
-        brew install "${pkgs[@]}" 2>/dev/null || true
+        brew install "${pkgs[@]}"
     fi
 }
 
@@ -348,13 +353,13 @@ install_python_tools() {
     local pip_pkgs=()
 
     if [[ "$TOOLS" == *"impacket"* ]]; then
-        pip_pkgs+=(impacket)
+        pip_pkgs+=("$(python3 "$DEPENDENCIES" python impacket)")
     fi
     if [[ "$TOOLS" == *"certipy"* ]]; then
-        pip_pkgs+=(certipy-ad)
+        pip_pkgs+=("$(python3 "$DEPENDENCIES" python certipy)")
     fi
     if [[ "$TOOLS" == *"crackmapexec"* ]]; then
-        pip_pkgs+=(crackmapexec)
+        log_warn "crackmapexec is no longer available from PyPI; install a reviewed compatible version manually."
     fi
 
     if [[ ${#pip_pkgs[@]} -gt 0 ]]; then
@@ -372,7 +377,7 @@ ensure_go() {
         return
     fi
 
-    log_step "Installing Go $GO_VERSION..."
+    log_step "Installing the verified Go toolchain from the dependency manifest..."
     local arch
     arch=$(uname -m)
     case "$arch" in
@@ -384,38 +389,44 @@ ensure_go() {
     local os_name
     os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
 
-    wget -q "https://go.dev/dl/go${GO_VERSION}.${os_name}-${arch}.tar.gz" -O /tmp/go.tar.gz
-    rm -rf /usr/local/go
-    tar -C /usr/local -xzf /tmp/go.tar.gz
-    rm /tmp/go.tar.gz
+    local tmp
+    tmp=$(mktemp -d)
+    python3 "$DEPENDENCIES" fetch go --platform "${os_name}-${arch}" --output "$tmp/go.tar.gz"
+    if [[ -e /usr/local/go ]]; then
+        log_error "Refusing to overwrite /usr/local/go; repair PATH or install Go manually."
+        return 1
+    fi
+    tar -C /usr/local -xzf "$tmp/go.tar.gz"
+    rm -f "$tmp/go.tar.gz"
+    rmdir "$tmp"
     export PATH="/usr/local/go/bin:$PATH"
-    log_ok "Go $GO_VERSION installed"
+    log_ok "Verified Go toolchain installed"
 }
 
 install_go_tools() {
     local go_tools=()
 
-    [[ "$TOOLS" == *"subfinder"* ]] && go_tools+=("github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest")
-    [[ "$TOOLS" == *"httpx"* ]] && go_tools+=("github.com/projectdiscovery/httpx/cmd/httpx@latest")
-    [[ "$TOOLS" == *"nuclei"* ]] && go_tools+=("github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest")
-    [[ "$TOOLS" == *"ffuf"* ]] && go_tools+=("github.com/ffuf/ffuf/v2@latest")
-    [[ "$TOOLS" == *"katana"* ]] && go_tools+=("github.com/projectdiscovery/katana/cmd/katana@latest")
-    [[ "$TOOLS" == *"gobuster"* ]] && go_tools+=("github.com/OJ/gobuster/v3@latest")
-    [[ "$TOOLS" == *"gau"* ]] && go_tools+=("github.com/lc/gau/v2/cmd/gau@latest")
+    local name
+    for name in subfinder httpx nuclei ffuf katana gobuster gau waybackurls; do
+        [[ "$TOOLS" == *"$name"* ]] && go_tools+=("$(python3 "$DEPENDENCIES" go "$name")")
+    done
 
     if [[ ${#go_tools[@]} -gt 0 ]]; then
         ensure_go
         export GOPATH="${GOPATH:-/tmp/redhands-go}"
         export GOBIN="/usr/local/bin"
 
+        local tool
         for tool in "${go_tools[@]}"; do
-            local name
             name=$(basename "${tool%%@*}")
+            [[ "$name" == "v2" ]] && name=ffuf
+            [[ "$name" == "v3" ]] && name=gobuster
             if check_tool "$name"; then
                 log_ok "$name already installed"
             else
                 log_step "Installing $name..."
-                go install "$tool" 2>/dev/null && log_ok "$name installed" || log_warn "Failed to install $name"
+                go install "$tool"
+                log_ok "$name installed"
             fi
         done
     fi
@@ -424,136 +435,33 @@ install_go_tools() {
 # ─── Binary Releases ──────────────────────────────────────────────────────────
 
 install_binary_releases() {
-    local arch
-    arch=$(uname -m)
-    case "$arch" in
-        x86_64|amd64) arch="amd64" ;;
-        aarch64|arm64) arch="arm64" ;;
-    esac
-
-    local os_name
-    os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-    # Chisel
-    if [[ "$TOOLS" == *"chisel"* ]] && ! check_tool chisel; then
-        log_step "Installing chisel..."
-        local chisel_ver="1.11.5"
-        curl -fsSL "https://github.com/jpillora/chisel/releases/download/v${chisel_ver}/chisel_${chisel_ver}_${os_name}_${arch}.gz" -o /tmp/chisel.gz && \
-            gunzip -f /tmp/chisel.gz && chmod +x /tmp/chisel && mv /tmp/chisel /usr/local/bin/chisel && \
-            log_ok "chisel $chisel_ver installed" || log_warn "Failed to install chisel"
-    fi
-
-    # Ligolo-ng
-    if [[ "$TOOLS" == *"ligolo-proxy"* ]] && ! check_tool ligolo-proxy; then
-        log_step "Installing ligolo-ng..."
-        local ligolo_ver="0.8.3"
-        curl -fsSL "https://github.com/nicocha30/ligolo-ng/releases/download/v${ligolo_ver}/ligolo-ng_proxy_${ligolo_ver}_${os_name}_${arch}.tar.gz" -o /tmp/ligolo.tar.gz && \
-            tar -xzf /tmp/ligolo.tar.gz -C /tmp && mv /tmp/proxy /usr/local/bin/ligolo-proxy && \
-            rm -f /tmp/ligolo.tar.gz && \
-            log_ok "ligolo-ng $ligolo_ver installed" || log_warn "Failed to install ligolo-ng"
-    fi
-
-    # KubeDagger
-    if [[ "$TOOLS" == *"kubedagger-client"* ]] && ! check_tool kubedagger-client; then
-        log_step "Installing kubedagger-client..."
-        curl -fsSL "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-client-${os_name}-${arch}" \
-            -o /usr/local/bin/kubedagger-client && chmod +x /usr/local/bin/kubedagger-client && \
-            log_ok "kubedagger-client installed" || log_warn "Failed to install kubedagger-client"
-    fi
-
-    if [[ "$TOOLS" == *"kubedagger-operator"* ]] && ! check_tool kubedagger-operator; then
-        log_step "Installing kubedagger-operator..."
-        curl -fsSL "https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-${os_name}-${arch}" \
-            -o /usr/local/bin/kubedagger-operator && chmod +x /usr/local/bin/kubedagger-operator && \
-            log_ok "kubedagger-operator installed" || log_warn "Failed to install kubedagger-operator"
-    fi
-
-    # Barzakh
-    if [[ "$TOOLS" == *"barzakh-adversary"* ]] && ! check_tool barzakh-adversary; then
-        log_step "Installing barzakh-adversary..."
-        local barzakh_os="linux"
-        local barzakh_arch="x86_64"
-        [[ "$OS" == "macos" ]] && barzakh_os="macos"
-        [[ "$(uname -m)" == "aarch64" || "$(uname -m)" == "arm64" ]] && barzakh_arch="aarch64"
-        curl -fsSL "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-${barzakh_os}-${barzakh_arch}" \
-            -o /usr/local/bin/barzakh-adversary && chmod +x /usr/local/bin/barzakh-adversary && \
-            log_ok "barzakh-adversary installed" || log_warn "Failed to install barzakh-adversary"
-    fi
-
-    if [[ "$TOOLS" == *"barzakh-scanner"* ]] && ! check_tool barzakh-scanner; then
-        log_step "Installing barzakh-scanner..."
-        local barzakh_os="linux"
-        local barzakh_arch="x86_64"
-        [[ "$OS" == "macos" ]] && barzakh_os="macos"
-        [[ "$(uname -m)" == "aarch64" || "$(uname -m)" == "arm64" ]] && barzakh_arch="aarch64"
-        curl -fsSL "https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-${barzakh_os}-${barzakh_arch}" \
-            -o /usr/local/bin/barzakh-scanner && chmod +x /usr/local/bin/barzakh-scanner && \
-            log_ok "barzakh-scanner installed" || log_warn "Failed to install barzakh-scanner"
-    fi
-
-    # RustScan
-    if [[ "$TOOLS" == *"rustscan"* ]] && ! check_tool rustscan; then
-        log_step "Installing rustscan..."
-        if [[ "$OS" == "debian" ]]; then
-            curl -fsSL "https://github.com/RustScan/RustScan/releases/latest/download/rustscan_2.3.0_amd64.deb" -o /tmp/rustscan.deb && \
-                dpkg -i /tmp/rustscan.deb && rm /tmp/rustscan.deb && \
-                log_ok "rustscan installed" || log_warn "Failed to install rustscan (try: cargo install rustscan)"
-        elif [[ "$OS" == "macos" ]]; then
-            brew install rustscan 2>/dev/null && log_ok "rustscan installed" || log_warn "Failed to install rustscan"
-        else
-            log_warn "rustscan: install manually or via cargo install rustscan"
+    local tool
+    for tool in chisel ligolo-proxy kubedagger-client kubedagger-operator barzakh-adversary barzakh-scanner feroxbuster; do
+        if [[ "$TOOLS" == *"$tool"* ]] && ! check_tool "$tool"; then
+            log_step "Installing checksum-verified $tool..."
+            python3 "$DEPENDENCIES" install "$tool" --output /usr/local/bin
         fi
-    fi
-
-    # Feroxbuster
-    if [[ "$TOOLS" == *"feroxbuster"* ]] && ! check_tool feroxbuster; then
-        log_step "Installing feroxbuster..."
-        if [[ "$OS" == "macos" ]]; then
-            brew install feroxbuster 2>/dev/null && log_ok "feroxbuster installed" || log_warn "Failed to install feroxbuster"
-        else
-            curl -fsSL "https://raw.githubusercontent.com/epi052/feroxbuster/main/install-nix.sh" | bash -s /usr/local/bin 2>/dev/null && \
-                log_ok "feroxbuster installed" || log_warn "Failed to install feroxbuster"
-        fi
-    fi
-
-    # Nikto
+    done
     if [[ "$TOOLS" == *"nikto"* ]] && ! check_tool nikto; then
-        log_step "Installing nikto..."
-        if [[ ! -d /opt/nikto ]]; then
-            git clone --depth 1 https://github.com/sullo/nikto.git /opt/nikto 2>/dev/null
-            ln -sf /opt/nikto/program/nikto.pl /usr/local/bin/nikto
-            log_ok "nikto installed"
-        fi
-    fi
-
-    # Arjun
-    if [[ "$TOOLS" == *"arjun"* ]] && ! check_tool arjun; then
-        log_step "Installing arjun..."
-        python3 -m pip install --break-system-packages arjun 2>/dev/null || \
-        python3 -m pip install arjun 2>/dev/null
-        log_ok "arjun installed"
-    fi
-
-    # Waybackurls
-    if [[ "$TOOLS" == *"waybackurls"* ]] && ! check_tool waybackurls; then
-        log_step "Installing waybackurls..."
-        if check_tool go; then
-            go install github.com/tomnomnom/waybackurls@latest 2>/dev/null && \
-                log_ok "waybackurls installed" || log_warn "Failed to install waybackurls"
-        fi
-    fi
-
-    # testssl.sh
-    if [[ "$TOOLS" == *"testssl.sh"* ]] && ! check_tool testssl.sh; then
-        log_step "Installing testssl.sh..."
-        if [[ "$OS" == "macos" ]]; then
-            brew install testssl 2>/dev/null && log_ok "testssl.sh installed" || true
+        if [[ -e /opt/nikto ]]; then
+            log_warn "Existing /opt/nikto left untouched; configure its executable manually."
         else
-            git clone --depth 1 https://github.com/drwetter/testssl.sh.git /opt/testssl 2>/dev/null
-            ln -sf /opt/testssl/testssl.sh /usr/local/bin/testssl.sh
-            log_ok "testssl.sh installed"
+            git init /opt/nikto
+            git -C /opt/nikto remote add origin https://github.com/sullo/nikto.git
+            git -C /opt/nikto fetch --depth 1 origin "$(python3 "$DEPENDENCIES" source nikto)"
+            git -C /opt/nikto checkout --detach FETCH_HEAD
+            ln -s /opt/nikto/program/nikto.pl /usr/local/bin/nikto
         fi
     fi
+    if [[ "$TOOLS" == *"arjun"* ]] && ! check_tool arjun; then
+        python3 -m pip install --break-system-packages "$(python3 "$DEPENDENCIES" python arjun)" || \
+        python3 -m pip install "$(python3 "$DEPENDENCIES" python arjun)"
+    fi
+    for tool in rustscan testssl.sh; do
+        if [[ "$TOOLS" == *"$tool"* ]] && ! check_tool "$tool"; then
+            log_warn "$tool has no reviewed locked artifact yet; install it manually from a trusted package manager."
+        fi
+    done
 }
 
 # ─── Main Installation Flow ───────────────────────────────────────────────────
@@ -574,6 +482,7 @@ case "$OS" in
     arch) install_pacman_packages ;;
     macos) install_brew_packages ;;
 esac
+python3 "$DEPENDENCIES" validate
 echo ""
 
 # Step 2: Python tools

@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"runtime"
 	"strings"
 
+	"github.com/yasindce1998/redhands/internal/binaries"
 	"github.com/yasindce1998/redhands/pkg/mcp"
+	"github.com/yasindce1998/redhands/pkg/version"
 )
-
-var version = "0.2.0"
 
 type HealthCheckTool struct {
 	binaries []string
@@ -38,7 +37,7 @@ func (t *HealthCheckTool) Execute(_ context.Context, _ json.RawMessage) (*mcp.To
 	var sb strings.Builder
 
 	sb.WriteString("## RedHands Health Check\n\n")
-	fmt.Fprintf(&sb, "**Version:** %s\n", version)
+	fmt.Fprintf(&sb, "**Version:** %s\n", version.Version)
 	fmt.Fprintf(&sb, "**Platform:** %s/%s\n", runtime.GOOS, runtime.GOARCH)
 	fmt.Fprintf(&sb, "**Go Version:** %s\n\n", runtime.Version())
 
@@ -47,7 +46,7 @@ func (t *HealthCheckTool) Execute(_ context.Context, _ json.RawMessage) (*mcp.To
 	sb.WriteString("|--------|--------|------|\n")
 
 	for _, bin := range t.binaries {
-		path, err := exec.LookPath(bin)
+		path, err := binaries.Resolve(bin)
 		if err != nil {
 			fmt.Fprintf(&sb, "| %s | not found | - |\n", bin)
 		} else {

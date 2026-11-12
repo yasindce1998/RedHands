@@ -184,6 +184,16 @@ func (t *DefenseStartTool) Execute(ctx context.Context, params json.RawMessage) 
 
 	var sb strings.Builder
 	sb.WriteString("## Aegis-Shadow Defense Daemon Started\n\n")
+	// Fenced JSON block so campaign dataflow can reference
+	// ${step_id.json.process_id} for stop/status chaining.
+	daemonJSON, _ := json.Marshal(map[string]any{
+		"process_id":  proc.ID,
+		"pid":         proc.PID,
+		"binary":      defenseBinary,
+		"stdout_path": stdoutPath,
+		"stderr_path": stderrPath,
+	})
+	fmt.Fprintf(&sb, "```json\n%s\n```\n\n", daemonJSON)
 	fmt.Fprintf(&sb, "- **Process ID:** %s\n", proc.ID)
 	fmt.Fprintf(&sb, "- **PID:** %d\n", proc.PID)
 	fmt.Fprintf(&sb, "- **Binary:** %s\n", defenseBinary)

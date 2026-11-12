@@ -110,29 +110,29 @@ func (t *defenseAPITool) Execute(ctx context.Context, params json.RawMessage) (*
 // NewThreats returns a tool that fetches recently correlated telecom threats.
 func NewThreats() *defenseAPITool {
 	return &defenseAPITool{
-		name:  "telecom_threats",
-		title: "Recent Threats",
+		name:        "telecom_threats",
+		title:       "Recent Threats",
 		description: "Fetch the most recently correlated telecom threats (up to 50) from a running StaticZero defense engine via GET /api/v1/threats. Read-only query of engine state; requires the engine to already be running." + authorizedUseNotice,
-		apiPath: "/api/v1/threats",
+		apiPath:     "/api/v1/threats",
 	}
 }
 
 // NewAlerts returns a tool that fetches recent raw defense alerts.
 func NewAlerts() *defenseAPITool {
 	return &defenseAPITool{
-		name:  "telecom_alerts",
-		title: "Recent Alerts",
+		name:        "telecom_alerts",
+		title:       "Recent Alerts",
 		description: "Fetch the most recent raw defense alerts (up to 100) from a running StaticZero defense engine via GET /api/v1/alerts. Read-only query of engine state; requires the engine to already be running." + authorizedUseNotice,
-		apiPath: "/api/v1/alerts",
+		apiPath:     "/api/v1/alerts",
 	}
 }
 
 // NewStats returns a tool that fetches defense engine statistics.
 func NewStats() *defenseAPITool {
 	return &defenseAPITool{
-		name:  "telecom_stats",
-		title: "Engine Statistics",
+		name:        "telecom_stats",
+		title:       "Engine Statistics",
 		description: "Fetch runtime statistics (uptime, events processed, threats detected, correlation and false-positive counters) from a running StaticZero defense engine via GET /api/v1/stats. Read-only query of engine state; requires the engine to already be running." + authorizedUseNotice,
-		apiPath: "/api/v1/stats",
+		apiPath:     "/api/v1/stats",
 	}
 }

@@ -135,7 +135,7 @@ func TestDefenseStart_SuccessLifecycle(t *testing.T) {
 		t.Fatalf("unexpected tool error: %s", result.Content[0].Text)
 	}
 	text := result.Content[0].Text
-	for _, want := range []string{"Process ID:** proc_", "PID:**", "aegis_defense_stop", "aegis_alerts_parse", alertsDir} {
+	for _, want := range []string{"Process ID:** proc_", "PID:**", "aegis_defense_stop", "aegis_alerts_parse", alertsDir, "```json", `"process_id":"proc_`} {
 		if !strings.Contains(text, want) {
 			t.Errorf("expected %q in start output, got:\n%s", want, text)
 		}
@@ -381,8 +381,7 @@ func TestDefenseStart_RejectsInvalidInput(t *testing.T) {
 // The binary must be allowlisted; a manager that does not know
 // aegis-shadow-defense refuses to start it.
 func TestDefenseStart_BinaryNotAllowed(t *testing.T) {
-	mgr := newTestManager(t)
-	mgr = executor.NewBackgroundManager(executor.Config{
+	mgr := executor.NewBackgroundManager(executor.Config{
 		AllowedBinaries: map[string]string{"some-other-binary": "/bin/true"},
 	})
 	result, err := NewDefenseStart(mgr).Execute(context.Background(), mustJSON(map[string]any{

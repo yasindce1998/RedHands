@@ -134,7 +134,7 @@ func TestDefenseStart_SuccessLifecycle(t *testing.T) {
 		t.Fatalf("unexpected tool error: %s", result.Content[0].Text)
 	}
 	text := result.Content[0].Text
-	for _, want := range []string{"Process ID:** proc_", "PID:**", "telecom_defense_stop", "telecom_defense_status", logsDir} {
+	for _, want := range []string{"Process ID:** proc_", "PID:**", "telecom_defense_stop", "telecom_defense_status", logsDir, "```json", `"process_id":"proc_`} {
 		if !strings.Contains(text, want) {
 			t.Errorf("expected %q in start output, got:\n%s", want, text)
 		}

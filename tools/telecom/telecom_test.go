@@ -160,11 +160,11 @@ func TestDoctor_Execute_WithFlags(t *testing.T) {
 	tool := NewDoctor(mock)
 
 	result, err := tool.Execute(context.Background(), mustJSON(map[string]any{
-		"bpf_path":       "/opt/staticzero/staticzero-defense.bpf.o",
-		"modem_path":     "/dev/cdc-wdm1",
-		"modules":        []int{16, 17, 22},
+		"bpf_path":        "/opt/staticzero/staticzero-defense.bpf.o",
+		"modem_path":      "/dev/cdc-wdm1",
+		"modules":         []int{16, 17, 22},
 		"allow_modem_pid": []int64{42, 1337},
-		"all":            true,
+		"all":             true,
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -812,11 +812,11 @@ func TestSDRScan_Execute_WithParams(t *testing.T) {
 	tool := NewSDRScan(mock)
 
 	result, err := tool.Execute(context.Background(), mustJSON(map[string]any{
-		"sdr_type":   "rtlsdr",
-		"device_id":  "serial-42",
+		"sdr_type":     "rtlsdr",
+		"device_id":    "serial-42",
 		"frequency_hz": 1805000000,
-		"gain_db":     25,
-		"scan_bands":  "100,2750,6150",
+		"gain_db":      25,
+		"scan_bands":   "100,2750,6150",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

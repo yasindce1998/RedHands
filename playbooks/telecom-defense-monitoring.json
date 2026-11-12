@@ -1,0 +1,15 @@
+{
+  "name": "telecom-defense-monitoring",
+  "description": "Stand up StaticZero telecom defense monitoring in a lab: read-only platform preflight (telecom_doctor), start the defense daemon with the telecom-detect module group as a managed background process (telecom_defense_start, requires logs_dir), query the running engine's HTTP API for correlated threats and raw alerts, then stop the daemon via its process id. The daemon requires root and kernel >= 5.15. Defensive playbook: no MITRE ATT&CK techniques apply.",
+  "vars": [
+    { "name": "logs_dir", "description": "Directory for daemon output: SIEM JSON-lines alerts (staticzero-defense-<id>.jsonl) and stderr logs (staticzero-defense-<id>.err); created with 0700 if missing", "required": true },
+    { "name": "base_url", "description": "Base URL of the defense engine HTTP API", "default": "http://127.0.0.1:9100" }
+  ],
+  "steps": [
+    { "id": "preflight", "tool": "telecom_doctor", "params": {}, "on_fail": "stop" },
+    { "id": "engine", "tool": "telecom_defense_start", "params": { "group": "telecom-detect", "logs_dir": "{{logs_dir}}" }, "on_fail": "stop" },
+    { "id": "threats", "tool": "telecom_threats", "params": { "base_url": "{{base_url}}" }, "on_fail": "continue", "condition": { "step": "engine", "op": "success" } },
+    { "id": "alerts_review", "tool": "telecom_alerts", "params": { "base_url": "{{base_url}}" }, "on_fail": "continue", "condition": { "step": "engine", "op": "success" } },
+    { "id": "stop", "tool": "telecom_defense_stop", "params": { "process_id": "${engine.json.process_id}" }, "on_fail": "continue", "condition": { "step": "engine", "op": "success" } }
+  ]
+}

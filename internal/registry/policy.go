@@ -14,6 +14,7 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 		"hashcat_show", "john_show", "john_formats", "tshark_read", "tshark_stats", "tshark_extract", "tshark_follow",
 		// Barzakh: pure listings, corpus analysis, and intel queries.
 		"barzakh_detectors", "barzakh_validate", "barzakh_intel",
+		"barzakh_history", "barzakh_manifest_validate",
 		// Aegis-Shadow: read-only alert analysis, catalog, and config reads.
 		"aegis_alerts_parse", "aegis_alerts_tail", "aegis_modules_list", "aegis_defense_config_read",
 		// StaticZero: read-only preflight and defense-engine queries.

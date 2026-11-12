@@ -53,12 +53,19 @@ type EnhancedWorkflowRequest struct {
 	Steps    []EnhancedStep `json:"steps"`
 	Template string         `json:"template,omitempty"`
 	Vars     map[string]string `json:"vars,omitempty"`
+	// Engagement optionally binds the campaign to a named engagement. The
+	// named engagement must exist and be the active engagement; every step's
+	// targets are then scope-checked against it by the engagement middleware.
+	Engagement string `json:"engagement,omitempty"`
 }
 
 // State represents a checkpoint of workflow execution.
 type State struct {
 	WorkflowID string                  `json:"workflow_id"`
 	Name       string                  `json:"name,omitempty"`
+	// Engagement records the engagement a campaign is bound to; it is
+	// re-validated on resume.
+	Engagement string                  `json:"engagement,omitempty"`
 	Steps      []EnhancedStep          `json:"steps"`
 	Results    map[string]StepResult   `json:"results"`
 	NextIndex  int                     `json:"next_index"`

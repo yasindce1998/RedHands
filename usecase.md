@@ -1221,6 +1221,28 @@ the server restarts mid-run:
 
 The interrupted step re-runs from its checkpoint.
 
+### Engagement-Scoped Campaigns
+
+Bind a campaign to the active engagement so every step's targets are checked
+against that engagement's scope — and fail fast if the operator switched
+engagements:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "campaign/run",
+  "id": 1,
+  "params": {
+    "engagement": "lab-1",
+    "steps": [ { "tool": "nmap_port_scan", "params": { "target": "192.0.2.0/24" } } ]
+  }
+}
+```
+
+The named engagement must exist (created with `engagement_create`) and be the
+active one (`engagement_switch`). Bindings persist with the campaign and are
+re-validated on `campaign/resume`.
+
 ### Daemon Steps in Campaigns
 
 Defense-engine daemons slot into campaigns like any other step:

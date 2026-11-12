@@ -513,7 +513,8 @@ Campaigns interrupted mid-step (cancellation or timeout) checkpoint as
 Playbooks are reusable, versioned campaign templates stored as JSON in
 `REDHANDS_WORKFLOW_TEMPLATES_DIR` (default `./playbooks/`). Shipped examples:
 `recon-to-vuln`, `web-assessment`, `k8s-recon-chain`, `ad-kerberoast-chain`,
-`firmware-bootkit-assessment`. Point-and-shoot a playbook:
+`firmware-bootkit-assessment`, `telecom-defense-monitoring`,
+`firmware-purple-team`. Point-and-shoot a playbook:
 
 ```json
 {
@@ -524,6 +525,27 @@ Playbooks are reusable, versioned campaign templates stored as JSON in
   }
 }
 ```
+
+### Engagement-scoped campaigns
+
+Campaigns can bind to an engagement with the `engagement` parameter. The named
+engagement must exist and be the **active** engagement — the campaign fails
+fast instead of silently running against the wrong scope, and every step's
+targets are checked against that engagement's scope by the middleware:
+
+```json
+{
+  "method": "campaign/run",
+  "params": {
+    "engagement": "lab-1",
+    "template": "web-assessment",
+    "vars": {"target": "https://target.example"}
+  }
+}
+```
+
+Bindings are persisted with the campaign state and re-validated on resume, so
+switching engagements between runs rejects a stale binding.
 
 Limits: 128 steps per campaign, 16 steps per parallel group, 64 `goto` recovery
 jumps, 16 MiB cumulative output — mirroring workflow hard caps.

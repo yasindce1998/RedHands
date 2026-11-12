@@ -13,6 +13,14 @@ const (
 	MethodNotificationsCancelled = "notifications/cancelled"
 	MethodWorkflowRun            = "workflow/run"
 	MethodReportGenerate         = "report/generate"
+	MethodCampaignRun            = "campaign/run"
+	MethodCampaignStatus         = "campaign/status"
+	MethodCampaignList           = "campaign/list"
+	MethodCampaignResume         = "campaign/resume"
+	MethodCampaignCancel         = "campaign/cancel"
+	MethodCampaignTemplates      = "campaign/templates"
+	MethodCampaignTemplateGet    = "campaign/template/get"
+	MethodCampaignTemplateSave   = "campaign/template/save"
 
 	ErrCodeParse          = -32700
 	ErrCodeInvalidRequest = -32600

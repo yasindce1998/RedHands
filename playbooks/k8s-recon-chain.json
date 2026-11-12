@@ -1,0 +1,13 @@
+{
+  "name": "k8s-recon-chain",
+  "description": "Kubernetes offensive recon using KubeDagger: cluster discovery, service-account token harvesting, RBAC abuse, then a MITRE ATT&CK export of covered techniques.",
+  "vars": [
+    { "name": "namespace", "description": "Namespace to operate in", "default": "default" }
+  ],
+  "steps": [
+    { "id": "discover", "tool": "kubedagger_k8s_discover", "params": { "namespace": "{{namespace}}" }, "on_fail": "stop" },
+    { "id": "sa_tokens", "tool": "kubedagger_sa_token", "params": { "namespace": "{{namespace}}", "action": "steal" }, "on_fail": "continue" },
+    { "id": "rbac", "tool": "kubedagger_k8s_abuse", "params": { "action": "enum", "namespace": "{{namespace}}" }, "on_fail": "continue" },
+    { "id": "mitre", "tool": "kubedagger_mitre_export", "params": { "format": "markdown" }, "on_fail": "continue" }
+  ]
+}

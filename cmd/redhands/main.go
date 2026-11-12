@@ -71,6 +71,7 @@ func run() error {
 	defer stopPlugins()
 
 	app.SetupWorkflow(srv)
+	app.SetupCampaign(srv, &cfg)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()

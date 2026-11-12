@@ -1,0 +1,13 @@
+{
+  "name": "recon-to-vuln",
+  "description": "External attack surface discovery: subdomain enumeration, live-host probing, then template-based vulnerability scanning. Non-destructive steps continue past failures.",
+  "vars": [
+    { "name": "domain", "description": "Root domain to assess", "required": true },
+    { "name": "severity", "description": "Nuclei severity filter", "default": "critical,high" }
+  ],
+  "steps": [
+    { "id": "subdomains", "tool": "subfinder_enum", "params": { "domain": "{{domain}}" }, "on_fail": "stop" },
+    { "id": "probe", "tool": "httpx_probe", "params": { "target": "${subdomains.text}", "status_code": true, "title": true, "tech_detect": true }, "on_fail": "continue" },
+    { "id": "vulns", "tool": "nuclei_scan", "params": { "target": "${probe.text}", "severity": "{{severity}}" }, "on_fail": "continue" }
+  ]
+}

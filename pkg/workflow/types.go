@@ -14,11 +14,17 @@ type EnhancedStep struct {
 
 // Condition determines whether a step should execute.
 type Condition struct {
-	// Check a previous step's result
+	// Check a previous step's result: a step ID, "$prev" for the immediately
+	// preceding step, or a zero-based step index as a decimal string.
 	Step string `json:"step,omitempty"`
-	// Operator: "contains", "not_contains", "equals", "not_equals", "success", "failure"
-	Op    string `json:"op"`
+	// Operator: "contains", "not_contains", "equals", "not_equals", "success",
+	// "failure", "json_exists", "json_not_exists", "json_equals",
+	// "json_not_equals", "json_contains", "json_gt", "json_lt"
+	Op string `json:"op"`
+	// Value compared by comparison operators.
 	Value string `json:"value,omitempty"`
+	// Path is a dot-separated JSON path ("hosts.0.ip") used by json_* operators.
+	Path string `json:"path,omitempty"`
 }
 
 // EnhancedWorkflowRequest supports the full feature set.
@@ -37,8 +43,13 @@ type State struct {
 	Steps      []EnhancedStep          `json:"steps"`
 	Results    map[string]StepResult   `json:"results"`
 	NextIndex  int                     `json:"next_index"`
-	Status     string                  `json:"status"` // "running", "paused", "completed", "failed"
+	Status     string                  `json:"status"` // "running", "paused", "cancelled", "completed", "failed"
 	Error      string                  `json:"error,omitempty"`
+	// JumpsUsed counts executed "goto:step_id" recovery jumps, persisted so
+	// resumed campaigns keep their loop budget.
+	JumpsUsed int   `json:"jumps_used,omitempty"`
+	CreatedAt int64 `json:"created_at,omitempty"`
+	UpdatedAt int64 `json:"updated_at,omitempty"`
 }
 
 // Template is a reusable workflow definition with variable placeholders.

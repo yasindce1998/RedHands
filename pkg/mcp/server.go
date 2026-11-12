@@ -20,6 +20,19 @@ type WorkflowRunner interface {
 	RunFromJSON(ctx context.Context, params json.RawMessage) (json.RawMessage, error)
 }
 
+// CampaignEngine powers the multi-stage campaign methods: conditional and
+// parallel step execution, checkpointing, resumption, and playbooks.
+type CampaignEngine interface {
+	RunFromJSON(ctx context.Context, params json.RawMessage) (json.RawMessage, error)
+	StatusFromJSON(params json.RawMessage) (json.RawMessage, error)
+	ListFromJSON(params json.RawMessage) (json.RawMessage, error)
+	ResumeFromJSON(ctx context.Context, params json.RawMessage) (json.RawMessage, error)
+	CancelFromJSON(params json.RawMessage) (json.RawMessage, error)
+	TemplatesFromJSON(params json.RawMessage) (json.RawMessage, error)
+	GetTemplateFromJSON(params json.RawMessage) (json.RawMessage, error)
+	SaveTemplateFromJSON(params json.RawMessage) (json.RawMessage, error)
+}
+
 // ReportGenerator generates a report from raw JSON params.
 type ReportGenerator interface {
 	GenerateFromJSON(data json.RawMessage) (string, error)
@@ -38,6 +51,7 @@ type Server struct {
 	reporter        ReportGenerator
 	requestCheck    func(context.Context) error
 	workflowTimeout time.Duration
+	campaign        CampaignEngine
 }
 
 func NewServer(name, version string) *Server {
@@ -127,6 +141,11 @@ func (s *Server) GetTool(name string) (Tool, bool) {
 
 func (s *Server) SetWorkflowRunner(w WorkflowRunner) {
 	s.workflow = w
+}
+
+// SetCampaignEngine wires the multi-stage campaign methods.
+func (s *Server) SetCampaignEngine(c CampaignEngine) {
+	s.campaign = c
 }
 
 func (s *Server) SetReportGenerator(r ReportGenerator) {

@@ -22,6 +22,8 @@ A comprehensive reference for all scenarios, workflows, and configurations suppo
   - [Kubernetes Security](#8-kubernetes-security)
   - [Vulnerability Scanning](#9-vulnerability-scanning)
   - [SQL Injection](#10-sql-injection)
+  - [Telecom Defense Monitoring](#11-telecom-defense-monitoring-staticzero)
+  - [Linux eBPF Research](#12-linux-ebpf-research-aegis-shadow)
 - [Workflow Chaining](#workflow-chaining)
 - [Report Generation](#report-generation)
 - [Plugin System](#plugin-system)
@@ -836,6 +838,171 @@ Params: { "url": "https://target.com/login", "data": "username=admin&password=te
 
 ---
 
+### 11. Telecom Defense Monitoring (StaticZero)
+
+#### Scenario: One-Shot Preflight (Doctor)
+
+```
+Tool: telecom_doctor
+Params: { "all": true }
+```
+
+Read-only preflight: platform, kernel version, BPF capabilities, tracepoint
+layout, and eBPF object/module availability. The engine is never started —
+`--doctor` prints its report and exits, so a failed preflight is a finding in
+the output, not a tool error.
+
+#### Scenario: Baseband Firmware Analysis
+
+```
+Step 1: Static vulnerability analysis
+Tool: telecom_firmware_analyze
+Params: { "target": "/opt/firmware/modem.mbn", "chipset": "qualcomm", "report": "/tmp/fw_analysis.json" }
+
+Step 2: Diff against a baseline image
+Tool: telecom_firmware_diff
+Params: { "old": "/opt/firmware/modem_old.mbn", "new": "/opt/firmware/modem.mbn", "chipset": "qualcomm" }
+
+Step 3: Extract NV items (carrier/band/security configuration)
+Tool: telecom_firmware_nv_dump
+Params: { "image": "/opt/firmware/nv_items.bin", "output": "/tmp/nv_items.json" }
+```
+
+#### Scenario: Start the Defense Engine as a Managed Daemon
+
+```
+Step 1: Start the engine (returns immediately with a process id)
+Tool: telecom_defense_start
+Params: { "group": "telecom-advanced", "logs_dir": "/tmp/redhands/telecom" }
+
+Step 2: Confirm the daemon survived startup
+Tool: telecom_defense_status
+Params: { "process_id": "proc_1a2b3c4d5e6f7a8b" }
+```
+
+Requires root and kernel >= 5.15 (BPF). SIEM JSON-lines alerts stream to
+`<logs_dir>/staticzero-defense-<id>.jsonl` and engine logs to
+`<logs_dir>/staticzero-defense-<id>.err`; if the daemon exits immediately
+(e.g. missing privileges), the stderr log explains why. The start result
+embeds the process id and output paths in a fenced JSON block, so campaigns
+can chain straight into the stop step (see
+[Daemon Steps in Campaigns](#daemon-steps-in-campaigns)).
+
+#### Scenario: Query a Running Engine
+
+```
+Step 1: Correlated threats
+Tool: telecom_threats
+Params: {}
+
+Step 2: Raw alerts
+Tool: telecom_alerts
+Params: {}
+
+Step 3: Runtime statistics
+Tool: telecom_stats
+Params: {}
+```
+
+These issue read-only GETs against the running engine's HTTP API (default
+`http://127.0.0.1:9100`, override with `base_url`); the engine must already
+be running.
+
+#### Scenario: Stop the Engine
+
+```
+Tool: telecom_defense_stop
+Params: { "process_id": "proc_1a2b3c4d5e6f7a8b" }
+```
+
+---
+
+### 12. Linux eBPF Research (Aegis-Shadow)
+
+Aegis-Shadow is a Linux eBPF security research platform with an explicitly
+educational, VM-only posture — use these tools on a disposable lab VM, for
+authorized research only.
+
+#### Scenario: Parse Defense Alert Files
+
+```
+Step 1: Full parse with severity, attack-chain, and anomaly-score filters
+Tool: aegis_alerts_parse
+Params: { "file": "/tmp/aegis/alerts.ndjson", "severity": "HIGH", "only_attack_chains": true, "min_anomaly_score": 0.7 }
+
+Step 2: Just the most recent alerts
+Tool: aegis_alerts_tail
+Params: { "file": "/tmp/aegis/alerts.ndjson", "count": 20, "severity": "MEDIUM" }
+```
+
+#### Scenario: Explore the Module Catalog
+
+```
+Tool: aegis_modules_list
+Params: { "component": "defense" }
+```
+
+Lists the 15 defense detection modules (name, CLI flag, eBPF hook point,
+alert type) and the offense rootkit feature groups with risk notes. Static
+reference data; no binary is executed.
+
+#### Scenario: Read/Write Defense Config
+
+```
+Step 1: Write a runtime config
+Tool: aegis_defense_config_write
+Params: { "path": "/tmp/aegis/config.json", "threshold": 3, "window_secs": 60 }
+
+Step 2: Validate it
+Tool: aegis_defense_config_read
+Params: { "path": "/tmp/aegis/config.json" }
+```
+
+The defense daemon hot-reloads this file every 5 seconds when started with
+`--config`.
+
+#### Scenario: Plan an Offense Launch (Dry Run Only)
+
+```
+Tool: aegis_offense_plan
+Params: { "features": ["enable_memfd", "enable_bpf_cloak"], "iface": "eth0", "hide_pid": 1337 }
+```
+
+`aegis_offense_plan` NEVER executes the rootkit: it validates the requested
+feature flags against the real offense CLI surface and renders the exact
+manual command line (with per-feature risk notes) for the operator to run in
+an authorized lab VM.
+
+#### Scenario: Run the Defense Engine Daemon and Read Its Alerts
+
+```
+Step 1: Start the daemon (returns immediately with a process id)
+Tool: aegis_defense_start
+Params: { "alerts_dir": "/tmp/aegis", "threshold": 2, "calibration_period": 60, "enable_ml": true }
+
+Step 2: Check it survived startup
+Tool: aegis_defense_status
+Params: { "process_id": "proc_1a2b3c4d5e6f7a8b" }
+
+Step 3: Run your lab exercise, then parse the NDJSON alert stream
+Tool: aegis_alerts_parse
+Params: { "file": "/tmp/aegis/aegis-defense-1a2b3c4d.ndjson", "severity": "HIGH", "only_attack_chains": true }
+
+Step 4: Stop the daemon
+Tool: aegis_defense_stop
+Params: { "process_id": "proc_1a2b3c4d5e6f7a8b" }
+```
+
+Requires root/eBPF privileges. Alerts stream as NDJSON to
+`<alerts_dir>/aegis-defense-<id>.ndjson` and logs to
+`<alerts_dir>/aegis-defense-<id>.err`; `aegis_defense_start` returns both
+paths, and `aegis_alerts_parse` / `aegis_alerts_tail` read the alert file
+directly. The process id and file paths are also embedded in a fenced JSON
+block for campaign chaining (see
+[Daemon Steps in Campaigns](#daemon-steps-in-campaigns)).
+
+---
+
 ## Workflow Chaining
 
 The workflow engine allows chaining multiple tools together with variable substitution between steps.
@@ -945,7 +1112,8 @@ through the same approval/scope/rate-limit middleware as a direct `tools/call`.
 ```
 
 Shipped playbooks (in `./playbooks/`): `recon-to-vuln`, `web-assessment`,
-`k8s-recon-chain`, `ad-kerberoast-chain`, `firmware-bootkit-assessment`.
+`k8s-recon-chain`, `ad-kerberoast-chain`, `firmware-bootkit-assessment`,
+`firmware-purple-team`, `telecom-defense-monitoring`.
 
 ### Conditional Branching
 
@@ -1053,6 +1221,50 @@ the server restarts mid-run:
 
 The interrupted step re-runs from its checkpoint.
 
+### Daemon Steps in Campaigns
+
+Defense-engine daemons slot into campaigns like any other step:
+`telecom_defense_start` (and `aegis_defense_start`) return immediately with a
+process id while the engine keeps running in the background, so later steps
+can exercise the lab and query the engine, and a final step tears the daemon
+down.
+
+```json
+{
+  "steps": [
+    { "id": "doctor", "tool": "telecom_doctor", "params": {},
+      "on_fail": "stop" },
+    { "id": "defense", "tool": "telecom_defense_start",
+      "params": { "group": "telecom-advanced", "logs_dir": "/tmp/rh-telecom" },
+      "on_fail": "continue" },
+    { "id": "exercise", "tool": "nmap_port_scan",
+      "params": { "target": "127.0.0.1", "ports": "22,80,443" },
+      "condition": { "step": "defense", "op": "contains", "value": "Process ID" },
+      "on_fail": "continue" },
+    { "id": "threats", "tool": "telecom_threats", "params": {}, "on_fail": "continue" },
+    { "id": "stats", "tool": "telecom_stats", "params": {}, "on_fail": "continue" },
+    { "id": "cleanup", "tool": "telecom_defense_stop",
+      "params": { "process_id": "${defense.json.process_id}" },
+      "on_fail": "continue" }
+  ]
+}
+```
+
+- The `defense` step does not block: it starts the daemon as a managed
+  background process and returns immediately with its process id, PID, and
+  output file paths.
+- Query steps (`telecom_threats` / `telecom_alerts` / `telecom_stats`) hit the
+  engine's HTTP API while it runs, and the JSON-lines alert file keeps
+  streaming to `<logs_dir>/staticzero-defense-<id>.jsonl` regardless.
+- The start step's output embeds a fenced JSON block
+  (`process_id`, `pid`, `binary`, `stdout_path`, `stderr_path`), so
+  `${defense.json.process_id}` chains into the final `telecom_defense_stop`
+  step — no run-time id capture needed.
+- The same pattern works for Aegis-Shadow: `aegis_defense_start` → lab
+  exercise steps → `aegis_alerts_parse` on `${defense.json.stdout_path}` →
+  `aegis_defense_stop` with `${defense.json.process_id}`.
+- A ready-made `telecom-defense-monitoring` playbook ships in `./playbooks/`.
+
 ### Multi-Stage Examples by Domain
 
 #### Kubernetes Multi-Stage (KubeDagger)
@@ -1082,12 +1294,19 @@ runs to validate detection coverage against ATT&CK-mapped attack chains.
 
 #### Telecom Defense Monitoring (StaticZero)
 
+```json
+{
+  "template": "telecom-defense-monitoring",
+  "vars": { "logs_dir": "/tmp/rh-telecom" }
+}
 ```
-Step 1 (one-shot): telecom_doctor — verify the defense engine can run
-Step 2 (external): run `staticzero-defense --json-stdout` in your lab
-Step 3: telecom_threats / telecom_alerts — query correlated threats
-Step 4: aegis_alerts_parse-style filtering or report generation
-```
+
+Expands to: read-only preflight (`telecom_doctor`) → managed defense daemon
+(`telecom_defense_start`, JSON alerts stream to the logs_dir file) → engine
+queries (`telecom_threats` / `telecom_alerts`) → teardown via
+`${engine.json.process_id}`. See
+[Daemon Steps in Campaigns](#daemon-steps-in-campaigns) for the step-by-step
+breakdown.
 
 ---
 

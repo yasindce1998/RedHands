@@ -248,6 +248,11 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(kubedagger.NewDetection(d.Exec))
 		srv.RegisterTool(kubedagger.NewReport(d.Exec))
 		srv.RegisterTool(kubedagger.NewVAPBackdoor(d.Exec))
+		if d.ProcMgr != nil {
+			srv.RegisterTool(kubedagger.NewServerStart(d.ProcMgr))
+			srv.RegisterTool(kubedagger.NewServerStop(d.ProcMgr))
+			srv.RegisterTool(kubedagger.NewServerStatus(d.ProcMgr))
+		}
 	}
 
 	if d.Cfg.ToolsetEnabled("barzakh") {
@@ -261,6 +266,11 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(barzakh.NewDetectors(d.Exec))
 		srv.RegisterTool(barzakh.NewBaseline(d.Exec))
 		srv.RegisterTool(barzakh.NewIntel(d.Exec))
+		if d.ProcMgr != nil {
+			srv.RegisterTool(barzakh.NewServerStart(d.ProcMgr))
+			srv.RegisterTool(barzakh.NewServerStop(d.ProcMgr))
+			srv.RegisterTool(barzakh.NewServerStatus(d.ProcMgr))
+		}
 	}
 
 	if d.Cfg.ToolsetEnabled("telecom") {

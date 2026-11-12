@@ -65,6 +65,31 @@ func NewBackgroundManager(cfg Config) *BackgroundManager {
 	return &BackgroundManager{cfg: cfg, procs: make(map[string]*managedProcess)}
 }
 
+// secretFlagValues lists argument names whose following value is a secret.
+// Values after these flags are redacted wherever the command line is
+// reported, so status output never echoes key material.
+var secretFlagValues = map[string]bool{
+	"-psk": true, "--psk": true,
+	"-key": true, "--key": true,
+	"--api-key": true,
+	"--obfusc-key": true, "-obfusc-key": true,
+	"--webui-token": true, "-webui-token": true,
+	"--cert-key": true, "--key-file": true, "-key-file": true,
+}
+
+// redactArgs returns a copy of args with values following secret-bearing
+// flags replaced by REDACTED.
+func redactArgs(args []string) []string {
+	redacted := make([]string, len(args))
+	copy(redacted, args)
+	for i := 0; i < len(redacted)-1; i++ {
+		if secretFlagValues[redacted[i]] {
+			redacted[i+1] = "REDACTED"
+		}
+	}
+	return redacted
+}
+
 // Start launches a background process. stdoutPath and stderrPath must be
 // absolute or relative file paths in existing directories; the files are
 // created or truncated with 0600 permissions. The process runs in its own
@@ -118,7 +143,7 @@ func (m *BackgroundManager) Start(ctx context.Context, binary string, args []str
 		proc: BackgroundProcess{
 			ID:         id,
 			Binary:     binary,
-			Args:       args,
+			Args:       redactArgs(args),
 			PID:        cmd.Process.Pid,
 			StartedAt:  time.Now().UTC(),
 			StdoutPath: stdoutPath,

@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-225-00fff2?style=flat-square" alt="225 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-231-00fff2?style=flat-square" alt="231 Tools"></a>
 </p>
 
 <p align="center">
@@ -113,8 +113,8 @@ docker compose run --rm -i redhands
 | `web` | minimal + ffuf, katana, nikto, sqlmap, feroxbuster | Web application testing |
 | `network` | minimal + masscan, rustscan, tshark, chisel, ligolo | Network/infrastructure |
 | `ad` | minimal + impacket, certipy, crackmapexec, hashcat, john | Active Directory attacks |
-| `k8s` | nmap, kubedagger-client, kubedagger-operator | Kubernetes offensive (eBPF) |
-| `uefi` | barzakh-adversary, barzakh-scanner | UEFI bootkit adversary simulation |
+| `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offensive (eBPF) |
+| `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI bootkit adversary simulation |
 | `recon` | minimal + amass, gau, waybackurls, arjun, whatweb | Deep reconnaissance |
 | `all` | Everything | Full offensive toolkit |
 
@@ -290,7 +290,7 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 
 | Tool | Description |
 |------|-------------|
-| 66 tools | eBPF-powered Kubernetes offensive toolkit (see `tools/kubedagger/`) |
+| 69 tools | eBPF-powered Kubernetes offensive toolkit, including managed C2-server lifecycle (`kubedagger_server_*`) — see `tools/kubedagger/` |
 
 ### Barzakh (toolset: `barzakh`)
 
@@ -306,6 +306,9 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 | `barzakh_detectors` | List/describe the 138 detectors |
 | `barzakh_baseline` | Create/show firmware baselines |
 | `barzakh_intel` | Query IOC feeds, MISP, ATT&CK, STIX intel |
+| `barzakh_server_start` | Start the Barzakh REST scanner server as a managed background daemon (X-API-Key auth, SQLite history) |
+| `barzakh_server_stop` | Stop a managed Barzakh server |
+| `barzakh_server_status` | Status of managed Barzakh servers |
 
 ### Telecom (toolset: `telecom`)
 

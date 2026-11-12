@@ -144,3 +144,29 @@ func TestBackgroundListAndStopAll(t *testing.T) {
 		}
 	}
 }
+
+func TestBackgroundRedactsSecretArgs(t *testing.T) {
+	m := testManager(t)
+	dir := t.TempDir()
+	proc, err := m.Start(context.Background(), "sh", []string{"-c", "sleep 30", "--psk", "hunter2", "--api-key", "s3cret", "--rate-limit", "10"}, filepath.Join(dir, "o"), filepath.Join(dir, "e"))
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	defer func() { _ = m.Stop(proc.ID) }()
+
+	status, err := m.Status(proc.ID)
+	if err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	joined := strings.Join(status.Args, " ")
+	if strings.Contains(joined, "hunter2") || strings.Contains(joined, "s3cret") {
+		t.Fatalf("secret leaked in recorded args: %s", joined)
+	}
+	if !strings.Contains(joined, "REDACTED") {
+		t.Fatalf("expected redaction marker: %s", joined)
+	}
+	// Non-secret values stay visible.
+	if !strings.Contains(joined, "--rate-limit 10") {
+		t.Fatalf("non-secret value redacted: %s", joined)
+	}
+}

@@ -49,15 +49,6 @@ func (e *exitCodeExecutor) Run(_ context.Context, binary string, args ...string)
 	return result, nil
 }
 
-func (e *exitCodeExecutor) lastCall() executor.MockCall {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if len(e.calls) == 0 {
-		return executor.MockCall{}
-	}
-	return e.calls[len(e.calls)-1]
-}
-
 type toolFactory struct {
 	name    string
 	newTool func(executor.Executor) mcp.Tool

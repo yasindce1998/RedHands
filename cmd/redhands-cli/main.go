@@ -180,7 +180,7 @@ type campaignArgs struct {
 //	redhands-cli campaign list|templates
 func campaignCommand(args []string) (campaignArgs, error) {
 	if len(args) < 2 {
-		return campaignArgs{}, fmt.Errorf("usage: redhands-cli campaign <run|status|list|resume|cancel|templates> ...")
+		return campaignArgs{}, fmt.Errorf("campaign requires a subcommand: run, status, list, resume, cancel, or templates")
 	}
 	switch args[1] {
 	case "run":

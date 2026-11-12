@@ -25,15 +25,6 @@ var placeholderRe = regexp.MustCompile(
 		`|\$prev\.(?P<pfield>text|json)(?:\.(?P<ppath>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*))?` +
 		`|\$step\[(?P<sid>\d+)\]\.(?P<sfield>text|json)(?:\.(?P<spath>[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*))?`)
 
-var reGroupNamedID = placeholderRe.SubexpIndex("nid")
-var reGroupNamedField = placeholderRe.SubexpIndex("nfield")
-var reGroupNamedPath = placeholderRe.SubexpIndex("npath")
-var reGroupPrevField = placeholderRe.SubexpIndex("pfield")
-var reGroupPrevPath = placeholderRe.SubexpIndex("ppath")
-var reGroupStepID = placeholderRe.SubexpIndex("sid")
-var reGroupStepField = placeholderRe.SubexpIndex("sfield")
-var reGroupStepPath = placeholderRe.SubexpIndex("spath")
-
 // substituteCampaignVars replaces campaign placeholders inside params.
 //
 // Placeholders that make up an entire string value are substituted natively:

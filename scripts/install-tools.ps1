@@ -6,7 +6,7 @@
     Installs security tool dependencies for RedHands MCP server.
     Supports: Chocolatey, Scoop, and direct downloads.
 .PARAMETER Profile
-    Installation profile: all, web, network, ad, recon, minimal
+    Installation profile: all, web, network, ad, k8s, uefi, recon, minimal
 .PARAMETER Check
     Only check which tools are installed (no installation)
 .PARAMETER List

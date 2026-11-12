@@ -43,7 +43,7 @@ for arg in "$@"; do
             echo ""
             echo "Options:"
             echo "  --with-tools       Print instructions for installing locked tool dependencies"
-            echo "  --profile=NAME     Tool profile: minimal, web, network, ad, all (default: minimal)"
+            echo "  --profile=NAME     Tool profile: minimal, web, network, ad, k8s, uefi, recon, all (default: minimal)"
             echo "  --dir=PATH         Install directory (default: /usr/local/bin)"
             echo ""
             echo "Examples:"

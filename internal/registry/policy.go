@@ -12,6 +12,12 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 		"report_sarif", "report_executive", "report_compliance", "correlation_analyze",
 		"attackgraph_path", "attackgraph_export", "barzakh_list",
 		"hashcat_show", "john_show", "john_formats", "tshark_read", "tshark_stats", "tshark_extract", "tshark_follow",
+		// Barzakh: pure listings, corpus analysis, and intel queries.
+		"barzakh_detectors", "barzakh_validate", "barzakh_intel",
+		// Aegis-Shadow: read-only alert analysis, catalog, and config reads.
+		"aegis_alerts_parse", "aegis_alerts_tail", "aegis_modules_list", "aegis_defense_config_read",
+		// StaticZero: read-only preflight and defense-engine queries.
+		"telecom_doctor", "telecom_threats", "telecom_alerts", "telecom_stats",
 	} {
 		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true}
 	}
@@ -29,5 +35,15 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 	// Raw packet scans may need capabilities even though approval is not required.
 	policies["nmap_port_scan"] = mcp.ToolPolicy{NetworkAccess: true, RequiresPrivileges: true}
 	policies["barzakh_scan"] = mcp.ToolPolicy{} // Optional report output writes files.
+	// Baseband firmware analysis reads images and writes local report files.
+	for _, name := range []string{"telecom_firmware_analyze", "telecom_firmware_extract", "telecom_firmware_diff", "telecom_firmware_nv_dump"} {
+		policies[name] = mcp.ToolPolicy{ReadOnly: true}
+	}
+	// Small idempotent local config write; never executes anything.
+	policies["aegis_defense_config_write"] = mcp.ToolPolicy{RetrySafe: true}
+	// Defense-engine HTTP queries touch the network (loopback by default).
+	for _, name := range []string{"telecom_threats", "telecom_alerts", "telecom_stats"} {
+		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true, NetworkAccess: true}
+	}
 	return policies
 }

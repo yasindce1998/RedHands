@@ -17,6 +17,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/ad/coercion"
 	"github.com/yasindce1998/redhands/tools/ad/evilwinrm"
 	"github.com/yasindce1998/redhands/tools/ad/responder"
+	"github.com/yasindce1998/redhands/tools/aegis"
 	"github.com/yasindce1998/redhands/tools/analysis/tshark"
 	"github.com/yasindce1998/redhands/tools/barzakh"
 	"github.com/yasindce1998/redhands/tools/c2/sliver"
@@ -47,6 +48,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/social/phishing"
 	"github.com/yasindce1998/redhands/tools/system/health"
 	targetdbtools "github.com/yasindce1998/redhands/tools/targetdb"
+	"github.com/yasindce1998/redhands/tools/telecom"
 	"github.com/yasindce1998/redhands/tools/tunnel/chisel"
 	"github.com/yasindce1998/redhands/tools/tunnel/ligolo"
 	"github.com/yasindce1998/redhands/tools/vuln/nuclei"
@@ -243,6 +245,33 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(barzakh.NewGenerate(d.Exec))
 		srv.RegisterTool(barzakh.NewCorpus(d.Exec))
 		srv.RegisterTool(barzakh.NewScan(d.Exec))
+		srv.RegisterTool(barzakh.NewValidate(d.Exec))
+		srv.RegisterTool(barzakh.NewScenario(d.Exec))
+		srv.RegisterTool(barzakh.NewRobustness(d.Exec))
+		srv.RegisterTool(barzakh.NewDetectors(d.Exec))
+		srv.RegisterTool(barzakh.NewBaseline(d.Exec))
+		srv.RegisterTool(barzakh.NewIntel(d.Exec))
+	}
+
+	if d.Cfg.ToolsetEnabled("telecom") {
+		srv.RegisterTool(telecom.NewDoctor(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareAnalyze(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareExtract(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareDiff(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareNvDump(d.Exec))
+		srv.RegisterTool(telecom.NewSDRScan(d.Exec))
+		srv.RegisterTool(telecom.NewThreats())
+		srv.RegisterTool(telecom.NewAlerts())
+		srv.RegisterTool(telecom.NewStats())
+	}
+
+	if d.Cfg.ToolsetEnabled("aegis") {
+		srv.RegisterTool(aegis.NewAlertsParse())
+		srv.RegisterTool(aegis.NewAlertsTail())
+		srv.RegisterTool(aegis.NewModulesList())
+		srv.RegisterTool(aegis.NewDefenseConfigRead())
+		srv.RegisterTool(aegis.NewDefenseConfigWrite())
+		srv.RegisterTool(aegis.NewOffensePlan())
 	}
 
 	if d.Cfg.ToolsetEnabled("bloodhound") {

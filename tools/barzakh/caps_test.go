@@ -108,6 +108,21 @@ var newTools = []newToolSpec{
 			}
 		},
 	},
+	{
+		name:    "barzakh_info",
+		newTool: func(e executor.Executor) mcp.Tool { return NewInfo(e) },
+		params:  func(t *testing.T) map[string]any { return map[string]any{} },
+	},
+	{
+		name:    "barzakh_report",
+		newTool: func(e executor.Executor) mcp.Tool { return NewReport(e) },
+		params: func(t *testing.T) map[string]any {
+			return map[string]any{
+				"target": "/fw/rom.bin",
+				"output": "/tmp/report.html",
+			}
+		},
+	},
 }
 
 // --- tool contract tests ---
@@ -1074,6 +1089,176 @@ func TestManifestValidate_MissingRequiredAndInvalid(t *testing.T) {
 	}
 }
 
+// --- barzakh_info ---
+
+func TestInfo_ExactArgs(t *testing.T) {
+	mock := executor.NewMock()
+	tool := NewInfo(mock)
+
+	// The info subcommand takes no flags; any params are ignored.
+	params := mustJSON(map[string]any{})
+	if _, err := tool.Execute(context.Background(), params); err != nil {
+		t.Fatal(err)
+	}
+
+	call := mock.LastCall()
+	if call.Binary != "barzakh-scanner" {
+		t.Errorf("binary = %q, want barzakh-scanner", call.Binary)
+	}
+	want := []string{"info"}
+	if !reflect.DeepEqual(call.Args, want) {
+		t.Errorf("args = %v, want %v", call.Args, want)
+	}
+}
+
+func TestInfo_ExitCode2_IsError(t *testing.T) {
+	// main() exits 2 on error; there is no detection-exit semantics for info.
+	exec := &exitCodeExecutor{
+		stderr:   "detector catalog unavailable",
+		exitCode: 2,
+	}
+	tool := NewInfo(exec)
+
+	result, err := tool.Execute(context.Background(), mustJSON(map[string]any{}))
+	if err != nil {
+		t.Fatalf("Execute() returned error: %v", err)
+	}
+	if !result.IsError {
+		t.Error("exit code 2 from info must remain an error")
+	}
+	if !strings.Contains(result.Content[0].Text, "barzakh-scanner info failed") {
+		t.Errorf("error should name the failing subcommand, got: %s", result.Content[0].Text)
+	}
+}
+
+// --- barzakh_report ---
+
+func TestReport_ExactArgs(t *testing.T) {
+	mock := executor.NewMock()
+	tool := NewReport(mock)
+
+	params := mustJSON(map[string]any{
+		"target":   "/fw/rom.bin",
+		"baseline": "/fw/known-good.json",
+		"output":   "/tmp/report.html",
+		"format":   "html",
+	})
+	if _, err := tool.Execute(context.Background(), params); err != nil {
+		t.Fatal(err)
+	}
+
+	call := mock.LastCall()
+	if call.Binary != "barzakh-scanner" {
+		t.Errorf("binary = %q, want barzakh-scanner", call.Binary)
+	}
+	want := []string{
+		"report", "--target", "/fw/rom.bin",
+		"--baseline", "/fw/known-good.json",
+		"--output", "/tmp/report.html",
+		"--format", "html",
+	}
+	if !reflect.DeepEqual(call.Args, want) {
+		t.Errorf("args = %v, want %v", call.Args, want)
+	}
+}
+
+func TestReport_MinimalArgs(t *testing.T) {
+	// Omitted optional flags fall back to the CLI defaults (report.json, json).
+	mock := executor.NewMock()
+	tool := NewReport(mock)
+
+	params := mustJSON(map[string]any{"target": "/fw/rom.bin"})
+	if _, err := tool.Execute(context.Background(), params); err != nil {
+		t.Fatal(err)
+	}
+
+	call := mock.LastCall()
+	want := []string{"report", "--target", "/fw/rom.bin"}
+	if !reflect.DeepEqual(call.Args, want) {
+		t.Errorf("args = %v, want %v", call.Args, want)
+	}
+}
+
+func TestReport_ExitCode2_IsError(t *testing.T) {
+	// cmd_report has no detection exit code; exit 2 (scan or write failure)
+	// stays an error, unlike barzakh_scan's exit-1 detection semantics.
+	exec := &exitCodeExecutor{
+		stderr:   "failed to write report: permission denied",
+		exitCode: 2,
+	}
+	tool := NewReport(exec)
+
+	result, err := tool.Execute(context.Background(), mustJSON(map[string]any{
+		"target": "/fw/rom.bin",
+		"format": "html",
+	}))
+	if err != nil {
+		t.Fatalf("Execute() returned error: %v", err)
+	}
+	if !result.IsError {
+		t.Error("exit code 2 from report must remain an error")
+	}
+	if !strings.Contains(result.Content[0].Text, "barzakh-scanner report failed") {
+		t.Errorf("error should name the failing subcommand, got: %s", result.Content[0].Text)
+	}
+}
+
+func TestReport_InvalidInput(t *testing.T) {
+	mock := executor.NewMock()
+	tool := NewReport(mock)
+
+	for _, params := range []map[string]any{
+		{},
+		{"target": ""},
+		{"target": "/fw/rom.bin; rm -rf /"},
+		{"target": "/fw/rom.bin", "baseline": "/tmp/b.json | sh"},
+		{"target": "/fw/rom.bin", "output": "/tmp/r.out; rm"},
+		{"target": "/fw/rom.bin", "format": "pdf"},
+		{"target": "/fw/rom.bin", "format": "xml"},
+	} {
+		result, err := tool.Execute(context.Background(), mustJSON(params))
+		if err != nil {
+			t.Fatalf("Execute() returned error: %v", err)
+		}
+		if !result.IsError {
+			t.Errorf("expected IsError=true for params %v", params)
+		}
+		if len(mock.Calls) > 0 {
+			t.Error("executor should not be called for invalid input")
+		}
+	}
+}
+
+func TestReport_ValidFormats(t *testing.T) {
+	for _, format := range reportFormats {
+		t.Run(format, func(t *testing.T) {
+			mock := executor.NewMock()
+			tool := NewReport(mock)
+
+			result, err := tool.Execute(context.Background(), mustJSON(map[string]any{
+				"target": "/fw/rom.bin",
+				"format": format,
+			}))
+			if err != nil {
+				t.Fatalf("Execute() returned error: %v", err)
+			}
+			if result.IsError {
+				t.Fatalf("format %q should be accepted, got: %s", format, result.Content[0].Text)
+			}
+			call := mock.LastCall()
+			found := false
+			for i, a := range call.Args {
+				if a == "--format" && i+1 < len(call.Args) && call.Args[i+1] == format {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("expected --format %q in args, got %v", format, call.Args)
+			}
+		})
+	}
+}
+
 // --- cross-cutting: missing required fields ---
 
 func TestNewTools_MissingRequiredFields(t *testing.T) {
@@ -1103,6 +1288,7 @@ func TestNewTools_MissingRequiredFields(t *testing.T) {
 		{"barzakh_ml evaluate without model", func(e executor.Executor) mcp.Tool { return NewMl(e) }, map[string]any{"action": "evaluate", "corpus": "/tmp/corpus"}},
 		{"barzakh_manifest_validate without corpus", func(e executor.Executor) mcp.Tool { return NewManifestValidate(e) }, map[string]any{"manifest": "/tmp/m.toml"}},
 		{"barzakh_manifest_validate without manifest", func(e executor.Executor) mcp.Tool { return NewManifestValidate(e) }, map[string]any{"corpus": "/tmp/corpus"}},
+		{"barzakh_report without target", func(e executor.Executor) mcp.Tool { return NewReport(e) }, map[string]any{"output": "/tmp/report.json"}},
 	}
 
 	for _, tt := range tests {

@@ -55,7 +55,7 @@ func NewDefenseStart(mgr *executor.BackgroundManager) *DefenseStartTool {
 func (t *DefenseStartTool) Name() string { return "aegis_defense_start" }
 
 func (t *DefenseStartTool) Description() string {
-	return "Start the Aegis-Shadow defense daemon (aegis-shadow-defense) as a managed background process with selected detection modules (empty list = all 15 modules), alert threshold (1-4), calibration period, runtime config, and optional ML layer. Alerts stream as NDJSON to <alerts_dir>/aegis-defense-<id>.ndjson (--json-stdout); logs go to <alerts_dir>/aegis-defense-<id>.err. Wraps Aegis-Shadow (Linux eBPF security research platform, educational/VM-only) for authorized lab use only. Requires root/eBPF privileges; high-impact: runs a privileged detection daemon until aegis_defense_stop is called. If the daemon exits immediately (missing privileges), check the stderr log via aegis_defense_status. Use aegis_alerts_parse / aegis_alerts_tail to read the alert stream."
+	return "Start the Aegis-Shadow defense daemon (aegis-shadow-defense) as a managed background process with selected detection modules (empty list = all 15 modules), alert threshold (1-4), calibration period, runtime config, and optional ML layer. Active-response capabilities — auto_detach (detach BPF programs flagged as malicious on the live system), auto_contain (move offending PIDs into a restrictive cgroup, 64MB memory / weight 1), and honeypots (pin honeypot BPF maps at /sys/fs/bpf/honeypot for deception detection) — are opt-in (default false) and flagged with an explicit warning when enabled because they mutate the running system; use them only in an isolated lab VM. Alerts stream as NDJSON to <alerts_dir>/aegis-defense-<id>.ndjson (--json-stdout); logs go to <alerts_dir>/aegis-defense-<id>.err. Wraps Aegis-Shadow (Linux eBPF security research platform, educational/VM-only) for authorized lab use only. Requires root/eBPF privileges; high-impact: runs a privileged detection daemon until aegis_defense_stop is called. If the daemon exits immediately (missing privileges), check the stderr log via aegis_defense_status. Use aegis_alerts_parse / aegis_alerts_tail to read the alert stream."
 }
 
 func (t *DefenseStartTool) InputSchema() json.RawMessage {
@@ -88,6 +88,18 @@ func (t *DefenseStartTool) InputSchema() json.RawMessage {
 				"type": "boolean",
 				"description": "Enable the adversarial ML detection layer (--enable-ml)"
 			},
+			"auto_detach": {
+				"type": "boolean",
+				"description": "ACTIVE RESPONSE (opt-in, default false): pass --auto-detach. Automatically detaches BPF programs flagged as malicious on the live system; mutates the running system"
+			},
+			"auto_contain": {
+				"type": "boolean",
+				"description": "ACTIVE RESPONSE (opt-in, default false): pass --auto-contain. Moves offending PIDs into a restrictive cgroup (64MB memory, CPU weight 1); mutates the running system"
+			},
+			"honeypots": {
+				"type": "boolean",
+				"description": "ACTIVE RESPONSE (opt-in, default false): pass --honeypots. Pins honeypot BPF maps at /sys/fs/bpf/honeypot for deception detection; mutates the running system"
+			},
 			"alerts_dir": {
 				"type": "string",
 				"description": "Required directory for daemon output files; created with 0700 if missing. Alerts (NDJSON) and logs are written here"
@@ -104,6 +116,9 @@ func (t *DefenseStartTool) Execute(ctx context.Context, params json.RawMessage) 
 		CalibrationPeriod *int     `json:"calibration_period"`
 		Config            string   `json:"config"`
 		EnableML          bool     `json:"enable_ml"`
+		AutoDetach        bool     `json:"auto_detach"`
+		AutoContain       bool     `json:"auto_contain"`
+		Honeypots         bool     `json:"honeypots"`
 		AlertsDir         string   `json:"alerts_dir"`
 	}
 	if err := json.Unmarshal(params, &input); err != nil {
@@ -170,6 +185,17 @@ func (t *DefenseStartTool) Execute(ctx context.Context, params json.RawMessage) 
 	if input.EnableML {
 		args = append(args, "--enable-ml")
 	}
+	// Active-response flags mirror the offense destructive-flag pattern:
+	// opt-in booleans, passed only when explicitly requested.
+	if input.AutoDetach {
+		args = append(args, "--auto-detach")
+	}
+	if input.AutoContain {
+		args = append(args, "--auto-contain")
+	}
+	if input.Honeypots {
+		args = append(args, "--honeypots")
+	}
 
 	// The manager needs the output paths up front, so the per-process suffix
 	// is generated here rather than by Start.
@@ -184,6 +210,21 @@ func (t *DefenseStartTool) Execute(ctx context.Context, params json.RawMessage) 
 
 	var sb strings.Builder
 	sb.WriteString("## Aegis-Shadow Defense Daemon Started\n\n")
+	// Active-response warning, mirroring the offense destructive-features
+	// block: one bullet per enabled flag, shown only when at least one is on.
+	if input.AutoDetach || input.AutoContain || input.Honeypots {
+		sb.WriteString("⚠️  ACTIVE RESPONSE ENABLED ⚠️\n\n")
+		if input.AutoDetach {
+			sb.WriteString("- auto-detach: detaches BPF programs flagged as malicious on the live system\n")
+		}
+		if input.AutoContain {
+			sb.WriteString("- auto-contain: moves offending PIDs into a restrictive cgroup (64MB, weight 1)\n")
+		}
+		if input.Honeypots {
+			sb.WriteString("- honeypots: pins honeypot BPF maps at /sys/fs/bpf/honeypot for deception detection\n")
+		}
+		sb.WriteString("These mutate the running system; use only in an isolated lab VM.\n\n")
+	}
 	// Fenced JSON block so campaign dataflow can reference
 	// ${step_id.json.process_id} for stop/status chaining.
 	daemonJSON, _ := json.Marshal(map[string]any{

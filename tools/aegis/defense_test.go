@@ -250,8 +250,161 @@ func TestDefenseStart_EmptyModulesUsesAllModules(t *testing.T) {
 	if strings.Contains(args, "-t ") || strings.Contains(args, "--enable-ml") || strings.Contains(args, "--calibration-period") {
 		t.Errorf("optional flags must be omitted when unset, got: %s", args)
 	}
+	// Active-response flags default to off: no flags, no warning block.
+	for _, flag := range []string{"--auto-detach", "--auto-contain", "--honeypots"} {
+		if strings.Contains(args, flag) {
+			t.Errorf("active-response flag %s must be omitted when unset, got: %s", flag, args)
+		}
+	}
+	if strings.Contains(result.Content[0].Text, "ACTIVE RESPONSE") {
+		t.Errorf("active-response warning must be omitted when no flag is set, got:\n%s", result.Content[0].Text)
+	}
 	if _, err := NewDefenseStop(mgr).Execute(context.Background(), mustJSON(map[string]any{"process_id": st.ID})); err != nil {
 		t.Errorf("cleanup stop failed: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test: active-response flags (auto-detach, auto-contain, honeypots)
+// ---------------------------------------------------------------------------
+
+func TestDefenseStart_ActiveResponseFlags(t *testing.T) {
+	cases := []struct {
+		name   string
+		params map[string]any
+		flags  []string
+	}{
+		{
+			name:   "auto_detach only",
+			params: map[string]any{"auto_detach": true},
+			flags:  []string{"--auto-detach"},
+		},
+		{
+			name:   "auto_contain only",
+			params: map[string]any{"auto_contain": true},
+			flags:  []string{"--auto-contain"},
+		},
+		{
+			name:   "honeypots only",
+			params: map[string]any{"honeypots": true},
+			flags:  []string{"--honeypots"},
+		},
+		{
+			name:   "all three together",
+			params: map[string]any{"auto_detach": true, "auto_contain": true, "honeypots": true},
+			flags:  []string{"--auto-detach", "--auto-contain", "--honeypots"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mgr := newTestManager(t)
+			tool := NewDefenseStart(mgr)
+
+			params := map[string]any{"alerts_dir": t.TempDir()}
+			for k, v := range tc.params {
+				params[k] = v
+			}
+			result, err := tool.Execute(context.Background(), mustJSON(params))
+			if err != nil {
+				t.Fatalf("unexpected Go error: %v", err)
+			}
+			if result.IsError {
+				t.Fatalf("unexpected tool error: %s", result.Content[0].Text)
+			}
+
+			// Every requested flag reaches the daemon args; unrequested
+			// active-response flags must stay absent.
+			st := firstProcess(t, mgr)
+			args := strings.Join(st.Args, " ")
+			for _, flag := range tc.flags {
+				if !strings.Contains(args, flag) {
+					t.Errorf("expected %q in daemon args, got: %s", flag, args)
+				}
+			}
+			allFlags := []string{"--auto-detach", "--auto-contain", "--honeypots"}
+			for _, flag := range allFlags {
+				active := false
+				for _, f := range tc.flags {
+					if f == flag {
+						active = true
+					}
+				}
+				if !active && strings.Contains(args, flag) {
+					t.Errorf("inactive flag %q must not be passed, got: %s", flag, args)
+				}
+			}
+
+			// The warning block appears with exactly one bullet per active flag.
+			text := result.Content[0].Text
+			if !strings.Contains(text, "⚠️  ACTIVE RESPONSE ENABLED ⚠️") {
+				t.Errorf("expected active-response warning, got:\n%s", text)
+			}
+			if !strings.Contains(text, "These mutate the running system; use only in an isolated lab VM.") {
+				t.Errorf("expected lab-VM caution line in warning, got:\n%s", text)
+			}
+			bullets := map[string]string{
+				"--auto-detach": "- auto-detach: detaches BPF programs flagged as malicious on the live system\n",
+				"--auto-contain": "- auto-contain: moves offending PIDs into a restrictive cgroup (64MB, weight 1)\n",
+				"--honeypots":   "- honeypots: pins honeypot BPF maps at /sys/fs/bpf/honeypot for deception detection\n",
+			}
+			for flag, bullet := range bullets {
+				active := false
+				for _, f := range tc.flags {
+					if f == flag {
+						active = true
+					}
+				}
+				if active && !strings.Contains(text, bullet) {
+					t.Errorf("expected warning bullet %q for %s, got:\n%s", bullet, flag, text)
+				}
+				if !active && strings.Contains(text, bullet) {
+					t.Errorf("warning must not mention inactive flag %s, got:\n%s", flag, text)
+				}
+			}
+
+			// Warning block sits near the top, before the JSON process block.
+			if wIdx, jIdx := strings.Index(text, "ACTIVE RESPONSE"), strings.Index(text, "```json"); wIdx == -1 || jIdx == -1 || wIdx > jIdx {
+				t.Errorf("warning must appear before the JSON process block, got:\n%s", text)
+			}
+
+			if _, err := NewDefenseStop(mgr).Execute(context.Background(), mustJSON(map[string]any{"process_id": st.ID})); err != nil {
+				t.Errorf("cleanup stop failed: %v", err)
+			}
+		})
+	}
+}
+
+// The schema exposes the three opt-in active-response booleans.
+func TestDefenseStart_SchemaHasActiveResponseBooleans(t *testing.T) {
+	mgr := newTestManager(t)
+	var schema struct {
+		Properties map[string]struct {
+			Type string `json:"type"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(NewDefenseStart(mgr).InputSchema(), &schema); err != nil {
+		t.Fatalf("InputSchema() is invalid JSON: %v", err)
+	}
+	for _, name := range []string{"auto_detach", "auto_contain", "honeypots"} {
+		prop, ok := schema.Properties[name]
+		if !ok {
+			t.Errorf("schema missing active-response property %q", name)
+			continue
+		}
+		if prop.Type != "boolean" {
+			t.Errorf("property %q must be of type boolean, got %q", name, prop.Type)
+		}
+	}
+}
+
+// The description must document the active-response capabilities as opt-in.
+func TestDefenseStart_DescriptionMentionsActiveResponse(t *testing.T) {
+	mgr := newTestManager(t)
+	desc := NewDefenseStart(mgr).Description()
+	for _, want := range []string{"auto_detach", "auto_contain", "honeypots", "opt-in"} {
+		if !strings.Contains(desc, want) {
+			t.Errorf("aegis_defense_start description must mention %q, got: %s", want, desc)
+		}
 	}
 }
 

@@ -1009,6 +1009,39 @@ ${portscan.json.hosts.0.ip}     → reference by step ID
 Whole-string placeholders preserve the extracted value's JSON type (numbers,
 arrays, objects); embedded placeholders substitute as text.
 
+### Auto-Populating the Target Database
+
+Campaign steps can record discovered assets into the target database as they
+run, building the engagement picture automatically:
+
+```json
+{
+  "id": "discover",
+  "tool": "kubedagger_k8s_discover",
+  "params": { "namespace": "kube-system" },
+  "mitre": ["T1613"],
+  "record": [
+    { "type": "host", "path": "nodes", "fields": { "ip": "ip", "hostname": "name", "os": "os" } },
+    { "type": "host", "path": "pods", "fields": { "ip": "pod_ip", "hostname": "name" } }
+  ]
+}
+```
+
+Recorded entries are tagged `campaign:<workflow_id>`, queryable via
+`targetdb_list_hosts` / `targetdb_query_findings`, and feed `attackgraph_build`.
+Supported entry types: `host`, `service`, `credential`, `finding`.
+
+### MITRE ATT&CK Technique Tagging
+
+```json
+{ "id": "kerberoast", "tool": "impacket_get_st", "params": { "...": "..." }, "mitre": ["T1558.003"] }
+```
+
+Campaign results aggregate the unique technique IDs of executed steps into
+`mitre_techniques`. Feed them to `kubedagger_detection` (`action: "generate"`,
+comma-separated `techniques`) to produce matching Falco/Sigma/audit detection
+rules — closing the purple-team loop from campaign to detections.
+
 ### Resume After Interruption
 
 Campaigns checkpoint after every step. If a campaign is cancelled, times out, or

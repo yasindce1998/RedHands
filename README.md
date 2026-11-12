@@ -451,6 +451,38 @@ A placeholder that makes up an entire string value is substituted natively
 (numbers stay numbers, arrays stay arrays); placeholders embedded in a larger
 string are substituted as text. Unresolvable placeholders pass through untouched.
 
+### Auto-populating the target database
+
+`record` rules map JSON arrays in a step's output to target database entries,
+so campaigns build the host/service/credential/finding picture automatically:
+
+```json
+{
+  "id": "discover",
+  "tool": "kubedagger_k8s_discover",
+  "params": {"namespace": "default"},
+  "mitre": ["T1613"],
+  "record": [
+    {"type": "host", "path": "nodes", "fields": {"ip": "ip", "hostname": "name", "os": "os"}},
+    {"type": "host", "path": "pods", "fields": {"ip": "pod_ip", "hostname": "name"}}
+  ]
+}
+```
+
+Entry types: `host`, `service`, `credential`, `finding`. Recorded entries are
+tagged `campaign:<workflow_id>` and become queryable via the `targetdb_*` tools
+and the attack graph. Recording failures warn in the step result without
+failing the campaign.
+
+### MITRE ATT&CK tagging
+
+Steps accept `mitre: ["T1613", "T1552.001"]` technique tags. Campaign results
+aggregate the unique techniques of executed steps as `mitre_techniques`, which
+can be passed to `kubedagger_detection` (`action: "generate"`, `techniques` as
+a comma-separated list) to produce matching Falco/Sigma/audit detection rules.
+The shipped `k8s-recon-chain` playbook demonstrates recording and tagging end
+to end, including a final detection-rule generation step.
+
 ### Campaign lifecycle
 
 | Method | Params | Description |

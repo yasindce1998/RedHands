@@ -46,8 +46,8 @@ func validOffenseFeatureList() string {
 // OffensePlanTool is a dry-run planner for the Aegis-Shadow offense rootkit
 // loader. It validates requested feature flags and renders the exact command
 // line an operator would run manually in an authorized lab VM. It NEVER
-// executes the offense binary — the eBPF rootkit stays out of
-// MCP-executable reach by design.
+// executes the offense binary; execution is provided separately by
+// aegis_offense_start (approval-gated, authorized labs only).
 type OffensePlanTool struct{}
 
 // NewOffensePlan constructs the aegis_offense_plan tool.

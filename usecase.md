@@ -35,10 +35,10 @@ A comprehensive reference for all scenarios, workflows, and configurations suppo
 
 ## Overview
 
-RedHands is an MCP (Model Context Protocol) server that exposes 237 registered offensive security tools across 30 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
+RedHands is an MCP (Model Context Protocol) server that exposes 262 registered offensive security tools across 30 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
 
 **Key Features:**
-- 237 registered tools across 30 specialized toolsets (230 on a default startup; credstore and GoPhish tools are env-gated)
+- 262 registered tools across 30 specialized toolsets (255 on a default startup; credstore and GoPhish tools are env-gated)
 - Zero external Go dependencies (stdlib only)
 - Three transport modes: stdio, SSE, WebSocket
 - Built-in authentication (API key, mTLS)
@@ -116,7 +116,7 @@ The Docker image includes a subset of supported security tools (see docs/depende
 | `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offense |
 | `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI firmware security |
 | `telecom` | staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge | Telecom security research (eBPF, Linux only) |
-| `aegis` | aegis-shadow-defense | Linux eBPF research (Aegis-Shadow) |
+| `aegis` | aegis-shadow-defense, aegis-shadow-offense | Linux eBPF research (Aegis-Shadow) |
 | `recon` | recon+web toolsets (subfinder, amass, dig, waybackurls, gau, arjun, httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
 | `all` | Everything above combined | Full offensive toolkit |
 
@@ -256,9 +256,9 @@ REDHANDS_TOOLSETS=nmap,recon,web ./redhands
 | `certipy` | 6 | AD Certificate Services |
 | `tshark` | 5 | Packet Analysis |
 | `kubedagger` | 69 | Kubernetes Offense |
-| `barzakh` | 13 | UEFI Firmware Security |
-| `telecom` | 12 | Telecom/Baseband Security (StaticZero) |
-| `aegis` | 9 | Linux eBPF Research (Aegis-Shadow) |
+| `barzakh` | 22 | UEFI Firmware Security |
+| `telecom` | 24 | Telecom/Baseband Security (StaticZero) |
+| `aegis` | 13 | Linux eBPF Research (Aegis-Shadow) |
 
 The table shows the core assessment toolsets; the registry also gates
 `bloodhound`, `responder`, `evilwinrm`, `coercion`, `phishing`, `wireless`,

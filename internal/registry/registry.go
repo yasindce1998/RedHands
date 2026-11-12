@@ -266,6 +266,15 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(barzakh.NewDetectors(d.Exec))
 		srv.RegisterTool(barzakh.NewBaseline(d.Exec))
 		srv.RegisterTool(barzakh.NewIntel(d.Exec))
+		srv.RegisterTool(barzakh.NewInject(d.Exec))
+		srv.RegisterTool(barzakh.NewEspBuild(d.Exec))
+		srv.RegisterTool(barzakh.NewQemu(d.Exec))
+		srv.RegisterTool(barzakh.NewRange(d.Exec))
+		srv.RegisterTool(barzakh.NewFuzz(d.Exec))
+		srv.RegisterTool(barzakh.NewHistory(d.Exec))
+		srv.RegisterTool(barzakh.NewKb(d.Exec))
+		srv.RegisterTool(barzakh.NewMl(d.Exec))
+		srv.RegisterTool(barzakh.NewManifestValidate(d.Exec))
 		if d.ProcMgr != nil {
 			srv.RegisterTool(barzakh.NewServerStart(d.ProcMgr))
 			srv.RegisterTool(barzakh.NewServerStop(d.ProcMgr))
@@ -279,7 +288,13 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(telecom.NewFirmwareExtract(d.Exec))
 		srv.RegisterTool(telecom.NewFirmwareDiff(d.Exec))
 		srv.RegisterTool(telecom.NewFirmwareNvDump(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwarePatch(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareMonitor(d.Exec))
 		srv.RegisterTool(telecom.NewSDRScan(d.Exec))
+		srv.RegisterTool(telecom.NewSDRCapture(d.Exec))
+		srv.RegisterTool(telecom.NewSDRInject(d.Exec))
+		srv.RegisterTool(telecom.NewSDRRelay(d.Exec))
+		srv.RegisterTool(telecom.NewSDRSelftest(d.Exec))
 		srv.RegisterTool(telecom.NewThreats())
 		srv.RegisterTool(telecom.NewAlerts())
 		srv.RegisterTool(telecom.NewStats())
@@ -287,6 +302,12 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			srv.RegisterTool(telecom.NewDefenseStart(d.ProcMgr))
 			srv.RegisterTool(telecom.NewDefenseStop(d.ProcMgr))
 			srv.RegisterTool(telecom.NewDefenseStatus(d.ProcMgr))
+			srv.RegisterTool(telecom.NewOffenseStart(d.ProcMgr))
+			srv.RegisterTool(telecom.NewOffenseStop(d.ProcMgr))
+			srv.RegisterTool(telecom.NewOffenseStatus(d.ProcMgr))
+			srv.RegisterTool(telecom.NewCorrelatorStart(d.ProcMgr))
+			srv.RegisterTool(telecom.NewCorrelatorStop(d.ProcMgr))
+			srv.RegisterTool(telecom.NewCorrelatorStatus(d.ProcMgr))
 		}
 	}
 
@@ -301,6 +322,10 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			srv.RegisterTool(aegis.NewDefenseStart(d.ProcMgr))
 			srv.RegisterTool(aegis.NewDefenseStop(d.ProcMgr))
 			srv.RegisterTool(aegis.NewDefenseStatus(d.ProcMgr))
+			srv.RegisterTool(aegis.NewOffenseStart(d.ProcMgr))
+			srv.RegisterTool(aegis.NewOffenseStop(d.ProcMgr))
+			srv.RegisterTool(aegis.NewOffenseStatus(d.ProcMgr))
+			srv.RegisterTool(aegis.NewC2Send(d.Exec))
 		}
 	}
 

@@ -47,7 +47,7 @@ Profiles:
   k8s        Kubernetes (nmap, kubedagger-client, kubedagger-operator, kubedagger-server)
   uefi       UEFI bootkit simulation (barzakh-adversary, barzakh-scanner, barzakh-server)
   telecom    Telecom research (staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge)
-  aegis      Linux eBPF research (aegis-shadow-defense)
+  aegis      Linux eBPF research (aegis-shadow-defense, aegis-shadow-offense)
   recon      Reconnaissance only (subfinder, amass, dns, wayback, gau, arjun)
   minimal    Just the essentials (nmap, nuclei, httpx, subfinder)
 
@@ -97,7 +97,7 @@ TOOLS_TSHARK="tshark"
 TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator kubedagger-server"
 TOOLS_BARZAKH="barzakh-adversary barzakh-scanner barzakh-server"
 TOOLS_TELECOM="staticzero-defense staticzero-offense modem-firmware sdr-bridge"
-TOOLS_AEGIS="aegis-shadow-defense"
+TOOLS_AEGIS="aegis-shadow-defense aegis-shadow-offense"
 
 get_profile_tools() {
     case "$1" in
@@ -166,7 +166,7 @@ list_profiles() {
     echo "             modem-firmware, sdr-bridge"
     echo ""
     echo -e "  ${GREEN}aegis${NC}      Linux eBPF security research"
-    echo "             aegis-shadow-defense"
+    echo "             aegis-shadow-defense, aegis-shadow-offense"
     echo ""
     echo -e "  ${GREEN}recon${NC}      Reconnaissance"
     echo "             subfinder, amass, dig, waybackurls, gau, arjun, httpx,"

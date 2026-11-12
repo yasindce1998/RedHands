@@ -98,6 +98,10 @@
       "linux-amd64": ["https://github.com/yasindce1998/Aegis-Shadow/releases/download/v0.1.1/aegis_x86_64", "995ec10500632bbdd8433431b5408be0f05a731444570904294087d4b2a954ae"],
       "linux-arm64": ["https://github.com/yasindce1998/Aegis-Shadow/releases/download/v0.1.1/aegis_aarch64", "9b65efba533c99766f496217c444c1e73768d9961bd584bc008f8d71eeeba7a8"]
     },
+    "aegis-shadow-offense": {
+      "linux-amd64": ["https://github.com/yasindce1998/Aegis-Shadow/releases/download/v0.1.1/shadow_x86_64", "a5f3075678f28184dc9f83f314aced2618d01349e89f7a05bbf99168e6e438f0"],
+      "linux-arm64": ["https://github.com/yasindce1998/Aegis-Shadow/releases/download/v0.1.1/shadow_aarch64", "e650ab625a35cd4ef1b7b017f5fcd997dcaa4fc41902bb1ab2afab28c7342cd4"]
+    },
     "feroxbuster": {
       "linux-amd64": ["https://github.com/epi052/feroxbuster/releases/download/v2.13.1/x86_64-linux-feroxbuster.zip", "0978619a10049ccaad290b2d1241bc4d8a6aac18da07d6231186fb9d343f99de"],
       "linux-arm64": ["https://github.com/epi052/feroxbuster/releases/download/v2.13.1/aarch64-linux-feroxbuster.zip", "1e5244e1f52e55a647b65e0c76ae7afe0b9983c1fbea30ed7c67e477175eb381"],

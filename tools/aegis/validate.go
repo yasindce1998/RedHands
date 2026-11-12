@@ -4,12 +4,15 @@
 // Most tools in this package operate purely on files produced by or consumed
 // by the Aegis-Shadow binaries (NDJSON alert logs, hot-reload runtime config)
 // plus static reference data transcribed from the Aegis-Shadow sources.
-// The exception is the defense daemon lifecycle toolset (aegis_defense_start/
-// stop/status), which launches the aegis-shadow-defense daemon through the
+// The exceptions are the daemon lifecycle toolsets (aegis_defense_start/
+// stop/status and aegis_offense_start/stop/status), which launch the
+// aegis-shadow-defense and aegis-shadow-offense binaries through the
 // executor BackgroundManager: the same binary allowlist and shell-metachar
 // argument validation as the regular executor apply, output streams to
 // validated files, and the daemon is killed when the server exits. The
-// offense binary is never executed.
+// offense plan tool (aegis_offense_plan) never executes anything; execution
+// of the offense binary is provided by aegis_offense_start (approval-gated,
+// authorized labs only).
 package aegis
 
 import (

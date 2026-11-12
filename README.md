@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-237-00fff2?style=flat-square" alt="237 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-262-00fff2?style=flat-square" alt="262 Tools"></a>
 </p>
 
 <p align="center">
@@ -119,7 +119,7 @@ docker compose run --rm -i redhands
 | `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offensive (eBPF) |
 | `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI bootkit adversary simulation |
 | `telecom` | staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge | Telecom security research (eBPF, Linux only) |
-| `aegis` | aegis-shadow-defense | Linux eBPF security research (Aegis-Shadow) |
+| `aegis` | aegis-shadow-defense, aegis-shadow-offense | Linux eBPF security research (Aegis-Shadow) |
 | `recon` | recon set (subfinder, amass, dig, waybackurls, gau, arjun) + web set (httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
 | `all` | Everything | Full offensive toolkit |
 
@@ -155,7 +155,7 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 
 ## Available Tools
 
-237 tools are registered across 30 toolsets. A default startup serves 230 of
+262 tools are registered across 30 toolsets. A default startup serves 255 of
 them: the two credstore tools additionally require `REDHANDS_CREDSTORE_KEY`,
 and the five GoPhish phishing tools additionally require `REDHANDS_GOPHISH_*`
 environment variables.
@@ -319,11 +319,28 @@ environment variables.
 | `barzakh_server_start` | Start the Barzakh REST scanner server as a managed background daemon (X-API-Key auth, SQLite history) |
 | `barzakh_server_stop` | Stop a managed Barzakh server |
 | `barzakh_server_status` | Status of managed Barzakh servers |
+| `barzakh_inject` | ⚠️ Implant a payload into an existing firmware image (adversary simulation; approval-gated) |
+| `barzakh_esp_build` | ⚠️ Build a bootable FAT16 ESP containing the payload as \EFI\BOOT\BOOTX64.EFI |
+| `barzakh_qemu` | Boot firmware in an emulated QEMU/OVMF environment (run config / memory dump) |
+| `barzakh_range` | Boot QEMU/OVMF/swTPM cyber-range suites with assert-on-detection (exit 1 = failed assertions, surfaced as a result) |
+| `barzakh_fuzz` | Protocol-aware firmware fuzzing (dhcpv6/bmp/capsule/httpboot/tcg/hii) |
+| `barzakh_history` | Query the SQLite scan history (list/show/diff/trends) |
+| `barzakh_kb` | Manage the firmware knowledge base (add/list/search/export/import) |
+| `barzakh_ml` | Train/evaluate the ML anomaly models |
+| `barzakh_manifest_validate` | Validate detectors against a labeled corpus manifest with train/validation/test splits |
 
 ### Telecom (toolset: `telecom`)
 
 Wraps StaticZero, an eBPF telecom security research framework (2G–5G, satellite,
 baseband firmware). Authorized lab use only.
+
+> [!WARNING]
+> `telecom_offense_start` launches the **telecom interception research loader**
+> (features F89–F172: IMSI targeting, GTP/SS7/Diameter interception, RF and
+> satellite domains). Intercepting telecommunications is **illegal without
+> authorization in most jurisdictions — including in labs in some**. Use only
+> in an isolated lab environment with equipment you own, and only where you
+> hold explicit permission. The tool is approval-gated and requires root.
 
 | Tool | Description |
 |------|-------------|
@@ -332,13 +349,25 @@ baseband firmware). Authorized lab use only.
 | `telecom_firmware_extract` | Extract firmware components with manifest |
 | `telecom_firmware_diff` | Diff two firmware images |
 | `telecom_firmware_nv_dump` | Extract NV items (carrier/band/security config) |
+| `telecom_firmware_patch` | ⚠️ Patch baseband firmware images (regulated; device-destructive if flashed; approval-gated) |
+| `telecom_firmware_monitor` | Monitor a modem device protocol stream (diag/at/qmi/mbim; bounded by the execution timeout) |
 | `telecom_sdr_scan` | Receive-only LTE cell scan via SDR |
+| `telecom_sdr_capture` | Receive-only IQ capture via SDR |
+| `telecom_sdr_inject` | ⚠️ RF transmission (FCC/CEPT licensing; shielded/cabled lab use only; approval-gated) |
+| `telecom_sdr_relay` | ⚠️ RF receive-and-retransmit relay (same RF warnings) |
+| `telecom_sdr_selftest` | ⚠️ SDR TX pipeline self-test (same RF warnings) |
 | `telecom_threats` | Correlated threats from a running defense engine |
 | `telecom_alerts` | Raw alerts from a running defense engine |
 | `telecom_stats` | Engine runtime statistics |
 | `telecom_defense_start` | Start the StaticZero defense engine as a managed background daemon (JSON alerts stream to a file) |
 | `telecom_defense_stop` | Stop a managed defense engine daemon |
 | `telecom_defense_status` | Status of managed defense engine daemons |
+| `telecom_offense_start` | ⚠️ Launch the StaticZero telecom interception research loader as a managed daemon (F89–F172; regulated; lab use only) |
+| `telecom_offense_stop` | Stop a managed offense loader daemon |
+| `telecom_offense_status` | Status of managed offense loader daemons |
+| `telecom_correlator_start` | Start the protocol correlator as a managed daemon (JSON-lines event ingest on loopback) |
+| `telecom_correlator_stop` | Stop a managed correlator daemon |
+| `telecom_correlator_status` | Status of managed correlator daemons |
 
 StaticZero binaries ship as checksum-verified release assets (v0.5.0, Linux
 only, eBPF embedded) and install via the `telecom` profile:
@@ -347,10 +376,20 @@ only, eBPF embedded) and install via the `telecom` profile:
 ### Aegis-Shadow (toolset: `aegis`)
 
 Wraps Aegis-Shadow, a Linux eBPF security research platform (educational, VM-only).
-The analysis tools never execute the offense rootkit binary — `aegis_offense_plan`
-renders the manual lab command with risk notes instead. The defense engine can be
-started as a managed background daemon whose NDJSON alerts stream to a file that
-`aegis_alerts_parse` reads.
+The analysis tools never execute binaries; `aegis_offense_plan` renders the manual
+lab command with risk notes without executing it. The defense engine and the
+offense rootkit loader can each be started as a managed background daemon
+(approval-gated).
+
+> [!DANGER]
+> `aegis_offense_start` launches the **eBPF rootkit loader** — process hiding,
+> credential harvesting, log tampering, anti-forensics, and covert C2, running
+> at kernel level with root. Two capabilities are **destructive by design**:
+> `deadman_switch` (scorched-earth wipe triggered on tamper or timeout — the
+> VM may become unrecoverable) and `wipe_bytecode` (erases the loaded eBPF
+> bytecode from memory, defeating live forensics). Both are opt-in, emit loud
+> warnings in every result, and expect a **disposable, snapshotted lab VM**.
+> Data loss from these flags is expected behavior, not a bug.
 
 | Tool | Description |
 |------|-------------|
@@ -363,6 +402,10 @@ started as a managed background daemon whose NDJSON alerts stream to a file that
 | `aegis_defense_start` | Start the Aegis-Shadow defense engine as a managed background daemon (NDJSON alerts stream to a file; requires root) |
 | `aegis_defense_stop` | Stop a managed defense engine daemon |
 | `aegis_defense_status` | Status of managed defense engine daemons |
+| `aegis_offense_start` | ☠️ Launch the Aegis-Shadow eBPF rootkit loader as a managed daemon (destructive `deadman_switch`/`wipe_bytecode` are opt-in with warnings; disposable VM only) |
+| `aegis_offense_stop` | Stop a managed offense loader daemon |
+| `aegis_offense_status` | Status of managed offense loader daemons |
+| `aegis_c2_send` | ☠️ Send a command to a running rootkit over its encrypted C2 channel (hide/unhide pid, obfuscate file, exfil, kill-switch; fire-and-forget; requires the `aegis-c2` CLI from Aegis-Shadow ≥ v0.2.0) |
 
 ### System
 
@@ -711,6 +754,11 @@ export REDHANDS_TOOLSETS=
 - **Binary allowlist** — only known security tools can be executed
 - **Argument validation** — shell metacharacter rejection for external-tool arguments
 - **Target validation and scope** — explicit network targets checked against active engagement scope; not a complete network sandbox
+- **Destructive-capability posture** — tools that can destroy data or destroy
+  a machine (`aegis_offense_start` with `deadman_switch` or `wipe_bytecode`)
+  are opt-in, approval-gated, and emit loud warnings in every result; read the
+  warnings in the [Aegis-Shadow](#aegis-shadow-toolset-aegis) and
+  [Telecom](#telecom-toolset-telecom) sections before using the offense tools
 - **Output size cap** — 10MB per execution
 - **Execution timeout** — configurable per tool call
 - **Rate limiting** — token bucket prevents abuse

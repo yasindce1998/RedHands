@@ -14,6 +14,7 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 		"hashcat_show", "john_show", "john_formats", "tshark_read", "tshark_stats", "tshark_extract", "tshark_follow",
 		// Barzakh: pure listings, corpus analysis, and intel queries.
 		"barzakh_detectors", "barzakh_validate", "barzakh_intel",
+		"barzakh_history", "barzakh_manifest_validate",
 		// Aegis-Shadow: read-only alert analysis, catalog, and config reads.
 		"aegis_alerts_parse", "aegis_alerts_tail", "aegis_modules_list", "aegis_defense_config_read",
 		// StaticZero: read-only preflight and defense-engine queries.
@@ -49,17 +50,36 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 	for _, name := range []string{"aegis_defense_start", "telecom_defense_start"} {
 		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true}
 	}
+	// eBPF rootkit and telecom interception loaders: kernel-level offense,
+	// destructive-capable, approval-gated. Never auto-approved.
+	for _, name := range []string{"aegis_offense_start", "telecom_offense_start"} {
+		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true, NetworkAccess: true}
+	}
 	// C2 and scanner servers: long-running listeners, approval-gated. The
 	// KubeDagger server binds 0.0.0.0:443 by default.
 	policies["kubedagger_server_start"] = mcp.ToolPolicy{NetworkAccess: true, RequiresPrivileges: true}
 	policies["barzakh_server_start"] = mcp.ToolPolicy{NetworkAccess: true}
 	// Stopping a daemon mutates operator state but is not target-facing.
-	for _, name := range []string{"aegis_defense_stop", "telecom_defense_stop", "kubedagger_server_stop", "barzakh_server_stop"} {
+	for _, name := range []string{"aegis_defense_stop", "telecom_defense_stop", "aegis_offense_stop", "telecom_offense_stop", "kubedagger_server_stop", "barzakh_server_stop"} {
 		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true, RetrySafe: true}
 	}
 	// Status queries over managed daemons are read-only.
-	for _, name := range []string{"aegis_defense_status", "telecom_defense_status", "kubedagger_server_status", "barzakh_server_status"} {
+	for _, name := range []string{"aegis_defense_status", "telecom_defense_status", "aegis_offense_status", "telecom_offense_status", "telecom_correlator_status", "kubedagger_server_status", "barzakh_server_status"} {
 		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true, RequiresPrivileges: true}
 	}
+	// Daemon stops are replayable operator actions.
+	for _, name := range []string{"telecom_correlator_stop"} {
+		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true, RetrySafe: true}
+	}
+	// RF transmission (SDR inject/relay/selftest) and baseband firmware
+	// patching are high-impact and regulated; approval-gated.
+	for _, name := range []string{"telecom_sdr_inject", "telecom_sdr_relay", "telecom_sdr_selftest", "telecom_firmware_patch"} {
+		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true}
+	}
+	// The correlator binds a loopback TCP listener.
+	policies["telecom_correlator_start"] = mcp.ToolPolicy{NetworkAccess: true}
+	// Driving a running rootkit over its C2 channel (hide/unhide/exfil/
+	// kill-switch) touches a live target; approval-gated.
+	policies["aegis_c2_send"] = mcp.ToolPolicy{NetworkAccess: true, RequiresPrivileges: true}
 	return policies
 }

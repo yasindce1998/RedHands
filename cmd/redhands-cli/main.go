@@ -85,12 +85,19 @@ func run(ctx context.Context, args []string, out io.Writer, getenv func(string) 
 			return fmt.Errorf("usage: redhands-cli status")
 		}
 		tool = "redhands_health"
+	case "campaign":
+		sub, err := campaignCommand(args)
+		if err != nil {
+			return err
+		}
+		method = sub.method
+		params = sub.params
 	default:
 		return fmt.Errorf("unknown command %q; use redhands-cli help", args[0])
 	}
 	if tool != "" {
 		params = mcp.ToolsCallParams{Name: tool, Arguments: arguments}
-	} else {
+	} else if method == mcp.MethodToolsCall {
 		params = struct{}{}
 	}
 	timeout := 6 * time.Minute
@@ -135,14 +142,94 @@ func run(ctx context.Context, args []string, out io.Writer, getenv func(string) 
 	if _, err := fmt.Fprintln(out, formatted.String()); err != nil {
 		return err
 	}
-	var toolResult mcp.ToolResult
-	if err := json.Unmarshal(result, &toolResult); err != nil {
-		return err
+	if method == mcp.MethodToolsCall {
+		var toolResult mcp.ToolResult
+		if err := json.Unmarshal(result, &toolResult); err != nil {
+			return err
+		}
+		if toolResult.IsError {
+			return fmt.Errorf("tool reported failure")
+		}
 	}
-	if toolResult.IsError {
-		return fmt.Errorf("tool reported failure")
+	if method == mcp.MethodCampaignRun || method == mcp.MethodCampaignResume {
+		var campaignResult struct {
+			Success bool   `json:"success"`
+			Status  string `json:"status"`
+		}
+		if err := json.Unmarshal(result, &campaignResult); err != nil {
+			return fmt.Errorf("invalid campaign result: %w", err)
+		}
+		if !campaignResult.Success {
+			return fmt.Errorf("campaign %s", campaignResult.Status)
+		}
 	}
 	return nil
+}
+
+// campaignArgs is a parsed campaign subcommand.
+type campaignArgs struct {
+	method string
+	params any
+}
+
+// campaignCommand parses the campaign command group:
+//
+//	redhands-cli campaign run <json>              inline campaign steps
+//	redhands-cli campaign run playbook <name> [json_vars]
+//	redhands-cli campaign status|resume|cancel <workflow_id>
+//	redhands-cli campaign list|templates
+func campaignCommand(args []string) (campaignArgs, error) {
+	if len(args) < 2 {
+		return campaignArgs{}, fmt.Errorf("campaign requires a subcommand: run, status, list, resume, cancel, or templates")
+	}
+	switch args[1] {
+	case "run":
+		switch {
+		case len(args) >= 3 && args[2] == "playbook":
+			if len(args) < 4 || len(args) > 5 {
+				return campaignArgs{}, fmt.Errorf("usage: redhands-cli campaign run playbook <name> [json_vars]")
+			}
+			vars := json.RawMessage(`{}`)
+			if len(args) == 5 {
+				vars = json.RawMessage(args[4])
+				var object map[string]json.RawMessage
+				if err := json.Unmarshal(vars, &object); err != nil || object == nil {
+					return campaignArgs{}, fmt.Errorf("playbook vars must be a JSON object")
+				}
+			}
+			return campaignArgs{method: mcp.MethodCampaignRun, params: map[string]any{"template": args[3], "vars": vars}}, nil
+		case len(args) == 3:
+			var object map[string]json.RawMessage
+			if err := json.Unmarshal(json.RawMessage(args[2]), &object); err != nil || object == nil {
+				return campaignArgs{}, fmt.Errorf("campaign params must be a JSON object")
+			}
+			return campaignArgs{method: mcp.MethodCampaignRun, params: json.RawMessage(args[2])}, nil
+		default:
+			return campaignArgs{}, fmt.Errorf("usage: redhands-cli campaign run <json> | campaign run playbook <name> [json_vars]")
+		}
+	case "status", "resume", "cancel":
+		if len(args) != 3 {
+			return campaignArgs{}, fmt.Errorf("usage: redhands-cli campaign %s <workflow_id>", args[1])
+		}
+		methods := map[string]string{
+			"status": mcp.MethodCampaignStatus,
+			"resume": mcp.MethodCampaignResume,
+			"cancel": mcp.MethodCampaignCancel,
+		}
+		return campaignArgs{method: methods[args[1]], params: map[string]string{"workflow_id": args[2]}}, nil
+	case "list":
+		if len(args) != 2 {
+			return campaignArgs{}, fmt.Errorf("usage: redhands-cli campaign list")
+		}
+		return campaignArgs{method: mcp.MethodCampaignList, params: struct{}{}}, nil
+	case "templates":
+		if len(args) != 2 {
+			return campaignArgs{}, fmt.Errorf("usage: redhands-cli campaign templates")
+		}
+		return campaignArgs{method: mcp.MethodCampaignTemplates, params: struct{}{}}, nil
+	default:
+		return campaignArgs{}, fmt.Errorf("unknown campaign subcommand %q", args[1])
+	}
 }
 
 func usage(out io.Writer) {
@@ -154,6 +241,14 @@ Usage: redhands-cli <command> [args]
   targets [add <ip> [name]] List or add hosts
   findings [severity]       Query findings
   status                    Call redhands_health on the MCP server
+  campaign run <json>       Run a multi-stage campaign (inline steps)
+  campaign run playbook <name> [json_vars]
+                            Point-and-shoot a playbook template
+  campaign status <id>      Get campaign state
+  campaign list             List saved campaigns
+  campaign resume <id>      Resume a paused campaign
+  campaign cancel <id>      Cancel a running campaign
+  campaign templates        List playbook templates
   version                   Show version
 
 Environment:

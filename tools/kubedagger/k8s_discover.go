@@ -11,10 +11,7 @@ import (
 )
 
 type K8sDiscoverInput struct {
-	Namespace  string `json:"namespace,omitempty"`
-	Resource   string `json:"resource,omitempty"`
-	AllNS      bool   `json:"all_namespaces,omitempty"`
-	OutputJSON bool   `json:"output_json,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 type K8sDiscoverTool struct {
@@ -37,20 +34,7 @@ func (t *K8sDiscoverTool) InputSchema() json.RawMessage {
 		"properties": {
 			"namespace": {
 				"type": "string",
-				"description": "Target namespace to enumerate (default: current)"
-			},
-			"resource": {
-				"type": "string",
-				"enum": ["pods", "services", "secrets", "configmaps", "roles", "serviceaccounts", "deployments", "all"],
-				"description": "Resource type to discover"
-			},
-			"all_namespaces": {
-				"type": "boolean",
-				"description": "Enumerate across all namespaces"
-			},
-			"output_json": {
-				"type": "boolean",
-				"description": "Output in JSON format"
+				"description": "Target namespace to enumerate (default: default). Passed explicitly because the CLI default is unreliable"
 			}
 		}
 	}`)
@@ -66,19 +50,12 @@ func (t *K8sDiscoverTool) Execute(ctx context.Context, params json.RawMessage) (
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"k8s", "discover"}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	namespace := input.Namespace
+	if namespace == "" {
+		namespace = "default"
 	}
-	if input.Resource != "" {
-		args = append(args, "--resource", input.Resource)
-	}
-	if input.AllNS {
-		args = append(args, "--all-namespaces")
-	}
-	if input.OutputJSON {
-		args = append(args, "--json")
-	}
+
+	args := []string{"k8s", "discover", "--namespace", namespace}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
 	if err != nil {
@@ -92,9 +69,7 @@ func (t *K8sDiscoverTool) Execute(ctx context.Context, params json.RawMessage) (
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
 	sb.WriteString("## KubeDagger K8s Discovery\n\n")
-	if input.Namespace != "" {
-		fmt.Fprintf(&sb, "Namespace: %s\n\n", input.Namespace)
-	}
+	fmt.Fprintf(&sb, "Namespace: %s\n\n", namespace)
 	if output == "" {
 		sb.WriteString("No resources found.\n")
 	} else {

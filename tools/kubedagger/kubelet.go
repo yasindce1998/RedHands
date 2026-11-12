@@ -11,11 +11,10 @@ import (
 )
 
 type KubeletInput struct {
-	Action    string `json:"action"`
-	Node      string `json:"node,omitempty"`
-	Pod       string `json:"pod,omitempty"`
-	Container string `json:"container,omitempty"`
-	Command   string `json:"command,omitempty"`
+	Action string `json:"action,omitempty"`
+	Node   string `json:"node,omitempty"`
+	Pod    string `json:"pod,omitempty"`
+	Cmd    string `json:"cmd,omitempty"`
 }
 
 type KubeletTool struct {
@@ -29,7 +28,7 @@ func NewKubelet(exec executor.Executor) *KubeletTool {
 func (t *KubeletTool) Name() string { return "kubedagger_kubelet" }
 
 func (t *KubeletTool) Description() string {
-	return "Abuse the kubelet API (port 10250/10255) for unauthenticated or token-based container access. Enumerate pods, exec into containers, read logs, and extract secrets by interacting directly with the node kubelet, bypassing API server audit logs."
+	return "Abuse the kubelet API (port 10250/10255) for unauthenticated or token-based container access. Lists pods on a node, executes commands in containers, and extracts secrets by interacting directly with the node kubelet, bypassing API server audit logs."
 }
 
 func (t *KubeletTool) InputSchema() json.RawMessage {
@@ -38,8 +37,8 @@ func (t *KubeletTool) InputSchema() json.RawMessage {
 		"properties": {
 			"action": {
 				"type": "string",
-				"enum": ["pods", "exec", "logs", "run", "metrics"],
-				"description": "Kubelet API action"
+				"enum": ["exec", "list", "secrets"],
+				"description": "Kubelet API action (default: list)"
 			},
 			"node": {
 				"type": "string",
@@ -47,18 +46,13 @@ func (t *KubeletTool) InputSchema() json.RawMessage {
 			},
 			"pod": {
 				"type": "string",
-				"description": "Target pod name"
+				"description": "Target pod name (required for exec)"
 			},
-			"container": {
+			"cmd": {
 				"type": "string",
-				"description": "Target container name within pod"
-			},
-			"command": {
-				"type": "string",
-				"description": "Command to exec in container"
+				"description": "Command to exec in the container (default: id)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -74,25 +68,22 @@ func (t *KubeletTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 	if err := validateSafeString(input.Pod, "pod"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Container, "container"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Command, "command"); err != nil {
+	if err := validateSafeString(input.Cmd, "cmd"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"kubelet", "--action", input.Action}
+	args := []string{"kubelet"}
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
+	}
 	if input.Node != "" {
 		args = append(args, "--node", input.Node)
 	}
 	if input.Pod != "" {
 		args = append(args, "--pod", input.Pod)
 	}
-	if input.Container != "" {
-		args = append(args, "--container", input.Container)
-	}
-	if input.Command != "" {
-		args = append(args, "--command", input.Command)
+	if input.Cmd != "" {
+		args = append(args, "--cmd", input.Cmd)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -106,7 +97,11 @@ func (t *KubeletTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Kubelet: %s\n\n", input.Action)
+	action := input.Action
+	if action == "" {
+		action = "list"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger Kubelet: %s\n\n", action)
 	if output == "" {
 		sb.WriteString("No results.\n")
 	} else {

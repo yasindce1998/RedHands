@@ -63,7 +63,7 @@ func TestValidateRejectsBadEnvironment(t *testing.T) {
 		{"REDHANDS_CACHE_SIZE", "-5"}, {"REDHANDS_PLUGIN_POLL_INTERVAL", "-1s"},
 		{"REDHANDS_TRANSPORT", "typo"},
 		{"REDHANDS_MAX_CONCURRENT", "0"}, {"REDHANDS_MAX_QUEUED", "-1"}, {"REDHANDS_WORKFLOW_TIMEOUT", "nonsense"},
-		{"REDHANDS_APPROVED_TOOLS", "*"}, {"REDHANDS_SYNC_PEERS", "http://ignored"}, {"REDHANDS_WORKFLOW_MAX_PARALLEL", "4"},
+		{"REDHANDS_APPROVED_TOOLS", "*"}, {"REDHANDS_SYNC_PEERS", "http://ignored"}, {"REDHANDS_WORKFLOW_MAX_PARALLEL", "33"},
 	} {
 		t.Run(tc.key+tc.value, func(t *testing.T) {
 			t.Setenv(tc.key, tc.value)

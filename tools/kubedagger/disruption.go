@@ -13,10 +13,8 @@ import (
 // Scheduler Starve
 
 type SchedStarveInput struct {
-	Action    string `json:"action"`
-	Target    string `json:"target,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Intensity string `json:"intensity,omitempty"`
+	TargetCgroup string `json:"target_cgroup,omitempty"`
+	Intensity    string `json:"intensity,omitempty"`
 }
 
 type SchedStarveTool struct {
@@ -30,33 +28,23 @@ func NewSchedStarve(exec executor.Executor) *SchedStarveTool {
 func (t *SchedStarveTool) Name() string { return "kubedagger_sched_starve" }
 
 func (t *SchedStarveTool) Description() string {
-	return "Starve specific pods of CPU by manipulating the CFS scheduler via eBPF. Hooks sched_process_exec and sched_switch to artificially deprioritize target processes without modifying cgroup limits."
+	return "Starve workloads in a target cgroup of CPU by manipulating the CFS scheduler via eBPF. Hooks sched_switch to artificially deprioritize target processes without modifying cgroup limits."
 }
 
 func (t *SchedStarveTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"target_cgroup": {
 				"type": "string",
-				"enum": ["start", "stop", "status"],
-				"description": "Scheduler manipulation action"
-			},
-			"target": {
-				"type": "string",
-				"description": "Target pod or process name"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Target namespace"
+				"description": "Target cgroup path (e.g. '/kubepods/burstable/pod123')"
 			},
 			"intensity": {
 				"type": "string",
-				"enum": ["low", "medium", "high", "total"],
-				"description": "Starvation intensity"
+				"enum": ["low", "medium", "high"],
+				"description": "Starvation intensity (default: medium)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -66,19 +54,13 @@ func (t *SchedStarveTool) Execute(ctx context.Context, params json.RawMessage) (
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validateSafeString(input.TargetCgroup, "target_cgroup"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"sched-starve", "--action", input.Action}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	args := []string{"sched-starve"}
+	if input.TargetCgroup != "" {
+		args = append(args, "--target-cgroup", input.TargetCgroup)
 	}
 	if input.Intensity != "" {
 		args = append(args, "--intensity", input.Intensity)
@@ -95,7 +77,7 @@ func (t *SchedStarveTool) Execute(ctx context.Context, params json.RawMessage) (
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Sched Starve: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Sched Starve\n\n")
 	if output == "" {
 		sb.WriteString("Starvation active.\n")
 	} else {
@@ -112,11 +94,10 @@ func (t *SchedStarveTool) Execute(ctx context.Context, params json.RawMessage) (
 // Fault Inject
 
 type FaultInjectInput struct {
-	Action    string `json:"action"`
-	Target    string `json:"target,omitempty"`
-	FaultType string `json:"fault_type,omitempty"`
-	Rate      int    `json:"rate,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	TargetPids string `json:"target_pids,omitempty"`
+	Syscalls   string `json:"syscalls,omitempty"`
+	ErrorRate  string `json:"error_rate,omitempty"`
+	Errno      string `json:"errno,omitempty"`
 }
 
 type FaultInjectTool struct {
@@ -130,37 +111,30 @@ func NewFaultInject(exec executor.Executor) *FaultInjectTool {
 func (t *FaultInjectTool) Name() string { return "kubedagger_fault_inject" }
 
 func (t *FaultInjectTool) Description() string {
-	return "Inject faults into running processes by hooking syscalls. Can cause random IO errors, network timeouts, memory allocation failures, and permission denied errors to destabilize target services."
+	return "Inject faults into running processes by hooking syscalls. Causes targeted syscalls from the given PIDs to fail at the configured rate with the chosen errno, destabilizing services with plausible IO or network errors."
 }
 
 func (t *FaultInjectTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"target_pids": {
 				"type": "string",
-				"enum": ["start", "stop", "status"],
-				"description": "Fault injection action"
+				"description": "Comma-separated list of target process IDs (e.g. '1234,5678')"
 			},
-			"target": {
+			"syscalls": {
 				"type": "string",
-				"description": "Target pod or process"
+				"description": "Comma-separated syscalls to fail (default: read,write,connect)"
 			},
-			"fault_type": {
+			"error_rate": {
 				"type": "string",
-				"enum": ["io-error", "net-timeout", "mem-fail", "perm-denied", "random"],
-				"description": "Type of fault to inject"
+				"description": "Percentage of calls to fail, '0'-'100' (default: 25)"
 			},
-			"rate": {
-				"type": "integer",
-				"description": "Fault rate percentage (1-100)"
-			},
-			"namespace": {
+			"errno": {
 				"type": "string",
-				"description": "Target namespace"
+				"description": "Errno to return for injected failures (default: EIO)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -170,25 +144,31 @@ func (t *FaultInjectTool) Execute(ctx context.Context, params json.RawMessage) (
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
+	if err := validatePIDList(input.TargetPids); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validateSafeString(input.Syscalls, "syscalls"); err != nil {
+		return errorResult(err.Error()), nil
+	}
+	if err := validateSafeString(input.ErrorRate, "error_rate"); err != nil {
+		return errorResult(err.Error()), nil
+	}
+	if err := validateSafeString(input.Errno, "errno"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"fault-inject", "--action", input.Action}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
+	args := []string{"fault-inject"}
+	if input.TargetPids != "" {
+		args = append(args, "--target-pids", input.TargetPids)
 	}
-	if input.FaultType != "" {
-		args = append(args, "--fault-type", input.FaultType)
+	if input.Syscalls != "" {
+		args = append(args, "--syscalls", input.Syscalls)
 	}
-	if input.Rate > 0 {
-		args = append(args, "--rate", fmt.Sprintf("%d", input.Rate))
+	if input.ErrorRate != "" {
+		args = append(args, "--error-rate", input.ErrorRate)
 	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	if input.Errno != "" {
+		args = append(args, "--errno", input.Errno)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -202,7 +182,7 @@ func (t *FaultInjectTool) Execute(ctx context.Context, params json.RawMessage) (
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Fault Inject: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Fault Inject\n\n")
 	if output == "" {
 		sb.WriteString("Fault injection active.\n")
 	} else {
@@ -219,11 +199,9 @@ func (t *FaultInjectTool) Execute(ctx context.Context, params json.RawMessage) (
 // Cgroup Manip
 
 type CgroupManipInput struct {
-	Action    string `json:"action"`
-	Target    string `json:"target,omitempty"`
+	TargetPod string `json:"target_pod,omitempty"`
 	Resource  string `json:"resource,omitempty"`
-	Limit     string `json:"limit,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	Action    string `json:"action,omitempty"`
 }
 
 type CgroupManipTool struct {
@@ -237,37 +215,28 @@ func NewCgroupManip(exec executor.Executor) *CgroupManipTool {
 func (t *CgroupManipTool) Name() string { return "kubedagger_cgroup_manip" }
 
 func (t *CgroupManipTool) Description() string {
-	return "Manipulate cgroup settings of running containers to cause OOM kills, CPU throttling, or IO starvation. Modifies cgroup parameters directly via eBPF, bypassing kubelet's resource management."
+	return "Manipulate cgroup settings of running pods to cause resource starvation or termination. Limits memory/CPU, freezes processes, or triggers OOM kills by modifying cgroup parameters directly, bypassing kubelet resource management."
 }
 
 func (t *CgroupManipTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"target_pod": {
 				"type": "string",
-				"enum": ["throttle", "oom", "io-starve", "restore", "status"],
-				"description": "Cgroup manipulation action"
-			},
-			"target": {
-				"type": "string",
-				"description": "Target pod or container"
+				"description": "Target pod whose cgroup is manipulated"
 			},
 			"resource": {
 				"type": "string",
-				"enum": ["cpu", "memory", "io", "pids"],
-				"description": "Resource to manipulate"
+				"enum": ["memory", "cpu"],
+				"description": "Resource to manipulate (default: memory)"
 			},
-			"limit": {
+			"action": {
 				"type": "string",
-				"description": "New limit value"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Target namespace"
+				"enum": ["limit", "freeze", "kill"],
+				"description": "Cgroup action (default: limit)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -277,28 +246,19 @@ func (t *CgroupManipTool) Execute(ctx context.Context, params json.RawMessage) (
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Limit, "limit"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validateSafeString(input.TargetPod, "target_pod"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"cgroup-manip", "--action", input.Action}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
+	args := []string{"cgroup-manip"}
+	if input.TargetPod != "" {
+		args = append(args, "--target-pod", input.TargetPod)
 	}
 	if input.Resource != "" {
 		args = append(args, "--resource", input.Resource)
 	}
-	if input.Limit != "" {
-		args = append(args, "--limit", input.Limit)
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -312,7 +272,7 @@ func (t *CgroupManipTool) Execute(ctx context.Context, params json.RawMessage) (
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Cgroup Manip: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Cgroup Manip\n\n")
 	if output == "" {
 		sb.WriteString("Manipulation active.\n")
 	} else {
@@ -329,9 +289,8 @@ func (t *CgroupManipTool) Execute(ctx context.Context, params json.RawMessage) (
 // Election Disrupt
 
 type ElectionDisruptInput struct {
-	Action    string `json:"action"`
-	Target    string `json:"target,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	Target string `json:"target,omitempty"`
+	Mode   string `json:"mode,omitempty"`
 }
 
 type ElectionDisruptTool struct {
@@ -345,28 +304,24 @@ func NewElectionDisrupt(exec executor.Executor) *ElectionDisruptTool {
 func (t *ElectionDisruptTool) Name() string { return "kubedagger_election_disrupt" }
 
 func (t *ElectionDisruptTool) Description() string {
-	return "Disrupt Kubernetes leader election by intercepting and manipulating lease objects. Forces leader failovers, causes split-brain, or permanently prevents election convergence for HA controllers."
+	return "Disrupt Kubernetes leader election by intercepting and manipulating lease objects. Steals leadership, denies election attempts, or oscillates leadership to force failovers and split-brain in HA controllers."
 }
 
 func (t *ElectionDisruptTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
-				"type": "string",
-				"enum": ["disrupt", "force-failover", "split-brain", "block", "status"],
-				"description": "Election disruption action"
-			},
 			"target": {
 				"type": "string",
-				"description": "Target controller or lease name"
+				"enum": ["scheduler", "controller-manager", "custom"],
+				"description": "Election target (default: scheduler)"
 			},
-			"namespace": {
+			"mode": {
 				"type": "string",
-				"description": "Namespace of the lease object"
+				"enum": ["steal", "deny", "oscillate"],
+				"description": "Disruption mode (default: deny)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -376,19 +331,12 @@ func (t *ElectionDisruptTool) Execute(ctx context.Context, params json.RawMessag
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateNamespace(input.Namespace); err != nil {
-		return errorResult(err.Error()), nil
-	}
-
-	args := []string{"election-disrupt", "--action", input.Action}
+	args := []string{"election-disrupt"}
 	if input.Target != "" {
 		args = append(args, "--target", input.Target)
 	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -402,7 +350,7 @@ func (t *ElectionDisruptTool) Execute(ctx context.Context, params json.RawMessag
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Election Disrupt: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Election Disrupt\n\n")
 	if output == "" {
 		sb.WriteString("Disruption active.\n")
 	} else {

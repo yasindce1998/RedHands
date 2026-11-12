@@ -11,12 +11,9 @@ import (
 )
 
 type CovertChannelInput struct {
-	Method    string `json:"method"`
-	Target    string `json:"target,omitempty"`
-	Port      int    `json:"port,omitempty"`
-	Data      string `json:"data,omitempty"`
-	Direction string `json:"direction,omitempty"`
-	Interface string `json:"interface,omitempty"`
+	Type string `json:"type,omitempty"`
+	Dest string `json:"dest,omitempty"`
+	Data string `json:"data,omitempty"`
 }
 
 type CovertChannelTool struct {
@@ -37,34 +34,20 @@ func (t *CovertChannelTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"method": {
+			"type": {
 				"type": "string",
-				"enum": ["icmp", "ipid", "ttl", "urgent", "tcp-timestamp"],
-				"description": "Covert channel encoding method"
+				"enum": ["icmp", "ipid", "urgent", "ttl"],
+				"description": "Covert channel encoding type (default: icmp)"
 			},
-			"target": {
+			"dest": {
 				"type": "string",
-				"description": "Target host for the covert channel"
-			},
-			"port": {
-				"type": "integer",
-				"description": "Port to use (for TCP-based methods)"
+				"description": "Destination IP address for the covert channel"
 			},
 			"data": {
 				"type": "string",
 				"description": "Data to send through the covert channel"
-			},
-			"direction": {
-				"type": "string",
-				"enum": ["send", "receive", "bidirectional"],
-				"description": "Channel direction"
-			},
-			"interface": {
-				"type": "string",
-				"description": "Network interface to use"
 			}
-		},
-		"required": ["method"]
+		}
 	}`)
 }
 
@@ -74,31 +57,22 @@ func (t *CovertChannelTool) Execute(ctx context.Context, params json.RawMessage)
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
+	if err := validateIP(input.Dest); err != nil {
 		return errorResult(err.Error()), nil
 	}
 	if err := validateSafeString(input.Data, "data"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Interface, "interface"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 
-	args := []string{"covert-channel", "--method", input.Method}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
+	args := []string{"covert-channel"}
+	if input.Type != "" {
+		args = append(args, "--type", input.Type)
 	}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
+	if input.Dest != "" {
+		args = append(args, "--dest", input.Dest)
 	}
 	if input.Data != "" {
 		args = append(args, "--data", input.Data)
-	}
-	if input.Direction != "" {
-		args = append(args, "--direction", input.Direction)
-	}
-	if input.Interface != "" {
-		args = append(args, "--interface", input.Interface)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -112,7 +86,11 @@ func (t *CovertChannelTool) Execute(ctx context.Context, params json.RawMessage)
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Covert Channel: %s\n\n", input.Method)
+	channelType := input.Type
+	if channelType == "" {
+		channelType = "icmp"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger Covert Channel: %s\n\n", channelType)
 	if output == "" {
 		sb.WriteString("Channel established.\n")
 	} else {

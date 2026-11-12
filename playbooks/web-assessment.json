@@ -1,0 +1,21 @@
+{
+  "name": "web-assessment",
+  "description": "Web application assessment: fingerprinting, then directory brute-force and TLS testing in parallel, followed by vulnerability scanning and an NSE vuln scan of open web ports.",
+  "vars": [
+    { "name": "target", "description": "Base URL (e.g. https://target.example)", "required": true },
+    { "name": "wordlist", "description": "Directory wordlist", "default": "/usr/share/wordlists/dirb/common.txt" }
+  ],
+  "steps": [
+    { "id": "fingerprint", "tool": "whatweb_fingerprint", "params": { "target": "{{target}}" }, "on_fail": "continue" },
+    {
+      "parallel": [
+        { "id": "dirs", "tool": "ffuf_fuzz", "params": { "url": "{{target}}/FUZZ", "wordlist": "{{wordlist}}", "mc": "200,301,302,403" } },
+        { "id": "tls", "tool": "testssl_scan", "params": { "target": "{{target}}" } }
+      ],
+      "on_fail": "continue"
+    },
+    { "id": "crawl", "tool": "katana_crawl", "params": { "target": "{{target}}", "depth": 2, "js_crawl": true }, "on_fail": "continue" },
+    { "id": "nikto", "tool": "nikto_scan", "params": { "target": "{{target}}" }, "on_fail": "continue" },
+    { "id": "nuclei", "tool": "nuclei_scan", "params": { "target": "{{target}}", "severity": "critical,high,medium" }, "on_fail": "continue" }
+  ]
+}

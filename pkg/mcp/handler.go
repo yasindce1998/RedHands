@@ -43,6 +43,22 @@ func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSONRP
 		return s.handleToolsCall(ctx, req)
 	case MethodWorkflowRun:
 		return s.handleWorkflowRun(ctx, req)
+	case MethodCampaignRun:
+		return s.handleCampaignRun(ctx, req)
+	case MethodCampaignResume:
+		if s.campaign == nil {
+			return s.errorResponse(req.ID, ErrCodeMethodNotFound, "campaign engine not configured")
+		}
+		ctx, cancel := context.WithTimeout(ctx, s.workflowTimeout)
+		defer cancel()
+		result, err := s.campaign.ResumeFromJSON(ctx, req.Params)
+		if err != nil {
+			return s.errorResponse(req.ID, ErrCodeInternal, err.Error())
+		}
+		return &JSONRPCResponse{JSONRPC: JSONRPCVersion, ID: req.ID, Result: json.RawMessage(result)}
+	case MethodCampaignStatus, MethodCampaignList, MethodCampaignCancel,
+		MethodCampaignTemplates, MethodCampaignTemplateGet, MethodCampaignTemplateSave:
+		return s.handleCampaignQuery(ctx, req)
 	case MethodReportGenerate:
 		return s.handleReportGenerate(req)
 	case MethodPing:
@@ -147,6 +163,61 @@ func (s *Server) handleReportGenerate(req *JSONRPCRequest) *JSONRPCResponse {
 	return s.successResponse(req.ID, &ToolResult{
 		Content: []ContentBlock{{Type: "text", Text: output}},
 	})
+}
+
+func (s *Server) handleCampaignRun(ctx context.Context, req *JSONRPCRequest) *JSONRPCResponse {
+	ctx, cancel := context.WithTimeout(ctx, s.workflowTimeout)
+	defer cancel()
+	if s.campaign == nil {
+		return s.errorResponse(req.ID, ErrCodeMethodNotFound, "campaign engine not configured")
+	}
+
+	result, err := s.campaign.RunFromJSON(ctx, req.Params)
+	if err != nil {
+		return s.errorResponse(req.ID, ErrCodeInternal, err.Error())
+	}
+
+	return &JSONRPCResponse{
+		JSONRPC: JSONRPCVersion,
+		ID:      req.ID,
+		Result:  json.RawMessage(result),
+	}
+}
+
+func (s *Server) handleCampaignQuery(ctx context.Context, req *JSONRPCRequest) *JSONRPCResponse {
+	if s.campaign == nil {
+		return s.errorResponse(req.ID, ErrCodeMethodNotFound, "campaign engine not configured")
+	}
+
+	var (
+		result json.RawMessage
+		err    error
+	)
+	switch req.Method {
+	case MethodCampaignStatus:
+		result, err = s.campaign.StatusFromJSON(req.Params)
+	case MethodCampaignList:
+		result, err = s.campaign.ListFromJSON(req.Params)
+	case MethodCampaignCancel:
+		result, err = s.campaign.CancelFromJSON(req.Params)
+	case MethodCampaignTemplates:
+		result, err = s.campaign.TemplatesFromJSON(req.Params)
+	case MethodCampaignTemplateGet:
+		result, err = s.campaign.GetTemplateFromJSON(req.Params)
+	case MethodCampaignTemplateSave:
+		result, err = s.campaign.SaveTemplateFromJSON(req.Params)
+	default:
+		return s.errorResponse(req.ID, ErrCodeMethodNotFound, fmt.Sprintf("method not found: %s", req.Method))
+	}
+	if err != nil {
+		return s.errorResponse(req.ID, ErrCodeInternal, err.Error())
+	}
+
+	return &JSONRPCResponse{
+		JSONRPC: JSONRPCVersion,
+		ID:      req.ID,
+		Result:  json.RawMessage(result),
+	}
 }
 
 func (s *Server) successResponse(id json.RawMessage, result any) *JSONRPCResponse {

@@ -11,10 +11,7 @@ import (
 )
 
 type HoneypotDetectInput struct {
-	Action    string `json:"action"`
-	Namespace string `json:"namespace,omitempty"`
-	Target    string `json:"target,omitempty"`
-	Depth     string `json:"depth,omitempty"`
+	Checks string `json:"checks,omitempty"`
 }
 
 type HoneypotDetectTool struct {
@@ -28,33 +25,19 @@ func NewHoneypotDetect(exec executor.Executor) *HoneypotDetectTool {
 func (t *HoneypotDetectTool) Name() string { return "kubedagger_honeypot_detect" }
 
 func (t *HoneypotDetectTool) Description() string {
-	return "Detect honeypots, canary tokens, and deception infrastructure in the cluster. Identifies honeypot pods, fake credentials, canary files, and deception services by analyzing resource patterns, response timing, and metadata inconsistencies."
+	return "Detect honeypots, canary tokens, and deception infrastructure in the cluster. Probes kubelet endpoints, metrics services, and token patterns to identify decoy resources before committing to operations."
 }
 
 func (t *HoneypotDetectTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"checks": {
 				"type": "string",
-				"enum": ["scan", "identify", "avoid", "map"],
-				"description": "Detection action: scan cluster, identify specific target, configure avoidance, map all deception"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Namespace to scan"
-			},
-			"target": {
-				"type": "string",
-				"description": "Specific resource to check"
-			},
-			"depth": {
-				"type": "string",
-				"enum": ["quick", "normal", "deep"],
-				"description": "Scan depth"
+				"enum": ["all", "kubelet", "metrics", "tokens"],
+				"description": "Detection checks to run (default: all)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -64,22 +47,9 @@ func (t *HoneypotDetectTool) Execute(ctx context.Context, params json.RawMessage
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateNamespace(input.Namespace); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-
-	args := []string{"honeypot-detect", "--action", input.Action}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
-	}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
-	}
-	if input.Depth != "" {
-		args = append(args, "--depth", input.Depth)
+	args := []string{"honeypot-detect"}
+	if input.Checks != "" {
+		args = append(args, "--checks", input.Checks)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -93,7 +63,7 @@ func (t *HoneypotDetectTool) Execute(ctx context.Context, params json.RawMessage
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Honeypot Detect: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Honeypot Detect\n\n")
 	if output == "" {
 		sb.WriteString("No honeypots detected.\n")
 	} else {

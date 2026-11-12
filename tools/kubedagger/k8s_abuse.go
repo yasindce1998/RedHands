@@ -11,12 +11,9 @@ import (
 )
 
 type K8sAbuseInput struct {
-	Action         string `json:"action"`
-	Namespace      string `json:"namespace,omitempty"`
-	ServiceAccount string `json:"service_account,omitempty"`
-	Role           string `json:"role,omitempty"`
-	Resource       string `json:"resource,omitempty"`
-	Verb           string `json:"verb,omitempty"`
+	Action    string `json:"action,omitempty"`
+	Token     string `json:"token,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 type K8sAbuseTool struct {
@@ -30,7 +27,7 @@ func NewK8sAbuse(exec executor.Executor) *K8sAbuseTool {
 func (t *K8sAbuseTool) Name() string { return "kubedagger_k8s_abuse" }
 
 func (t *K8sAbuseTool) Description() string {
-	return "Exploit Kubernetes RBAC misconfigurations by escalating privileges through service account token theft, role binding manipulation, and impersonation attacks. Uses eBPF to intercept and modify API server authorization decisions."
+	return "Abuse Kubernetes RBAC using a service account token. Enumerates the permissions the token grants, attempts privilege escalation, or dumps secrets accessible to the token."
 }
 
 func (t *K8sAbuseTool) InputSchema() json.RawMessage {
@@ -39,31 +36,18 @@ func (t *K8sAbuseTool) InputSchema() json.RawMessage {
 		"properties": {
 			"action": {
 				"type": "string",
-				"enum": ["escalate", "impersonate", "bind-role", "steal-token", "enum-permissions"],
-				"description": "Abuse action to perform"
+				"enum": ["enum", "escalate", "dump-secrets"],
+				"description": "Abuse action: enumerate permissions, escalate privileges, or dump secrets (default: enum)"
+			},
+			"token": {
+				"type": "string",
+				"description": "Service account token to use (defaults to the pod's mounted token)"
 			},
 			"namespace": {
 				"type": "string",
-				"description": "Target namespace"
-			},
-			"service_account": {
-				"type": "string",
-				"description": "Target service account name"
-			},
-			"role": {
-				"type": "string",
-				"description": "Role or ClusterRole to bind/escalate to"
-			},
-			"resource": {
-				"type": "string",
-				"description": "Target resource type for permission check"
-			},
-			"verb": {
-				"type": "string",
-				"description": "Action verb to check/grant (get, list, create, delete, etc.)"
+				"description": "Target namespace (default: default)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -73,31 +57,22 @@ func (t *K8sAbuseTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
+	if err := validateSafeString(input.Token, "token"); err != nil {
+		return errorResult(err.Error()), nil
+	}
 	if err := validateNamespace(input.Namespace); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.ServiceAccount, "service_account"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Role, "role"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 
-	args := []string{"k8s", "abuse", "--action", input.Action}
+	args := []string{"k8s", "abuse"}
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
+	}
+	if input.Token != "" {
+		args = append(args, "--token", input.Token)
+	}
 	if input.Namespace != "" {
 		args = append(args, "--namespace", input.Namespace)
-	}
-	if input.ServiceAccount != "" {
-		args = append(args, "--service-account", input.ServiceAccount)
-	}
-	if input.Role != "" {
-		args = append(args, "--role", input.Role)
-	}
-	if input.Resource != "" {
-		args = append(args, "--resource", input.Resource)
-	}
-	if input.Verb != "" {
-		args = append(args, "--verb", input.Verb)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -111,7 +86,11 @@ func (t *K8sAbuseTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger K8s RBAC Abuse: %s\n\n", input.Action)
+	action := input.Action
+	if action == "" {
+		action = "enum"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger K8s RBAC Abuse: %s\n\n", action)
 	if output == "" {
 		sb.WriteString("No output.\n")
 	} else {

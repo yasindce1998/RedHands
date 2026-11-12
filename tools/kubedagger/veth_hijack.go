@@ -11,11 +11,9 @@ import (
 )
 
 type VethHijackInput struct {
-	Action    string `json:"action"`
-	Interface string `json:"interface,omitempty"`
-	Pod       string `json:"pod,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Duration  int    `json:"duration,omitempty"`
+	SourcePod string `json:"source_pod,omitempty"`
+	DestPod   string `json:"dest_pod,omitempty"`
+	Mode      string `json:"mode,omitempty"`
 }
 
 type VethHijackTool struct {
@@ -29,36 +27,27 @@ func NewVethHijack(exec executor.Executor) *VethHijackTool {
 func (t *VethHijackTool) Name() string { return "kubedagger_veth_hijack" }
 
 func (t *VethHijackTool) Description() string {
-	return "Hijack veth pairs connecting pod network namespaces to the host bridge. Attaches TC eBPF programs to intercept, modify, or redirect traffic between containers at the virtual ethernet level."
+	return "Hijack veth pairs connecting pod network namespaces to the host bridge. Attaches TC eBPF programs to mirror, redirect, or inject traffic between a source pod and a destination pod at the virtual ethernet level."
 }
 
 func (t *VethHijackTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"source_pod": {
 				"type": "string",
-				"enum": ["sniff", "redirect", "inject", "mirror", "status"],
-				"description": "Hijack action"
+				"description": "Source pod whose traffic is intercepted"
 			},
-			"interface": {
+			"dest_pod": {
 				"type": "string",
-				"description": "Veth interface name (e.g., vethXXXX)"
+				"description": "Destination pod for redirected/injected traffic"
 			},
-			"pod": {
+			"mode": {
 				"type": "string",
-				"description": "Target pod (auto-resolves veth)"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Target pod namespace"
-			},
-			"duration": {
-				"type": "integer",
-				"description": "Capture/redirect duration in seconds"
+				"enum": ["mirror", "redirect", "inject"],
+				"description": "Hijack mode (default: mirror)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -68,28 +57,22 @@ func (t *VethHijackTool) Execute(ctx context.Context, params json.RawMessage) (*
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Interface, "interface"); err != nil {
+	if err := validateSafeString(input.SourcePod, "source_pod"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Pod, "pod"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validateSafeString(input.DestPod, "dest_pod"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"veth-hijack", "--action", input.Action}
-	if input.Interface != "" {
-		args = append(args, "--interface", input.Interface)
+	args := []string{"veth-hijack"}
+	if input.SourcePod != "" {
+		args = append(args, "--source-pod", input.SourcePod)
 	}
-	if input.Pod != "" {
-		args = append(args, "--pod", input.Pod)
+	if input.DestPod != "" {
+		args = append(args, "--dest-pod", input.DestPod)
 	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
-	}
-	if input.Duration > 0 {
-		args = append(args, "--duration", fmt.Sprintf("%d", input.Duration))
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -103,7 +86,7 @@ func (t *VethHijackTool) Execute(ctx context.Context, params json.RawMessage) (*
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Veth Hijack: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Veth Hijack\n\n")
 	if output == "" {
 		sb.WriteString("Hijack active.\n")
 	} else {

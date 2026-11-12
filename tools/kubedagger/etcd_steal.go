@@ -11,11 +11,8 @@ import (
 )
 
 type EtcdStealInput struct {
-	Key       string `json:"key,omitempty"`
-	Prefix    string `json:"prefix,omitempty"`
-	Secrets   bool   `json:"secrets,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Format    string `json:"format,omitempty"`
+	Mode      string `json:"mode,omitempty"`
+	KeyPrefix string `json:"key_prefix,omitempty"`
 }
 
 type EtcdStealTool struct {
@@ -36,26 +33,14 @@ func (t *EtcdStealTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"key": {
+			"mode": {
 				"type": "string",
-				"description": "Specific etcd key to read"
+				"enum": ["intercept", "dump-keys", "steal-certs"],
+				"description": "Extraction mode: intercept live reads, dump keys, or steal TLS certs (default: intercept)"
 			},
-			"prefix": {
+			"key_prefix": {
 				"type": "string",
-				"description": "Key prefix to enumerate (e.g., '/registry/secrets')"
-			},
-			"secrets": {
-				"type": "boolean",
-				"description": "Target Kubernetes secrets specifically"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Filter secrets by namespace"
-			},
-			"format": {
-				"type": "string",
-				"enum": ["text", "json", "raw"],
-				"description": "Output format"
+				"description": "etcd key prefix to target (default: /registry/secrets)"
 			}
 		}
 	}`)
@@ -67,31 +52,16 @@ func (t *EtcdStealTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Key, "key"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Prefix, "prefix"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validateSafeString(input.KeyPrefix, "key_prefix"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
 	args := []string{"etcd-steal"}
-	if input.Key != "" {
-		args = append(args, "--key", input.Key)
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
-	if input.Prefix != "" {
-		args = append(args, "--prefix", input.Prefix)
-	}
-	if input.Secrets {
-		args = append(args, "--secrets")
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
-	}
-	if input.Format != "" {
-		args = append(args, "--format", input.Format)
+	if input.KeyPrefix != "" {
+		args = append(args, "--key-prefix", input.KeyPrefix)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)

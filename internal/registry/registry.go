@@ -17,6 +17,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/ad/coercion"
 	"github.com/yasindce1998/redhands/tools/ad/evilwinrm"
 	"github.com/yasindce1998/redhands/tools/ad/responder"
+	"github.com/yasindce1998/redhands/tools/aegis"
 	"github.com/yasindce1998/redhands/tools/analysis/tshark"
 	"github.com/yasindce1998/redhands/tools/barzakh"
 	"github.com/yasindce1998/redhands/tools/c2/sliver"
@@ -47,6 +48,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/social/phishing"
 	"github.com/yasindce1998/redhands/tools/system/health"
 	targetdbtools "github.com/yasindce1998/redhands/tools/targetdb"
+	"github.com/yasindce1998/redhands/tools/telecom"
 	"github.com/yasindce1998/redhands/tools/tunnel/chisel"
 	"github.com/yasindce1998/redhands/tools/tunnel/ligolo"
 	"github.com/yasindce1998/redhands/tools/vuln/nuclei"
@@ -67,6 +69,7 @@ type Deps struct {
 	Loot      *loot.Store
 	CredStore *credstore.Store
 	Evidence  *evidence.Store
+	ProcMgr   *executor.BackgroundManager
 }
 
 func RegisterAll(srv *mcp.Server, d *Deps) {
@@ -236,6 +239,15 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(kubedagger.NewOperatorShell(d.Exec))
 		srv.RegisterTool(kubedagger.NewOperatorModule(d.Exec))
 		srv.RegisterTool(kubedagger.NewOperatorTasks(d.Exec))
+		srv.RegisterTool(kubedagger.NewOperatorStatus(d.Exec))
+		srv.RegisterTool(kubedagger.NewFSWatch(d.Exec))
+		srv.RegisterTool(kubedagger.NewPipeProg(d.Exec))
+		srv.RegisterTool(kubedagger.NewPostgres(d.Exec))
+		srv.RegisterTool(kubedagger.NewProctree(d.Exec))
+		srv.RegisterTool(kubedagger.NewMITREExport(d.Exec))
+		srv.RegisterTool(kubedagger.NewDetection(d.Exec))
+		srv.RegisterTool(kubedagger.NewReport(d.Exec))
+		srv.RegisterTool(kubedagger.NewVAPBackdoor(d.Exec))
 	}
 
 	if d.Cfg.ToolsetEnabled("barzakh") {
@@ -243,6 +255,43 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(barzakh.NewGenerate(d.Exec))
 		srv.RegisterTool(barzakh.NewCorpus(d.Exec))
 		srv.RegisterTool(barzakh.NewScan(d.Exec))
+		srv.RegisterTool(barzakh.NewValidate(d.Exec))
+		srv.RegisterTool(barzakh.NewScenario(d.Exec))
+		srv.RegisterTool(barzakh.NewRobustness(d.Exec))
+		srv.RegisterTool(barzakh.NewDetectors(d.Exec))
+		srv.RegisterTool(barzakh.NewBaseline(d.Exec))
+		srv.RegisterTool(barzakh.NewIntel(d.Exec))
+	}
+
+	if d.Cfg.ToolsetEnabled("telecom") {
+		srv.RegisterTool(telecom.NewDoctor(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareAnalyze(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareExtract(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareDiff(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareNvDump(d.Exec))
+		srv.RegisterTool(telecom.NewSDRScan(d.Exec))
+		srv.RegisterTool(telecom.NewThreats())
+		srv.RegisterTool(telecom.NewAlerts())
+		srv.RegisterTool(telecom.NewStats())
+		if d.ProcMgr != nil {
+			srv.RegisterTool(telecom.NewDefenseStart(d.ProcMgr))
+			srv.RegisterTool(telecom.NewDefenseStop(d.ProcMgr))
+			srv.RegisterTool(telecom.NewDefenseStatus(d.ProcMgr))
+		}
+	}
+
+	if d.Cfg.ToolsetEnabled("aegis") {
+		srv.RegisterTool(aegis.NewAlertsParse())
+		srv.RegisterTool(aegis.NewAlertsTail())
+		srv.RegisterTool(aegis.NewModulesList())
+		srv.RegisterTool(aegis.NewDefenseConfigRead())
+		srv.RegisterTool(aegis.NewDefenseConfigWrite())
+		srv.RegisterTool(aegis.NewOffensePlan())
+		if d.ProcMgr != nil {
+			srv.RegisterTool(aegis.NewDefenseStart(d.ProcMgr))
+			srv.RegisterTool(aegis.NewDefenseStop(d.ProcMgr))
+			srv.RegisterTool(aegis.NewDefenseStatus(d.ProcMgr))
+		}
 	}
 
 	if d.Cfg.ToolsetEnabled("bloodhound") {

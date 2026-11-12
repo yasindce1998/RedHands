@@ -11,11 +11,8 @@ import (
 )
 
 type CRDBackdoorInput struct {
-	Action    string `json:"action"`
-	Name      string `json:"name,omitempty"`
-	Group     string `json:"group,omitempty"`
-	Webhook   string `json:"webhook,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	Action  string `json:"action,omitempty"`
+	CRDName string `json:"crd_name,omitempty"`
 }
 
 type CRDBackdoorTool struct {
@@ -29,7 +26,7 @@ func NewCRDBackdoor(exec executor.Executor) *CRDBackdoorTool {
 func (t *CRDBackdoorTool) Name() string { return "kubedagger_crd_backdoor" }
 
 func (t *CRDBackdoorTool) Description() string {
-	return "Install a backdoor Custom Resource Definition with a conversion webhook that executes arbitrary code when custom resources are accessed. The CRD appears legitimate but its conversion webhook provides persistent code execution."
+	return "Install a backdoor Custom Resource Definition whose controller provides persistent code execution when custom resources are created or accessed. The CRD appears legitimate but grants a hidden execution path in the cluster."
 }
 
 func (t *CRDBackdoorTool) InputSchema() json.RawMessage {
@@ -38,27 +35,14 @@ func (t *CRDBackdoorTool) InputSchema() json.RawMessage {
 		"properties": {
 			"action": {
 				"type": "string",
-				"enum": ["deploy", "remove", "trigger", "status"],
-				"description": "CRD backdoor action"
+				"enum": ["deploy", "trigger", "remove"],
+				"description": "CRD backdoor action (default: deploy)"
 			},
-			"name": {
+			"crd_name": {
 				"type": "string",
-				"description": "CRD name to create"
-			},
-			"group": {
-				"type": "string",
-				"description": "API group for the CRD"
-			},
-			"webhook": {
-				"type": "string",
-				"description": "Webhook endpoint for conversion"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Namespace for webhook service"
+				"description": "CRD name to use for the backdoor (default: monitoring.internal)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -68,31 +52,16 @@ func (t *CRDBackdoorTool) Execute(ctx context.Context, params json.RawMessage) (
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Name, "name"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Group, "group"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Webhook, "webhook"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validateSafeString(input.CRDName, "crd_name"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"crd-backdoor", "--action", input.Action}
-	if input.Name != "" {
-		args = append(args, "--name", input.Name)
+	args := []string{"crd-backdoor"}
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
 	}
-	if input.Group != "" {
-		args = append(args, "--group", input.Group)
-	}
-	if input.Webhook != "" {
-		args = append(args, "--webhook", input.Webhook)
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	if input.CRDName != "" {
+		args = append(args, "--crd-name", input.CRDName)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -106,7 +75,7 @@ func (t *CRDBackdoorTool) Execute(ctx context.Context, params json.RawMessage) (
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger CRD Backdoor: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger CRD Backdoor\n\n")
 	if output == "" {
 		sb.WriteString("Operation completed.\n")
 	} else {

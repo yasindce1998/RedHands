@@ -11,10 +11,7 @@ import (
 )
 
 type EvasionInput struct {
-	Target string `json:"target"`
-	Mode   string `json:"mode,omitempty"`
-	PID    int    `json:"pid,omitempty"`
-	Scope  string `json:"scope,omitempty"`
+	Mode string `json:"mode,omitempty"`
 }
 
 type EvasionTool struct {
@@ -28,34 +25,19 @@ func NewEvasion(exec executor.Executor) *EvasionTool {
 func (t *EvasionTool) Name() string { return "kubedagger_evasion" }
 
 func (t *EvasionTool) Description() string {
-	return "Evade runtime security tools (Falco, Tetragon, Sysdig) by hooking their eBPF programs and filtering events before they reach userspace. Suppresses syscall monitoring, file integrity checks, and network activity alerts."
+	return "Evade container-native runtime security sensors (Falco, Tetragon, Sysdig, Tracee) by neutralizing their eBPF-based event collection. Modes target sensor programs, probe endpoints, or shield the agent from detection. Use 'all' to apply every evasion technique."
 }
 
 func (t *EvasionTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"target": {
-				"type": "string",
-				"enum": ["falco", "tetragon", "sysdig", "tracee", "all"],
-				"description": "Security tool to evade"
-			},
 			"mode": {
 				"type": "string",
-				"enum": ["suppress", "blind", "corrupt", "redirect"],
-				"description": "Evasion mode: suppress events, blind the tool, corrupt data, or redirect to decoy"
-			},
-			"pid": {
-				"type": "integer",
-				"description": "Process ID to hide from monitoring"
-			},
-			"scope": {
-				"type": "string",
-				"enum": ["process", "network", "file", "all"],
-				"description": "Category of events to suppress"
+				"enum": ["cnative-sensor", "cnative-probe", "cnative-shield", "all"],
+				"description": "Evasion mode (default: all)"
 			}
-		},
-		"required": ["target"]
+		}
 	}`)
 }
 
@@ -65,15 +47,9 @@ func (t *EvasionTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	args := []string{"evasion", "--target", input.Target}
+	args := []string{"evasion"}
 	if input.Mode != "" {
 		args = append(args, "--mode", input.Mode)
-	}
-	if input.PID > 0 {
-		args = append(args, "--pid", fmt.Sprintf("%d", input.PID))
-	}
-	if input.Scope != "" {
-		args = append(args, "--scope", input.Scope)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -87,7 +63,11 @@ func (t *EvasionTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Evasion: %s\n\n", input.Target)
+	mode := input.Mode
+	if mode == "" {
+		mode = "all"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger Evasion: %s\n\n", mode)
 	if output == "" {
 		sb.WriteString("Evasion active.\n")
 	} else {

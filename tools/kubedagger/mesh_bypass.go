@@ -11,11 +11,8 @@ import (
 )
 
 type MeshBypassInput struct {
-	Mesh      string `json:"mesh"`
-	Target    string `json:"target,omitempty"`
-	Port      int    `json:"port,omitempty"`
-	Method    string `json:"method,omitempty"`
-	SkipMTLS  bool   `json:"skip_mtls,omitempty"`
+	Mode       string `json:"mode,omitempty"`
+	MeshTarget string `json:"mesh_target,omitempty"`
 }
 
 type MeshBypassTool struct {
@@ -29,37 +26,23 @@ func NewMeshBypass(exec executor.Executor) *MeshBypassTool {
 func (t *MeshBypassTool) Name() string { return "kubedagger_mesh_bypass" }
 
 func (t *MeshBypassTool) Description() string {
-	return "Bypass service mesh (Istio, Linkerd, Cilium) mTLS enforcement and authorization policies by hooking the sidecar proxy's socket operations. Enables plaintext communication or impersonation of mesh identities."
+	return "Bypass service mesh (Istio, Linkerd) sidecar enforcement by hooking the proxy's socket operations. Skips the sidecar proxy for outbound traffic, spoofs mesh identities, or falls back to raw connections, evading mTLS and authorization policies."
 }
 
 func (t *MeshBypassTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"mesh": {
+			"mode": {
 				"type": "string",
-				"enum": ["istio", "linkerd", "cilium", "auto"],
-				"description": "Target service mesh"
+				"enum": ["skip-proxy", "spoof-identity", "raw-connect"],
+				"description": "Bypass mode (default: skip-proxy)"
 			},
-			"target": {
+			"mesh_target": {
 				"type": "string",
-				"description": "Target service or pod to reach"
-			},
-			"port": {
-				"type": "integer",
-				"description": "Target port"
-			},
-			"method": {
-				"type": "string",
-				"enum": ["skip-sidecar", "impersonate", "plaintext", "cert-steal"],
-				"description": "Bypass method"
-			},
-			"skip_mtls": {
-				"type": "boolean",
-				"description": "Skip mTLS verification entirely"
+				"description": "Target service or pod to reach through the mesh"
 			}
-		},
-		"required": ["mesh"]
+		}
 	}`)
 }
 
@@ -69,22 +52,16 @@ func (t *MeshBypassTool) Execute(ctx context.Context, params json.RawMessage) (*
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
+	if err := validateSafeString(input.MeshTarget, "mesh_target"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"meshbypass", "--mesh", input.Mesh}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
+	args := []string{"meshbypass"}
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
-	}
-	if input.Method != "" {
-		args = append(args, "--method", input.Method)
-	}
-	if input.SkipMTLS {
-		args = append(args, "--skip-mtls")
+	if input.MeshTarget != "" {
+		args = append(args, "--mesh-target", input.MeshTarget)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -93,12 +70,12 @@ func (t *MeshBypassTool) Execute(ctx context.Context, params json.RawMessage) (*
 		if result != nil {
 			stderr = string(result.Stderr)
 		}
-		return errorResult(fmt.Sprintf("kubedagger mesh bypass failed: %s\n%s", err.Error(), stderr)), nil
+		return errorResult(fmt.Sprintf("kubedagger meshbypass failed: %s\n%s", err.Error(), stderr)), nil
 	}
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Service Mesh Bypass: %s\n\n", input.Mesh)
+	sb.WriteString("## KubeDagger Service Mesh Bypass\n\n")
 	if output == "" {
 		sb.WriteString("Mesh bypass active.\n")
 	} else {

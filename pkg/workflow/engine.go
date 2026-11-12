@@ -23,14 +23,24 @@ type WorkflowRequest struct {
 // StepResult holds the result from a single step.
 type StepResult struct {
 	Tool    string `json:"tool"`
+	ID      string `json:"id,omitempty"`
 	Success bool   `json:"success"`
+	Skipped bool   `json:"skipped,omitempty"`
 	Text    string `json:"text"`
+	// Recorded counts items written to the target database by this step's
+	// record rules.
+	Recorded int `json:"recorded,omitempty"`
 }
 
 // WorkflowResult is the combined output of all steps.
 type WorkflowResult struct {
-	Steps   []StepResult `json:"steps"`
-	Success bool         `json:"success"`
+	WorkflowID string       `json:"workflow_id,omitempty"`
+	Status     string       `json:"status,omitempty"`
+	Steps      []StepResult `json:"steps"`
+	Success    bool         `json:"success"`
+	// MITRE lists the unique ATT&CK technique IDs tagged on executed steps,
+	// ready for detection-rule generation (e.g. kubedagger_detection).
+	MITRE []string `json:"mitre_techniques,omitempty"`
 }
 
 // ToolExecutor is the function signature for executing a tool by name.
@@ -219,8 +229,4 @@ func (w *substitutionWriter) WriteString(text string) (int, error) {
 	return w.Builder.WriteString(text)
 }
 
-// Used by the separate, currently inactive enhanced workflow implementation.
-func escapeJSON(s string) string {
-	b, _ := json.Marshal(s)
-	return string(b[1 : len(b)-1])
-}
+

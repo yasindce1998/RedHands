@@ -202,9 +202,9 @@ func Load() Config {
 	// Dry-run
 	cfg.DryRun = os.Getenv("REDHANDS_DRY_RUN") == "true"
 
-	// Workflow
+	// Workflow / campaign
 	cfg.WorkflowStateDir = envOr("REDHANDS_WORKFLOW_STATE_DIR", "workflow_state")
-	cfg.WorkflowTemplateDir = envOr("REDHANDS_WORKFLOW_TEMPLATES_DIR", "workflow_templates")
+	cfg.WorkflowTemplateDir = envOr("REDHANDS_WORKFLOW_TEMPLATES_DIR", "playbooks")
 	if v := os.Getenv("REDHANDS_WORKFLOW_MAX_PARALLEL"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.WorkflowMaxParallel = n
@@ -255,6 +255,9 @@ func (c Config) Validate() error {
 	if c.CacheTTL < 0 || c.CacheMaxSize < 0 || c.PluginPollInterval <= 0 || c.WorkflowMaxParallel <= 0 {
 		return fmt.Errorf("invalid cache, plugin polling or workflow limits")
 	}
+	if c.WorkflowMaxParallel > 32 {
+		return fmt.Errorf("REDHANDS_WORKFLOW_MAX_PARALLEL must be at most 32")
+	}
 	if c.MaxConcurrent < 1 || c.MaxConcurrent > 256 || c.MaxQueued < 0 || c.MaxQueued > 4096 || c.WorkflowTimeout <= 0 {
 		return fmt.Errorf("execution limits must be 1..256 concurrent, 0..4096 queued, and a positive workflow timeout")
 	}
@@ -280,7 +283,7 @@ func (c Config) Validate() error {
 	}
 	// These knobs were parsed but never connected to the running server. Fail
 	// explicitly rather than giving operators a false sense of configured behavior.
-	for _, key := range []string{"REDHANDS_OPSEC_PROXIES", "REDHANDS_OPERATOR_ID", "REDHANDS_SYNC_PEERS", "REDHANDS_WEBHOOK_URLS", "REDHANDS_WEBHOOK_EVENTS", "REDHANDS_WORKFLOW_STATE_DIR", "REDHANDS_WORKFLOW_TEMPLATES_DIR", "REDHANDS_WORKFLOW_MAX_PARALLEL"} {
+	for _, key := range []string{"REDHANDS_OPSEC_PROXIES", "REDHANDS_OPERATOR_ID", "REDHANDS_SYNC_PEERS", "REDHANDS_WEBHOOK_URLS", "REDHANDS_WEBHOOK_EVENTS"} {
 		if os.Getenv(key) != "" {
 			return fmt.Errorf("%s is not supported by the active server; unset it", key)
 		}

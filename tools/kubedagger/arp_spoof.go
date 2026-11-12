@@ -11,11 +11,9 @@ import (
 )
 
 type ARPSpoofInput struct {
-	Action    string `json:"action"`
-	TargetIP  string `json:"target_ip,omitempty"`
-	GatewayIP string `json:"gateway_ip,omitempty"`
+	VictimIP  string `json:"victim_ip"`
+	GatewayIP string `json:"gateway_ip"`
 	Interface string `json:"interface,omitempty"`
-	Duration  int    `json:"duration,omitempty"`
 }
 
 type ARPSpoofTool struct {
@@ -29,36 +27,27 @@ func NewARPSpoof(exec executor.Executor) *ARPSpoofTool {
 func (t *ARPSpoofTool) Name() string { return "kubedagger_arp_spoof" }
 
 func (t *ARPSpoofTool) Description() string {
-	return "Perform ARP spoofing via XDP to intercept pod-to-pod traffic within the same L2 segment. Injects gratuitous ARP replies at wire speed using XDP, faster and stealthier than userspace tools."
+	return "Perform ARP spoofing via XDP to intercept pod-to-pod traffic within the same L2 segment. Injects gratuitous ARP replies at wire speed using XDP, faster and stealthier than userspace tools. Positions the attacker between a victim IP and the gateway."
 }
 
 func (t *ARPSpoofTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"victim_ip": {
 				"type": "string",
-				"enum": ["start", "stop", "status"],
-				"description": "ARP spoof action"
-			},
-			"target_ip": {
-				"type": "string",
-				"description": "IP address to impersonate traffic for"
+				"description": "Victim IP address to intercept traffic for (required)"
 			},
 			"gateway_ip": {
 				"type": "string",
-				"description": "Gateway IP to poison"
+				"description": "Gateway IP address to impersonate (required)"
 			},
 			"interface": {
 				"type": "string",
-				"description": "Network interface for ARP injection"
-			},
-			"duration": {
-				"type": "integer",
-				"description": "Duration in seconds (0 = indefinite)"
+				"description": "Network interface for ARP injection (default: eth0)"
 			}
 		},
-		"required": ["action"]
+		"required": ["victim_ip", "gateway_ip"]
 	}`)
 }
 
@@ -68,32 +57,19 @@ func (t *ARPSpoofTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if input.TargetIP != "" {
-		if err := validateIP(input.TargetIP); err != nil {
-			return errorResult(err.Error()), nil
-		}
+	if err := validateIP(input.VictimIP); err != nil {
+		return errorResult(err.Error()), nil
 	}
-	if input.GatewayIP != "" {
-		if err := validateIP(input.GatewayIP); err != nil {
-			return errorResult(err.Error()), nil
-		}
+	if err := validateIP(input.GatewayIP); err != nil {
+		return errorResult(err.Error()), nil
 	}
 	if err := validateSafeString(input.Interface, "interface"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"arp-spoof", "--action", input.Action}
-	if input.TargetIP != "" {
-		args = append(args, "--target-ip", input.TargetIP)
-	}
-	if input.GatewayIP != "" {
-		args = append(args, "--gateway-ip", input.GatewayIP)
-	}
+	args := []string{"arp-spoof", "--victim-ip", input.VictimIP, "--gateway-ip", input.GatewayIP}
 	if input.Interface != "" {
 		args = append(args, "--interface", input.Interface)
-	}
-	if input.Duration > 0 {
-		args = append(args, "--duration", fmt.Sprintf("%d", input.Duration))
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -107,7 +83,7 @@ func (t *ARPSpoofTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger ARP Spoof: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger ARP Spoof\n\n")
 	if output == "" {
 		sb.WriteString("ARP spoofing active.\n")
 	} else {

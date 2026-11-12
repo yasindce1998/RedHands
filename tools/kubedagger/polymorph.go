@@ -11,10 +11,7 @@ import (
 )
 
 type PolymorphInput struct {
-	Action   string `json:"action"`
-	Program  string `json:"program,omitempty"`
-	Interval int    `json:"interval,omitempty"`
-	Seed     string `json:"seed,omitempty"`
+	Seed string `json:"seed,omitempty"`
 }
 
 type PolymorphTool struct {
@@ -28,32 +25,18 @@ func NewPolymorph(exec executor.Executor) *PolymorphTool {
 func (t *PolymorphTool) Name() string { return "kubedagger_polymorph" }
 
 func (t *PolymorphTool) Description() string {
-	return "Mutate loaded eBPF bytecode at runtime to evade signature-based BPF program detection. Applies semantic-preserving transformations (register renaming, instruction reordering, dead code insertion) to change program hash without altering behavior."
+	return "Mutate loaded eBPF bytecode at runtime to evade signature-based BPF program detection. Applies semantic-preserving transformations (register renaming, instruction reordering, dead code insertion) to change the program hash without altering behavior."
 }
 
 func (t *PolymorphTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
-				"type": "string",
-				"enum": ["mutate", "status", "auto"],
-				"description": "mutate: transform now; auto: periodic mutation; status: show current state"
-			},
-			"program": {
-				"type": "string",
-				"description": "Specific BPF program name to mutate (default: all kubedagger programs)"
-			},
-			"interval": {
-				"type": "integer",
-				"description": "Auto-mutation interval in seconds"
-			},
 			"seed": {
 				"type": "string",
-				"description": "Mutation seed for reproducible transforms"
+				"description": "Mutation seed for reproducible transforms (empty = random)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -63,20 +46,11 @@ func (t *PolymorphTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Program, "program"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 	if err := validateSafeString(input.Seed, "seed"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"polymorph", "--action", input.Action}
-	if input.Program != "" {
-		args = append(args, "--program", input.Program)
-	}
-	if input.Interval > 0 {
-		args = append(args, "--interval", fmt.Sprintf("%d", input.Interval))
-	}
+	args := []string{"polymorph"}
 	if input.Seed != "" {
 		args = append(args, "--seed", input.Seed)
 	}
@@ -92,7 +66,7 @@ func (t *PolymorphTool) Execute(ctx context.Context, params json.RawMessage) (*m
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Polymorph: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Polymorph\n\n")
 	if output == "" {
 		sb.WriteString("Mutation applied.\n")
 	} else {

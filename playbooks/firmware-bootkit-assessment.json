@@ -1,0 +1,13 @@
+{
+  "name": "firmware-bootkit-assessment",
+  "description": "UEFI firmware security assessment with Barzakh: generate a clean test corpus, validate detector coverage against it, then run the 138-detector scan over a firmware image. A bootkit detection (exit 1) is reported as a finding, not an error.",
+  "vars": [
+    { "name": "firmware", "description": "Path to the firmware image to scan", "required": true }
+  ],
+  "steps": [
+    { "id": "corpus", "tool": "barzakh_corpus", "params": {}, "on_fail": "stop" },
+    { "id": "detectors", "tool": "barzakh_detectors", "params": { "action": "list" }, "on_fail": "continue" },
+    { "id": "scan", "tool": "barzakh_scan", "params": { "target": "{{firmware}}", "format": "json" }, "on_fail": "continue" },
+    { "id": "scenarios", "tool": "barzakh_scenario", "params": { "action": "list" }, "on_fail": "continue" }
+  ]
+}

@@ -21,8 +21,29 @@ func NewStateManager(dir string) *StateManager {
 	return &StateManager{dir: dir}
 }
 
+// ValidWorkflowID rejects IDs that could escape the state directory.
+func ValidWorkflowID(id string) error {
+	if id == "" {
+		return fmt.Errorf("workflow id is required")
+	}
+	if len(id) > 64 {
+		return fmt.Errorf("workflow id too long (max 64 chars)")
+	}
+	for _, r := range id {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_', r == '-':
+		default:
+			return fmt.Errorf("workflow id %q contains unsupported characters (allowed: letters, digits, underscore, dash)", id)
+		}
+	}
+	return nil
+}
+
 // Save persists workflow state to disk.
 func (sm *StateManager) Save(state *State) error {
+	if err := ValidWorkflowID(state.WorkflowID); err != nil {
+		return err
+	}
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -41,6 +62,9 @@ func (sm *StateManager) Save(state *State) error {
 
 // Load reads workflow state from disk.
 func (sm *StateManager) Load(workflowID string) (*State, error) {
+	if err := ValidWorkflowID(workflowID); err != nil {
+		return nil, err
+	}
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
 
@@ -89,6 +113,9 @@ func (sm *StateManager) List() ([]*State, error) {
 
 // Delete removes a workflow state file.
 func (sm *StateManager) Delete(workflowID string) error {
+	if err := ValidWorkflowID(workflowID); err != nil {
+		return err
+	}
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 

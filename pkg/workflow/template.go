@@ -122,8 +122,22 @@ func (tm *TemplateManager) Instantiate(name string, vars map[string]string) (*En
 	}, nil
 }
 
-// Save persists a template to the template directory.
+// Save persists a template to the template directory. Template names become
+// filenames, so they are restricted to a conservative identifier set.
 func (tm *TemplateManager) Save(t *Template) error {
+	if t.Name == "" {
+		return fmt.Errorf("template name is required")
+	}
+	if len(t.Name) > 64 {
+		return fmt.Errorf("template name too long (max 64 chars)")
+	}
+	for _, r := range t.Name {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_', r == '-':
+		default:
+			return fmt.Errorf("template name %q contains unsupported characters (allowed: letters, digits, underscore, dash)", t.Name)
+		}
+	}
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 

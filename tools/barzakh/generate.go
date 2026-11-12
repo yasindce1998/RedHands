@@ -28,7 +28,7 @@ func NewGenerate(exec executor.Executor) *GenerateTool {
 func (t *GenerateTool) Name() string { return "barzakh_generate" }
 
 func (t *GenerateTool) Description() string {
-	return "Generate a UEFI bootkit payload for red-team testing. Supports 33 payload types including trampoline, boot_services_hook, pe_inject, secureboot_bypass, blacklotus_mok, acpi_backdoor, logofail_image, pixiefail_dhcp, arm_trustzone, riscv_opensbi and more. Use 'barzakh_list' to see all available payloads."
+	return "Generate a UEFI bootkit payload for red-team testing. Supports 134 payload types including trampoline, boot_services_hook, pe_inject, secureboot_bypass, blacklotus_mok, acpi_backdoor, logofail_image, pixiefail_dhcp, arm_trustzone, riscv_opensbi and more. Use 'barzakh_list' to see all available payloads."
 }
 
 func (t *GenerateTool) InputSchema() json.RawMessage {
@@ -45,7 +45,7 @@ func (t *GenerateTool) InputSchema() json.RawMessage {
 			},
 			"arch": {
 				"type": "string",
-				"enum": ["x86-64", "aarch64", "riscv64"],
+				"enum": ["x86-64", "aarch64", "riscv64", "power64", "armv7"],
 				"description": "Target architecture (default: x86-64)"
 			},
 			"size": {
@@ -76,9 +76,9 @@ func (t *GenerateTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 		return errorResult(err.Error()), nil
 	}
 
-	validArchs := map[string]bool{"x86-64": true, "aarch64": true, "riscv64": true}
+	validArchs := map[string]bool{"x86-64": true, "aarch64": true, "riscv64": true, "power64": true, "armv7": true}
 	if input.Arch != "" && !validArchs[input.Arch] {
-		return errorResult("invalid arch: must be x86-64, aarch64, or riscv64"), nil
+		return errorResult("invalid arch: must be x86-64, aarch64, riscv64, power64, or armv7"), nil
 	}
 
 	args := []string{"generate", "--payload", input.Payload, "--output", input.Output}

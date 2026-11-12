@@ -11,11 +11,9 @@ import (
 )
 
 type SidecarInjectInput struct {
-	Action    string `json:"action"`
-	Pod       string `json:"pod,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	Pod       string `json:"pod"`
 	Image     string `json:"image,omitempty"`
-	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 type SidecarInjectTool struct {
@@ -36,29 +34,20 @@ func (t *SidecarInjectTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
-				"type": "string",
-				"enum": ["inject", "remove", "list"],
-				"description": "Sidecar action"
-			},
 			"pod": {
 				"type": "string",
-				"description": "Target pod name"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Target pod namespace"
+				"description": "Target pod name (required)"
 			},
 			"image": {
 				"type": "string",
-				"description": "Container image for sidecar"
+				"description": "Container image for the injected sidecar"
 			},
-			"name": {
+			"namespace": {
 				"type": "string",
-				"description": "Name for injected sidecar container"
+				"description": "Target pod namespace (default: default)"
 			}
 		},
-		"required": ["action"]
+		"required": ["pod"]
 	}`)
 }
 
@@ -68,6 +57,9 @@ func (t *SidecarInjectTool) Execute(ctx context.Context, params json.RawMessage)
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
+	if input.Pod == "" {
+		return errorResult("pod is required"), nil
+	}
 	if err := validateSafeString(input.Pod, "pod"); err != nil {
 		return errorResult(err.Error()), nil
 	}
@@ -77,22 +69,13 @@ func (t *SidecarInjectTool) Execute(ctx context.Context, params json.RawMessage)
 	if err := validateSafeString(input.Image, "image"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Name, "name"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 
-	args := []string{"sidecar-inject", "--action", input.Action}
-	if input.Pod != "" {
-		args = append(args, "--pod", input.Pod)
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
-	}
+	args := []string{"sidecar-inject", "--pod", input.Pod}
 	if input.Image != "" {
 		args = append(args, "--image", input.Image)
 	}
-	if input.Name != "" {
-		args = append(args, "--name", input.Name)
+	if input.Namespace != "" {
+		args = append(args, "--namespace", input.Namespace)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -106,7 +89,7 @@ func (t *SidecarInjectTool) Execute(ctx context.Context, params json.RawMessage)
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Sidecar Inject: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Sidecar Inject\n\n")
 	if output == "" {
 		sb.WriteString("Operation completed.\n")
 	} else {

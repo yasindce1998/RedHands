@@ -116,7 +116,7 @@ The Docker image includes a subset of supported security tools (see docs/depende
 | `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offense |
 | `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI firmware security |
 | `telecom` | staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge | Telecom security research (eBPF, Linux only) |
-| `aegis` | aegis-shadow-defense | Linux eBPF research (Aegis-Shadow) |
+| `aegis` | aegis-shadow-defense, aegis-shadow-offense | Linux eBPF research (Aegis-Shadow) |
 | `recon` | recon+web toolsets (subfinder, amass, dig, waybackurls, gau, arjun, httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
 | `all` | Everything above combined | Full offensive toolkit |
 

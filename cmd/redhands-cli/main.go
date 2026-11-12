@@ -151,6 +151,18 @@ func run(ctx context.Context, args []string, out io.Writer, getenv func(string) 
 			return fmt.Errorf("tool reported failure")
 		}
 	}
+	if method == mcp.MethodCampaignRun || method == mcp.MethodCampaignResume {
+		var campaignResult struct {
+			Success bool   `json:"success"`
+			Status  string `json:"status"`
+		}
+		if err := json.Unmarshal(result, &campaignResult); err != nil {
+			return fmt.Errorf("invalid campaign result: %w", err)
+		}
+		if !campaignResult.Success {
+			return fmt.Errorf("campaign %s", campaignResult.Status)
+		}
+	}
 	return nil
 }
 

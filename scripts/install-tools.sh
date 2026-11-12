@@ -51,7 +51,8 @@ Profiles:
   recon      Reconnaissance only (subfinder, amass, dns, wayback, gau, arjun)
   minimal    Just the essentials (nmap, nuclei, httpx, subfinder)
 
-Note: Sliver is not installed by any profile; install sliver-client manually from a
+Note: Sliver and Metasploit are not installed by any profile; install sliver-client
+and metasploit-framework (msfconsole/msfvenom) manually from a
 trusted release if you need the sliver toolset.
 
 Examples:

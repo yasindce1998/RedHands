@@ -35,10 +35,10 @@ A comprehensive reference for all scenarios, workflows, and configurations suppo
 
 ## Overview
 
-RedHands is an MCP (Model Context Protocol) server that exposes 262 registered offensive security tools across 30 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
+RedHands is an MCP (Model Context Protocol) server that exposes 269 registered offensive security tools across 31 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
 
 **Key Features:**
-- 262 registered tools across 30 specialized toolsets (255 on a default startup; credstore and GoPhish tools are env-gated)
+- 269 registered tools across 31 specialized toolsets (262 on a default startup; credstore and GoPhish tools are env-gated)
 - Zero external Go dependencies (stdlib only)
 - Three transport modes: stdio, SSE, WebSocket
 - Built-in authentication (API key, mTLS)
@@ -256,14 +256,15 @@ REDHANDS_TOOLSETS=nmap,recon,web ./redhands
 | `certipy` | 6 | AD Certificate Services |
 | `tshark` | 5 | Packet Analysis |
 | `kubedagger` | 69 | Kubernetes Offense |
-| `barzakh` | 22 | UEFI Firmware Security |
+| `barzakh` | 24 | UEFI Firmware Security |
 | `telecom` | 24 | Telecom/Baseband Security (StaticZero) |
 | `aegis` | 13 | Linux eBPF Research (Aegis-Shadow) |
+| `msf` | 5 | Metasploit Framework |
 
 The table shows the core assessment toolsets; the registry also gates
 `bloodhound`, `responder`, `evilwinrm`, `coercion`, `phishing`, `wireless`,
 `mobile`, `cloud`, `targetdb`, `intelligence`, `operations`, and `reporting`
-(30 toolsets total).
+(31 toolsets total).
 
 ---
 

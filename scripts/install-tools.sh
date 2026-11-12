@@ -88,8 +88,8 @@ TOOLS_CRACK="hashcat john"
 TOOLS_CME="crackmapexec"
 TOOLS_CERTIPY="certipy"
 TOOLS_TSHARK="tshark"
-TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator"
-TOOLS_BARZAKH="barzakh-adversary barzakh-scanner"
+TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator kubedagger-server"
+TOOLS_BARZAKH="barzakh-adversary barzakh-scanner barzakh-server"
 
 get_profile_tools() {
     case "$1" in

@@ -40,36 +40,36 @@
       "windows-amd64": ["https://github.com/nicocha30/ligolo-ng/releases/download/v0.8.3/ligolo-ng_proxy_0.8.3_windows_amd64.zip", "8a8af6827dd4bc579be2bb0207697a3482bcb2d6e9d73b7d30cc2d64f113c185"]
     },
     "kubedagger-client": {
-      "linux-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-client-linux-amd64", "c97b6a64802520194fc4a5591184b96d2a44dac86a3f888ab714bc3a32e96fb5"],
-      "linux-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-client-linux-arm64", "01ea286913da5dc8db7a3efe47c64351d64d4a1217e7ca938fd2e1be0776d791"]
+      "linux-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-client-linux-amd64", "8fe4a13dbee6c65a9da0e0e310ce48c6ab37da969d1a39644502f2fc9369bd18"],
+      "linux-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-client-linux-arm64", "f7a2c5cd7d44d0026086338f87af605bba7dc03aeda49544d1e082585fec40cf"]
     },
     "kubedagger-operator": {
-      "linux-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-linux-amd64", "b0adbd893510cb0bd0ce1c2cbcf0d73da76a6162206d2cf03fd65e1cf584f662"],
-      "linux-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-linux-arm64", "a70bc3d309b11d02d8c30e2fa8aaced830a83b565aaf7533c2d4e5301dfe9d5c"],
-      "darwin-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-darwin-amd64", "80ed8588c2453dfa2d2f9721b4cde80c861bafceac1d9c199a2525a06ba1a12b"],
-      "darwin-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-darwin-arm64", "9d959c59c7008a70825d69c84996ef5436ade60401cc26ddf11fef27d13deedf"],
-      "windows-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-operator-windows-amd64.exe", "353d0c6c08d72ad4580e4d7133b3541646582eb2fd19e1218ba545efc0af7ef4"]
+      "linux-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-operator-linux-amd64", "a46fe97bc47eee3eeb7459a607ced5efa8f26846ddedc786ec072bddf3c9ec50"],
+      "linux-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-operator-linux-arm64", "82b08a34736f6ab10feb6c867fec909a3c3fefea7986f4da04125c0bd8269bf6"],
+      "darwin-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-operator-darwin-amd64", "74f8efacc8232a70ec33324922f6c6abe2aaa74ec6b99c680443c9a3bce4051a"],
+      "darwin-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-operator-darwin-arm64", "5f5a154432a7e3ef04299920a4fbd01cc1441babda6b0deee7caa385587602ca"],
+      "windows-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-operator-windows-amd64.exe", "bfa606b259e63b9415940ec14dd8f105c92977a40c4535ab27311256e4b3b245"]
     },
     "kubedagger-server": {
-      "linux-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-server-linux-amd64", "dad511a1a922db7666a57898e60e2585af992349333fc8b884656ee835ba5843"],
-      "linux-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-server-linux-arm64", "2d87ab7b39c12034f5e4b1584b6bf0bd3d82d69c409b67f79a4cfdcb4ce89a6e"],
-      "darwin-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-server-darwin-amd64", "8955137b17f3be356e2a705d27f7ba32d2ef65ca15dc62aac6d56623477ad3d2"],
-      "darwin-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-server-darwin-arm64", "9c59ea4522a312abdd71d7a623b91382e445863fc2eb99144c09a11683a41f01"],
-      "windows-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.1.0/kubedagger-server-windows-amd64.exe", "9d9ee593d95dbf552441b9505d618b2eed769cf90ae0d892f41a4d09aa1d8ef9"]
+      "linux-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-server-linux-amd64", "6b48e25f2a7100a55d9b724d20eeffffe75e0150fbf94d4f48c1f72335fea524"],
+      "linux-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-server-linux-arm64", "4f5c64aece857cb34c99ca9fd4657cdf33d5774e9dc5815ade41db341a6689b9"],
+      "darwin-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-server-darwin-amd64", "3aebaeda5a954f15510ed071470e1f3fc69c798bdb8a17887a6cd596a4677dad"],
+      "darwin-arm64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-server-darwin-arm64", "3ece55f03adfe7667bd242c7c5d27139f85a9f58a883e9c30768e55d46aacaa7"],
+      "windows-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-server-windows-amd64.exe", "241a16e7066bd27b420d23783311cb1ce8f6e6d95a1b0faef30f54825f8b1a84"]
     },
     "barzakh-adversary": {
-      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-linux-x86_64", "057771a913648bcb21198a331fb5bb357cc17491bc30502a7881efec6775016b"],
-      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-linux-aarch64", "c8c52ed5c0e4ffb5ee2e50b066a96a431452c517d85b03ccbfdd7f62c1bafb5e"],
-      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-macos-x86_64", "5a707358d47603997f101b5f8c0bc97e9589b2a06d7946e2311c68d50fa82b7b"],
-      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-macos-aarch64", "42ee0da3666f81cc8cfc38fffb626fa7b764c7af77bb927422b130c51f605eef"],
-      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-adversary-windows-x86_64.exe", "17c05cf87b73c1c6ff836b90a94b27e5b550f812feeca009b01c67cc9cc70ad8"]
+      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-x86_64-unknown-linux-gnu", "19d6582f8d18db7263080d2b3e084a08dc81ced8bdbcda078ac61a6effd78b37"],
+      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-aarch64-unknown-linux-gnu", "34201ed5929b8882d7ae3c865426af09b1216945060414bfc4dea2a1b0c5203f"],
+      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-x86_64-apple-darwin", "a711c9be5975185974f4dabf610507965e7a6e92b7b80f057cfcd496141ec93a"],
+      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-aarch64-apple-darwin", "9e92b3eb8520dfd90ae38273a6c6b74c2ebda8d331c1c1dc6c4edf87684049e5"],
+      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-x86_64-pc-windows-msvc.exe", "ca032b6990814315c82c8ee15c41d59158cc0a2264f4b97f86a207feb2217599"]
     },
     "barzakh-scanner": {
-      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-linux-x86_64", "fb9d80a3925351fd4916da0d828001edec9dd0d8cfa8b34f404c44398803af99"],
-      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-linux-aarch64", "3b3cbfa4111c6826f7b55eb5f4ddd18293bc26879954e35041d4d8948568b92e"],
-      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-macos-x86_64", "9910cf1c28dd226d27659658c6ce60f6648184a263bd6d5a2a0f742b991abff1"],
-      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-macos-aarch64", "dff6d76b73660a217ca9ade4685934660e50b023298a644d1c4f459ea845c2f3"],
-      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.1.1/barzakh-scanner-windows-x86_64.exe", "9bc7fe4fcf81dee8bd01586bc217f85795e7cdaf16f97ff10aed758db418b4bd"]
+      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-x86_64-unknown-linux-gnu", "fddd77c12c74da6dc71944483a4506897f1d0b1c8c8b045d64eae0d390d6c84a"],
+      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-aarch64-unknown-linux-gnu", "38598e9cf7e1f9cf077515cb20c2aa4e82ed6a7b0656ad9885014da1e98e6413"],
+      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-x86_64-apple-darwin", "35bcc80115b7c34b4445b20b3bbee6e0092b1c30dbe777ce93d3cab4e2c11512"],
+      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-aarch64-apple-darwin", "527f1f6a53d44a6b7059a6df9240cb3f722a23b65c56b8ee2f9c67b9d05a202e"],
+      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-x86_64-pc-windows-msvc.exe", "5e954bed167fd71c16628a7f73a74671a2664fa716987115e69345d4660395fd"]
     },
     "barzakh-server": {
       "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-server-x86_64-unknown-linux-gnu", "4ce75af62bf7330cfae31353c29ec67671fee6f092f452f29155d5e4376b0107"],

@@ -14,7 +14,7 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 		"hashcat_show", "john_show", "john_formats", "tshark_read", "tshark_stats", "tshark_extract", "tshark_follow",
 		// Barzakh: pure listings, corpus analysis, and intel queries.
 		"barzakh_detectors", "barzakh_validate", "barzakh_intel",
-		"barzakh_history", "barzakh_manifest_validate",
+		"barzakh_history", "barzakh_manifest_validate", "barzakh_info",
 		// Aegis-Shadow: read-only alert analysis, catalog, and config reads.
 		"aegis_alerts_parse", "aegis_alerts_tail", "aegis_modules_list", "aegis_defense_config_read",
 		// StaticZero: read-only preflight and defense-engine queries.
@@ -81,5 +81,16 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 	// Driving a running rootkit over its C2 channel (hide/unhide/exfil/
 	// kill-switch) touches a live target; approval-gated.
 	policies["aegis_c2_send"] = mcp.ToolPolicy{NetworkAccess: true, RequiresPrivileges: true}
+	// Metasploit: reference listings and module docs are read-only.
+	for _, name := range []string{"msf_payload_list", "msf_module_info"} {
+		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true}
+	}
+	// Metasploit module execution and operator resource files launch
+	// exploits against targets; approval-gated, never auto-approved.
+	for _, name := range []string{"msf_module_run", "msf_resource_run"} {
+		policies[name] = mcp.ToolPolicy{NetworkAccess: true}
+	}
+	// Barzakh report generation always writes a report file.
+	policies["barzakh_report"] = mcp.ToolPolicy{}
 	return policies
 }

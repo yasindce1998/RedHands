@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-262-00fff2?style=flat-square" alt="262 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-269-00fff2?style=flat-square" alt="269 Tools"></a>
 </p>
 
 <p align="center">
@@ -155,7 +155,7 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 
 ## Available Tools
 
-262 tools are registered across 30 toolsets. A default startup serves 255 of
+269 tools are registered across 31 toolsets. A default startup serves 262 of
 them: the two credstore tools additionally require `REDHANDS_CREDSTORE_KEY`,
 and the five GoPhish phishing tools additionally require `REDHANDS_GOPHISH_*`
 environment variables.
@@ -328,6 +328,8 @@ environment variables.
 | `barzakh_kb` | Manage the firmware knowledge base (add/list/search/export/import) |
 | `barzakh_ml` | Train/evaluate the ML anomaly models |
 | `barzakh_manifest_validate` | Validate detectors against a labeled corpus manifest with train/validation/test splits |
+| `barzakh_info` | Scanner build/version, detector, architecture, and format metadata |
+| `barzakh_report` | Generate report files (json/html/markdown/sarif/csv/ecs/cef/leef) from scan results |
 
 ### Telecom (toolset: `telecom`)
 
@@ -406,6 +408,24 @@ offense rootkit loader can each be started as a managed background daemon
 | `aegis_offense_stop` | Stop a managed offense loader daemon |
 | `aegis_offense_status` | Status of managed offense loader daemons |
 | `aegis_c2_send` | ☠️ Send a command to a running rootkit over its encrypted C2 channel (hide/unhide pid, obfuscate file, exfil, kill-switch; fire-and-forget; requires the `aegis-c2` CLI from Aegis-Shadow ≥ v0.2.0) |
+
+### Metasploit (toolset: `msf`)
+
+Wraps Metasploit Framework (msfvenom + msfconsole). Console tools generate
+validated `.rc` resource files from structured parameters — never
+`msfconsole -x` — so console-command injection is structurally impossible.
+Metasploit is not checksum-pinnable (no stable release binaries); install it
+manually (`apt install metasploit-framework` on Kali/Parrot) and the allowlist
+discovers `msfconsole`/`msfvenom` on PATH. msfconsole startup takes 10–60s;
+runs are bounded by `REDHANDS_TIMEOUT`.
+
+| Tool | Description |
+|------|-------------|
+| `msf_payload_generate` | ⚠️ Generate Metasploit payloads via msfvenom (formats, encoders, platforms; reports SHA-256 of the artifact; approval-gated) |
+| `msf_payload_list` | List payloads, encoders, formats, platforms, or architectures |
+| `msf_module_info` | Show module documentation (exploit/auxiliary/post/payload/encoder/nop) |
+| `msf_module_run` | ⚠️ Run a module against targets (options map, run/exploit/exploit -j; scope-checked by the engagement middleware; approval-gated) |
+| `msf_resource_run` | ⚠️ Run an operator-authored `.rc` resource file (arbitrary console commands; approval-gated) |
 
 ### System
 

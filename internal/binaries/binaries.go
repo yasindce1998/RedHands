@@ -52,6 +52,7 @@ var All = []string{
 	"aegis-c2",
 	"bloodhound-python", "responder", "evil-winrm", "python3",
 	"airmon-ng", "airodump-ng", "aircrack-ng", "bettercap",
+	"msfconsole", "msfvenom",
 	"frida", "objection", "apktool", "adb",
 	"scout", "prowler", "pacu", "roadtx",
 	"cutycapt",

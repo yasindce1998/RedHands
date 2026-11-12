@@ -34,6 +34,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/intelligence"
 	"github.com/yasindce1998/redhands/tools/kubedagger"
 	"github.com/yasindce1998/redhands/tools/mobile"
+	"github.com/yasindce1998/redhands/tools/msf"
 	"github.com/yasindce1998/redhands/tools/operations"
 	"github.com/yasindce1998/redhands/tools/recon/amass"
 	"github.com/yasindce1998/redhands/tools/recon/arjun"
@@ -275,6 +276,8 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(barzakh.NewKb(d.Exec))
 		srv.RegisterTool(barzakh.NewMl(d.Exec))
 		srv.RegisterTool(barzakh.NewManifestValidate(d.Exec))
+		srv.RegisterTool(barzakh.NewInfo(d.Exec))
+		srv.RegisterTool(barzakh.NewReport(d.Exec))
 		if d.ProcMgr != nil {
 			srv.RegisterTool(barzakh.NewServerStart(d.ProcMgr))
 			srv.RegisterTool(barzakh.NewServerStop(d.ProcMgr))
@@ -309,6 +312,14 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			srv.RegisterTool(telecom.NewCorrelatorStop(d.ProcMgr))
 			srv.RegisterTool(telecom.NewCorrelatorStatus(d.ProcMgr))
 		}
+	}
+
+	if d.Cfg.ToolsetEnabled("msf") {
+		srv.RegisterTool(msf.NewPayloadGenerate(d.Exec))
+		srv.RegisterTool(msf.NewPayloadList(d.Exec))
+		srv.RegisterTool(msf.NewModuleInfo(d.Exec))
+		srv.RegisterTool(msf.NewModuleRun(d.Exec))
+		srv.RegisterTool(msf.NewResourceRun(d.Exec))
 	}
 
 	if d.Cfg.ToolsetEnabled("aegis") {

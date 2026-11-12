@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-252-00fff2?style=flat-square" alt="252 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-261-00fff2?style=flat-square" alt="261 Tools"></a>
 </p>
 
 <p align="center">
@@ -155,7 +155,7 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 
 ## Available Tools
 
-252 tools are registered across 30 toolsets. A default startup serves 245 of
+261 tools are registered across 30 toolsets. A default startup serves 254 of
 them: the two credstore tools additionally require `REDHANDS_CREDSTORE_KEY`,
 and the five GoPhish phishing tools additionally require `REDHANDS_GOPHISH_*`
 environment variables.
@@ -349,7 +349,13 @@ baseband firmware). Authorized lab use only.
 | `telecom_firmware_extract` | Extract firmware components with manifest |
 | `telecom_firmware_diff` | Diff two firmware images |
 | `telecom_firmware_nv_dump` | Extract NV items (carrier/band/security config) |
+| `telecom_firmware_patch` | ⚠️ Patch baseband firmware images (regulated; device-destructive if flashed; approval-gated) |
+| `telecom_firmware_monitor` | Monitor a modem device protocol stream (diag/at/qmi/mbim; bounded by the execution timeout) |
 | `telecom_sdr_scan` | Receive-only LTE cell scan via SDR |
+| `telecom_sdr_capture` | Receive-only IQ capture via SDR |
+| `telecom_sdr_inject` | ⚠️ RF transmission (FCC/CEPT licensing; shielded/cabled lab use only; approval-gated) |
+| `telecom_sdr_relay` | ⚠️ RF receive-and-retransmit relay (same RF warnings) |
+| `telecom_sdr_selftest` | ⚠️ SDR TX pipeline self-test (same RF warnings) |
 | `telecom_threats` | Correlated threats from a running defense engine |
 | `telecom_alerts` | Raw alerts from a running defense engine |
 | `telecom_stats` | Engine runtime statistics |
@@ -359,6 +365,9 @@ baseband firmware). Authorized lab use only.
 | `telecom_offense_start` | ⚠️ Launch the StaticZero telecom interception research loader as a managed daemon (F89–F172; regulated; lab use only) |
 | `telecom_offense_stop` | Stop a managed offense loader daemon |
 | `telecom_offense_status` | Status of managed offense loader daemons |
+| `telecom_correlator_start` | Start the protocol correlator as a managed daemon (JSON-lines event ingest on loopback) |
+| `telecom_correlator_stop` | Stop a managed correlator daemon |
+| `telecom_correlator_status` | Status of managed correlator daemons |
 
 StaticZero binaries ship as checksum-verified release assets (v0.5.0, Linux
 only, eBPF embedded) and install via the `telecom` profile:

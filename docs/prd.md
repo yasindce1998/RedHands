@@ -4,7 +4,7 @@
 
 RedHands is an MCP (Model Context Protocol) server that exposes offensive security tools to AI agents. It follows the same architecture patterns used by GitHub's MCP server and Atlassian's MCP server — a single-binary Go server with zero external dependencies, multi-transport support (stdio/SSE/WebSocket), tool chaining, structured output parsing, report generation, and a JSON plugin system.
 
-**Current state:** v0.2.0 — 125 tools across 15 toolsets, multi-transport (stdio/SSE/WebSocket), authentication (API key/mTLS), workflow engine, structured parsers, report generation, plugin system, Docker image with all tools pre-installed.
+**Current state:** v0.2.0 — 216 tools across 30 toolsets, multi-transport (stdio/SSE/WebSocket), authentication (API key/mTLS), sequential workflow engine plus the multi-stage campaign engine (conditions, parallelism, goto recovery, checkpoint/resume, playbooks), structured parsers, report generation, plugin system, Docker image with all tools pre-installed.
 
 ---
 

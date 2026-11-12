@@ -33,10 +33,10 @@ A comprehensive reference for all scenarios, workflows, and configurations suppo
 
 ## Overview
 
-RedHands is an MCP (Model Context Protocol) server that exposes 125 offensive security tools across 15 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
+RedHands is an MCP (Model Context Protocol) server that exposes 216 offensive security tools across 30 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
 
 **Key Features:**
-- 125 tools across 15 specialized toolsets
+- 216 tools across 30 specialized toolsets
 - Zero external Go dependencies (stdlib only)
 - Three transport modes: stdio, SSE, WebSocket
 - Built-in authentication (API key, mTLS)
@@ -248,7 +248,15 @@ REDHANDS_TOOLSETS=nmap,recon,web ./redhands
 | `crackmapexec` | 5 | Network Exploitation |
 | `certipy` | 6 | AD Certificate Services |
 | `tshark` | 5 | Packet Analysis |
-| `kubedagger` | 57 | Kubernetes Offense |
+| `kubedagger` | 66 | Kubernetes Offense |
+| `barzakh` | 10 | UEFI Firmware Security |
+| `telecom` | 9 | Telecom/Baseband Security (StaticZero) |
+| `aegis` | 6 | Linux eBPF Research (Aegis-Shadow) |
+
+The table shows the core assessment toolsets; the registry also gates
+`bloodhound`, `responder`, `evilwinrm`, `coercion`, `phishing`, `wireless`,
+`mobile`, `cloud`, `targetdb`, `intelligence`, `operations`, and `reporting`
+(30 toolsets total).
 
 ---
 
@@ -898,6 +906,154 @@ The workflow engine allows chaining multiple tools together with variable substi
     { "tool": "hashcat_crack", "params": { "hash_file": "$prev.text", "hash_type": "13100", "wordlist": "/usr/share/wordlists/rockyou.txt" } }
   ]
 }
+```
+
+---
+
+## Campaign Framework (Multi-Stage Attacks)
+
+Campaigns are the multi-stage evolution of workflows: conditional steps, parallel
+fan-out, failure recovery with `goto`, per-step checkpointing, resume after
+interruption, cancellation, and reusable playbook templates. Every step runs
+through the same approval/scope/rate-limit middleware as a direct `tools/call`.
+
+### MCP Methods
+
+| Method | Description |
+|--------|-------------|
+| `campaign/run` | Execute a campaign (inline steps or a playbook template) |
+| `campaign/status` | Get persisted state for a workflow ID |
+| `campaign/list` | List all saved campaigns |
+| `campaign/resume` | Resume a paused or cancelled campaign |
+| `campaign/cancel` | Cancel a running campaign |
+| `campaign/templates` | List playbook templates |
+| `campaign/template/get` | Fetch a playbook definition |
+| `campaign/template/save` | Validate and save a new playbook |
+
+### Point-and-Shoot: Playbooks
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "campaign/run",
+  "id": 1,
+  "params": {
+    "template": "recon-to-vuln",
+    "vars": { "domain": "target.com", "severity": "critical,high" }
+  }
+}
+```
+
+Shipped playbooks (in `./playbooks/`): `recon-to-vuln`, `web-assessment`,
+`k8s-recon-chain`, `ad-kerberoast-chain`, `firmware-bootkit-assessment`.
+
+### Conditional Branching
+
+```json
+{
+  "steps": [
+    { "id": "scan", "tool": "nmap_port_scan", "params": { "target": "10.0.0.1" } },
+    { "id": "exploit", "tool": "sqlmap_scan", "params": { "url": "http://10.0.0.1/?id=1" },
+      "condition": { "step": "scan", "op": "contains", "value": "80/open" } },
+    { "id": "fallback", "tool": "nikto_scan", "params": { "target": "http://10.0.0.1" },
+      "condition": { "step": "scan", "op": "not_contains", "value": "80/open" } }
+  ]
+}
+```
+
+JSON-aware conditions work on structured tool output (dot paths, numeric array
+indices): `{"step": "scan", "op": "json_gt", "path": "hosts.0.ports.0", "value": "0"}`.
+
+### Parallel Fan-Out
+
+```json
+{
+  "steps": [
+    { "id": "portscan", "tool": "nmap_port_scan", "params": { "target": "10.0.0.1" } },
+    { "parallel": [
+        { "id": "nikto", "tool": "nikto_scan", "params": { "target": "http://10.0.0.1" } },
+        { "id": "tls", "tool": "testssl_scan", "params": { "target": "10.0.0.1:443" } },
+        { "id": "whatweb", "tool": "whatweb_fingerprint", "params": { "target": "http://10.0.0.1" } }
+      ],
+      "on_fail": "continue" }
+  ]
+}
+```
+
+### Failure Recovery with goto
+
+```json
+{
+  "steps": [
+    { "id": "attempt", "tool": "cme_smb", "params": { "target": "10.0.0.5", "action": "enum" },
+      "on_fail": "goto:attempt" },
+    { "id": "next", "tool": "impacket_secretsdump", "params": { "target": "10.0.0.5" } }
+  ]
+}
+```
+
+`on_fail` accepts `stop` (default), `continue`, or `goto:<step_id>` (bounded to 64
+recovery jumps per campaign to prevent loops).
+
+### Structured Dataflow Between Steps
+
+Extract fields from prior JSON output instead of passing whole text blobs:
+
+```
+$prev.text                      → full text of previous step
+$prev.json.hosts.0.ip           → first host IP from previous JSON output
+$step[2].json.findings          → whole findings array from step 2
+${portscan.json.hosts.0.ip}     → reference by step ID
+```
+
+Whole-string placeholders preserve the extracted value's JSON type (numbers,
+arrays, objects); embedded placeholders substitute as text.
+
+### Resume After Interruption
+
+Campaigns checkpoint after every step. If a campaign is cancelled, times out, or
+the server restarts mid-run:
+
+```json
+{ "jsonrpc": "2.0", "method": "campaign/resume", "id": 1, "params": { "workflow_id": "abc123def4567890" } }
+```
+
+The interrupted step re-runs from its checkpoint.
+
+### Multi-Stage Examples by Domain
+
+#### Kubernetes Multi-Stage (KubeDagger)
+
+```json
+{
+  "template": "k8s-recon-chain",
+  "vars": { "namespace": "kube-system" }
+}
+```
+
+Expands to: cluster discovery → service-account token theft → RBAC abuse
+enumeration → MITRE ATT&CK export.
+
+#### Firmware Purple-Team (Barzakh)
+
+```json
+{
+  "template": "firmware-bootkit-assessment",
+  "vars": { "firmware": "/path/to/image.bin" }
+}
+```
+
+Expands to: corpus generation → detector listing → 138-detector scan (detection =
+finding, not error) → multi-stage scenario chains. Pair with `barzakh_scenario`
+runs to validate detection coverage against ATT&CK-mapped attack chains.
+
+#### Telecom Defense Monitoring (StaticZero)
+
+```
+Step 1 (one-shot): telecom_doctor — verify the defense engine can run
+Step 2 (external): run `staticzero-defense --json-stdout` in your lab
+Step 3: telecom_threats / telecom_alerts — query correlated threats
+Step 4: aegis_alerts_parse-style filtering or report generation
 ```
 
 ---

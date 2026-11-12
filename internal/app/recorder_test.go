@@ -89,8 +89,16 @@ func TestCampaignRecorderMapsItemsToTargetDB(t *testing.T) {
 	if len(hosts) != 2 {
 		t.Fatalf("expected 2 hosts, got %d", len(hosts))
 	}
-	if hosts[0].IP != "10.0.0.1" || hosts[0].Hostname != "web01" || hosts[0].OS != "Linux 5.x" {
-		t.Errorf("host mapping wrong: %+v", hosts[0])
+	// ListHosts order is map-iteration dependent; look up by IP instead.
+	web, ok := db.GetHost("10.0.0.1")
+	if !ok {
+		t.Fatal("host 10.0.0.1 not recorded")
+	}
+	if web.Hostname != "web01" || web.OS != "Linux 5.x" {
+		t.Errorf("host mapping wrong: %+v", web)
+	}
+	if _, ok := db.GetHost("10.0.0.2"); !ok {
+		t.Fatal("host 10.0.0.2 not recorded")
 	}
 	services := db.ListServices("10.0.0.1")
 	if len(services) != 1 || services[0].Port != 443 || services[0].Name != "https" {

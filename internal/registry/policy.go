@@ -45,5 +45,17 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 	for _, name := range []string{"telecom_threats", "telecom_alerts", "telecom_stats"} {
 		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true, NetworkAccess: true}
 	}
+	// Privileged eBPF defense daemons: long-running, root-required.
+	for _, name := range []string{"aegis_defense_start", "telecom_defense_start"} {
+		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true}
+	}
+	// Stopping a daemon mutates operator state but is not target-facing.
+	for _, name := range []string{"aegis_defense_stop", "telecom_defense_stop"} {
+		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true, RetrySafe: true}
+	}
+	// Status queries over managed daemons are read-only.
+	for _, name := range []string{"aegis_defense_status", "telecom_defense_status"} {
+		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true, RequiresPrivileges: true}
+	}
 	return policies
 }

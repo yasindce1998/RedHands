@@ -60,6 +60,32 @@ func validateInputFile(path, field string) error {
 	return nil
 }
 
+// validateOutputDir enforces a non-empty metachar-free directory path and
+// ensures it exists, creating it (and parents) with 0700 when missing. It is
+// used for the defense daemon output directory.
+func validateOutputDir(dir, field string) error {
+	if dir == "" {
+		return fmt.Errorf("%s is required", field)
+	}
+	if err := validateSafeString(dir, field); err != nil {
+		return err
+	}
+	info, err := os.Stat(dir)
+	if err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("%s is a file, not a directory: %s", field, dir)
+		}
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		return fmt.Errorf("cannot access %s %s: %v", field, dir, err)
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("cannot create %s %s: %v", field, dir, err)
+	}
+	return nil
+}
+
 // validChipsets mirrors the exact chipset strings accepted by
 // modem-firmware's FirmwareAnalyzer::new (tools/src/modem_firmware.rs).
 var validChipsets = map[string]bool{

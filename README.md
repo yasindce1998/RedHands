@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-216-00fff2?style=flat-square" alt="216 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-225-00fff2?style=flat-square" alt="225 Tools"></a>
 </p>
 
 <p align="center">
@@ -323,6 +323,9 @@ baseband firmware). Authorized lab use only.
 | `telecom_threats` | Correlated threats from a running defense engine |
 | `telecom_alerts` | Raw alerts from a running defense engine |
 | `telecom_stats` | Engine runtime statistics |
+| `telecom_defense_start` | Start the StaticZero defense engine as a managed background daemon (JSON alerts stream to a file) |
+| `telecom_defense_stop` | Stop a managed defense engine daemon |
+| `telecom_defense_status` | Status of managed defense engine daemons |
 
 StaticZero binaries (`staticzero-defense`, `modem-firmware`, `sdr-bridge`) are
 built from the Rust workspace with `cargo xtask build-ebpf` and must be on PATH;
@@ -331,7 +334,10 @@ they are not bundled with the install profiles.
 ### Aegis-Shadow (toolset: `aegis`)
 
 Wraps Aegis-Shadow, a Linux eBPF security research platform (educational, VM-only).
-These tools never execute the offense rootkit binary — analysis and planning only.
+The analysis tools never execute the offense rootkit binary — `aegis_offense_plan`
+renders the manual lab command with risk notes instead. The defense engine can be
+started as a managed background daemon whose NDJSON alerts stream to a file that
+`aegis_alerts_parse` reads.
 
 | Tool | Description |
 |------|-------------|
@@ -341,6 +347,9 @@ These tools never execute the offense rootkit binary — analysis and planning o
 | `aegis_defense_config_read` | Read/validate a defense engine hot-reload config |
 | `aegis_defense_config_write` | Write a defense engine config (threshold, window) |
 | `aegis_offense_plan` | Dry-run planner: validate offense feature flags and render the exact manual command line with risk notes |
+| `aegis_defense_start` | Start the Aegis-Shadow defense engine as a managed background daemon (NDJSON alerts stream to a file; requires root) |
+| `aegis_defense_stop` | Stop a managed defense engine daemon |
+| `aegis_defense_status` | Status of managed defense engine daemons |
 
 ### System
 

@@ -13,6 +13,10 @@ var aliases = map[string]string{
 	"impacket-getTGT":      "getTGT.py",
 	"impacket-getST":       "getST.py",
 	"impacket-ntlmrelayx":  "ntlmrelayx.py",
+	// Aegis-Shadow binaries may be built under either name; prefer the
+	// collision-safe one and fall back to the short historical name.
+	"aegis-shadow-defense": "defense",
+	"aegis-shadow-offense": "offense",
 }
 
 func Resolve(name string) (string, error) {
@@ -43,6 +47,7 @@ var All = []string{
 	"tshark",
 	"barzakh-adversary", "barzakh-scanner",
 	"staticzero-defense", "modem-firmware", "sdr-bridge",
+	"aegis-shadow-defense", "aegis-shadow-offense",
 	"bloodhound-python", "responder", "evil-winrm", "python3",
 	"airmon-ng", "airodump-ng", "aircrack-ng", "bettercap",
 	"frida", "objection", "apktool", "adb",

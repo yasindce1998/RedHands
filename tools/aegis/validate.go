@@ -1,12 +1,15 @@
 // Package aegis wraps Aegis-Shadow (Linux eBPF security research platform,
 // educational/VM-only) for authorized lab use only.
 //
-// The tools in this package deliberately NEVER execute the Aegis-Shadow
-// defense/offense binaries. They operate purely on files produced by or
-// consumed by those binaries (NDJSON alert logs, hot-reload runtime config)
+// Most tools in this package operate purely on files produced by or consumed
+// by the Aegis-Shadow binaries (NDJSON alert logs, hot-reload runtime config)
 // plus static reference data transcribed from the Aegis-Shadow sources.
-// This keeps the eBPF rootkit binaries out of MCP-executable reach while
-// still supporting alert triage and lab planning workflows.
+// The exception is the defense daemon lifecycle toolset (aegis_defense_start/
+// stop/status), which launches the aegis-shadow-defense daemon through the
+// executor BackgroundManager: the same binary allowlist and shell-metachar
+// argument validation as the regular executor apply, output streams to
+// validated files, and the daemon is killed when the server exits. The
+// offense binary is never executed.
 package aegis
 
 import (
@@ -80,6 +83,32 @@ func validateWritablePath(path, field string) error {
 	}
 	if info, err := os.Stat(path); err == nil && info.IsDir() {
 		return fmt.Errorf("%s is a directory, not a file: %s", field, path)
+	}
+	return nil
+}
+
+// validateOutputDir enforces a non-empty metachar-free directory path and
+// ensures it exists, creating it (and parents) with 0700 when missing. It is
+// used for the defense daemon output directories.
+func validateOutputDir(dir, field string) error {
+	if dir == "" {
+		return fmt.Errorf("%s is required", field)
+	}
+	if err := validateSafeString(dir, field); err != nil {
+		return err
+	}
+	info, err := os.Stat(dir)
+	if err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("%s is a file, not a directory: %s", field, dir)
+		}
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		return fmt.Errorf("cannot access %s %s: %v", field, dir, err)
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("cannot create %s %s: %v", field, dir, err)
 	}
 	return nil
 }

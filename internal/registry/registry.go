@@ -69,6 +69,7 @@ type Deps struct {
 	Loot      *loot.Store
 	CredStore *credstore.Store
 	Evidence  *evidence.Store
+	ProcMgr   *executor.BackgroundManager
 }
 
 func RegisterAll(srv *mcp.Server, d *Deps) {
@@ -272,6 +273,11 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(telecom.NewThreats())
 		srv.RegisterTool(telecom.NewAlerts())
 		srv.RegisterTool(telecom.NewStats())
+		if d.ProcMgr != nil {
+			srv.RegisterTool(telecom.NewDefenseStart(d.ProcMgr))
+			srv.RegisterTool(telecom.NewDefenseStop(d.ProcMgr))
+			srv.RegisterTool(telecom.NewDefenseStatus(d.ProcMgr))
+		}
 	}
 
 	if d.Cfg.ToolsetEnabled("aegis") {
@@ -281,6 +287,11 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(aegis.NewDefenseConfigRead())
 		srv.RegisterTool(aegis.NewDefenseConfigWrite())
 		srv.RegisterTool(aegis.NewOffensePlan())
+		if d.ProcMgr != nil {
+			srv.RegisterTool(aegis.NewDefenseStart(d.ProcMgr))
+			srv.RegisterTool(aegis.NewDefenseStop(d.ProcMgr))
+			srv.RegisterTool(aegis.NewDefenseStatus(d.ProcMgr))
+		}
 	}
 
 	if d.Cfg.ToolsetEnabled("bloodhound") {

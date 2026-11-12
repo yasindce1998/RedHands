@@ -40,6 +40,11 @@ func run() error {
 		AllowedBinaries: binaries.Discover(),
 		MaxOutputBytes:  cfg.MaxOutputBytes,
 	})
+	procMgr := executor.NewBackgroundManager(executor.Config{
+		AllowedBinaries: binaries.Discover(),
+		MaxOutputBytes:  cfg.MaxOutputBytes,
+	})
+	defer procMgr.StopAll()
 
 	auditLogger, err := audit.NewFileLogger(cfg.AuditFile)
 	if err != nil {
@@ -65,6 +70,7 @@ func run() error {
 		Loot:      stores.Loot,
 		CredStore: stores.CredStore,
 		Evidence:  stores.Evidence,
+		ProcMgr:   procMgr,
 	})
 
 	stopPlugins := app.SetupPlugins(srv, &cfg, execr)

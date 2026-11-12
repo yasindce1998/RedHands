@@ -10,10 +10,7 @@ import (
 	"github.com/yasindce1998/redhands/pkg/mcp"
 )
 
-type DockerListInput struct {
-	Namespace string `json:"namespace,omitempty"`
-	All       bool   `json:"all,omitempty"`
-}
+type DockerListInput struct{}
 
 type DockerListTool struct {
 	exec executor.Executor
@@ -32,16 +29,7 @@ func (t *DockerListTool) Description() string {
 func (t *DockerListTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
-		"properties": {
-			"namespace": {
-				"type": "string",
-				"description": "Filter by Kubernetes namespace"
-			},
-			"all": {
-				"type": "boolean",
-				"description": "Show all containers including stopped ones"
-			}
-		}
+		"properties": {}
 	}`)
 }
 
@@ -51,17 +39,7 @@ func (t *DockerListTool) Execute(ctx context.Context, params json.RawMessage) (*
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateNamespace(input.Namespace); err != nil {
-		return errorResult(err.Error()), nil
-	}
-
 	args := []string{"docker", "list"}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
-	}
-	if input.All {
-		args = append(args, "--all")
-	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
 	if err != nil {
@@ -88,11 +66,27 @@ func (t *DockerListTool) Execute(ctx context.Context, params json.RawMessage) (*
 	}, nil
 }
 
+// validateDockerName enforces the docker put/delete --from/--to constraints:
+// max 63 chars and no '#' character (empty allowed only when not required).
+func validateDockerName(s, field string) error {
+	if s == "" {
+		return nil
+	}
+	if len(s) > 63 {
+		return fmt.Errorf("%s too long (max 63 chars)", field)
+	}
+	if strings.Contains(s, "#") {
+		return fmt.Errorf("%s must not contain '#'", field)
+	}
+	return nil
+}
+
 type DockerOverrideInput struct {
-	ContainerID string `json:"container_id"`
-	Image       string `json:"image,omitempty"`
-	Entrypoint  string `json:"entrypoint,omitempty"`
-	Env         string `json:"env,omitempty"`
+	Action   string `json:"action,omitempty"`
+	From     string `json:"from"`
+	To       string `json:"to,omitempty"`
+	Override int    `json:"override,omitempty"`
+	Ping     int    `json:"ping,omitempty"`
 }
 
 type DockerOverrideTool struct {
@@ -106,31 +100,38 @@ func NewDockerOverride(exec executor.Executor) *DockerOverrideTool {
 func (t *DockerOverrideTool) Name() string { return "kubedagger_docker_override" }
 
 func (t *DockerOverrideTool) Description() string {
-	return "Override container configuration at the runtime level using eBPF hooks on containerd/CRI-O. Can modify image references, entrypoints, and environment variables at container creation time."
+	return "Override OCI image references at the container runtime level via 'docker put': swap a source image reference (--from) for a destination one (--to) in container creation, optionally replacing existing mappings (--override=1) or manipulating the ping handler (--ping: 0=nop, 1=crash, 2=run, 3=hide). Action 'delete' removes a mapping via 'docker delete --from'."
 }
 
 func (t *DockerOverrideTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"container_id": {
+			"action": {
 				"type": "string",
-				"description": "Target container ID or name"
+				"enum": ["put", "delete"],
+				"description": "put: create/replace an image override mapping; delete: remove one (default: put)"
 			},
-			"image": {
+			"from": {
 				"type": "string",
-				"description": "Override image reference"
+				"description": "Source image reference to override (required, max 63 chars, no '#')"
 			},
-			"entrypoint": {
+			"to": {
 				"type": "string",
-				"description": "Override entrypoint command"
+				"description": "Replacement image reference (put only, max 63 chars, no '#')"
 			},
-			"env": {
-				"type": "string",
-				"description": "Environment variables to inject (KEY=VALUE format, comma-separated)"
+			"override": {
+				"type": "integer",
+				"enum": [0, 1],
+				"description": "put only: 0=keep existing mapping (nop), 1=replace it (default: 0)"
+			},
+			"ping": {
+				"type": "integer",
+				"enum": [0, 1, 2, 3],
+				"description": "put only: ping handler behavior — 0=nop, 1=crash, 2=run, 3=hide (default: 0)"
 			}
 		},
-		"required": ["container_id"]
+		"required": ["from"]
 	}`)
 }
 
@@ -140,28 +141,47 @@ func (t *DockerOverrideTool) Execute(ctx context.Context, params json.RawMessage
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.ContainerID, "container_id"); err != nil {
+	if input.From == "" {
+		return errorResult("from is required"), nil
+	}
+	if err := validateSafeString(input.From, "from"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Image, "image"); err != nil {
+	if err := validateDockerName(input.From, "from"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Entrypoint, "entrypoint"); err != nil {
+	if err := validateSafeString(input.To, "to"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Env, "env"); err != nil {
+	if err := validateDockerName(input.To, "to"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"docker", "override", "--id", input.ContainerID}
-	if input.Image != "" {
-		args = append(args, "--image", input.Image)
+	action := input.Action
+	if action == "" {
+		action = "put"
 	}
-	if input.Entrypoint != "" {
-		args = append(args, "--entrypoint", input.Entrypoint)
+	switch action {
+	case "put":
+		if input.Override < 0 || input.Override > 1 {
+			return errorResult("override must be 0 or 1"), nil
+		}
+		if input.Ping < 0 || input.Ping > 3 {
+			return errorResult("ping must be 0, 1, 2, or 3"), nil
+		}
+	case "delete":
+		// --from only
+	default:
+		return errorResult("invalid action: must be 'put' or 'delete'"), nil
 	}
-	if input.Env != "" {
-		args = append(args, "--env", input.Env)
+
+	args := []string{"docker", action, "--from", input.From}
+	if action == "put" {
+		if input.To != "" {
+			args = append(args, "--to", input.To)
+		}
+		args = append(args, "--override", fmt.Sprintf("%d", input.Override))
+		args = append(args, "--ping", fmt.Sprintf("%d", input.Ping))
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -170,12 +190,12 @@ func (t *DockerOverrideTool) Execute(ctx context.Context, params json.RawMessage
 		if result != nil {
 			stderr = string(result.Stderr)
 		}
-		return errorResult(fmt.Sprintf("kubedagger docker override failed: %s\n%s", err.Error(), stderr)), nil
+		return errorResult(fmt.Sprintf("kubedagger docker %s failed: %s\n%s", action, err.Error(), stderr)), nil
 	}
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Docker Override: %s\n\n", input.ContainerID)
+	fmt.Fprintf(&sb, "## KubeDagger Docker %s: %s\n\n", action, input.From)
 	if output == "" {
 		sb.WriteString("Override applied.\n")
 	} else {

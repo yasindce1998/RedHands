@@ -11,11 +11,9 @@ import (
 )
 
 type PodIdentityInput struct {
-	Action    string `json:"action"`
-	Pod       string `json:"pod,omitempty"`
+	TargetPod string `json:"target_pod,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
-	Provider  string `json:"provider,omitempty"`
-	Role      string `json:"role,omitempty"`
+	Action    string `json:"action,omitempty"`
 }
 
 type PodIdentityTool struct {
@@ -29,37 +27,27 @@ func NewPodIdentity(exec executor.Executor) *PodIdentityTool {
 func (t *PodIdentityTool) Name() string { return "kubedagger_pod_identity" }
 
 func (t *PodIdentityTool) Description() string {
-	return "Steal or impersonate pod cloud identities (AWS IRSA, GCP Workload Identity, Azure Managed Identity). Intercepts OIDC token exchanges or metadata requests to assume the cloud IAM role bound to another pod."
+	return "Steal or impersonate pod cloud identities (AWS IRSA, GCP Workload Identity, Azure Managed Identity). Intercepts the target pod's token exchanges or metadata requests to assume the cloud IAM role bound to it."
 }
 
 func (t *PodIdentityTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"target_pod": {
 				"type": "string",
-				"enum": ["enumerate", "steal", "impersonate", "escalate"],
-				"description": "Pod identity operation"
-			},
-			"pod": {
-				"type": "string",
-				"description": "Target pod"
+				"description": "Pod whose cloud identity is targeted"
 			},
 			"namespace": {
 				"type": "string",
-				"description": "Target namespace"
+				"description": "Namespace of the target pod (default: default)"
 			},
-			"provider": {
+			"action": {
 				"type": "string",
-				"enum": ["aws", "gcp", "azure", "auto"],
-				"description": "Cloud provider"
-			},
-			"role": {
-				"type": "string",
-				"description": "Specific IAM role/identity to target"
+				"enum": ["steal", "impersonate"],
+				"description": "Identity operation (default: steal)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -69,28 +57,22 @@ func (t *PodIdentityTool) Execute(ctx context.Context, params json.RawMessage) (
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Pod, "pod"); err != nil {
+	if err := validateSafeString(input.TargetPod, "target_pod"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 	if err := validateNamespace(input.Namespace); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Role, "role"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 
-	args := []string{"pod-identity", "--action", input.Action}
-	if input.Pod != "" {
-		args = append(args, "--pod", input.Pod)
+	args := []string{"pod-identity"}
+	if input.TargetPod != "" {
+		args = append(args, "--target-pod", input.TargetPod)
 	}
 	if input.Namespace != "" {
 		args = append(args, "--namespace", input.Namespace)
 	}
-	if input.Provider != "" {
-		args = append(args, "--provider", input.Provider)
-	}
-	if input.Role != "" {
-		args = append(args, "--role", input.Role)
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -104,7 +86,7 @@ func (t *PodIdentityTool) Execute(ctx context.Context, params json.RawMessage) (
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Pod Identity: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Pod Identity\n\n")
 	if output == "" {
 		sb.WriteString("No identities found.\n")
 	} else {

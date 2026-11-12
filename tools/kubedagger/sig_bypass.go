@@ -11,10 +11,8 @@ import (
 )
 
 type SigBypassInput struct {
-	Action   string `json:"action"`
-	Image    string `json:"image,omitempty"`
-	Policy   string `json:"policy,omitempty"`
-	Registry string `json:"registry,omitempty"`
+	Mode        string `json:"mode,omitempty"`
+	TargetImage string `json:"target_image,omitempty"`
 }
 
 type SigBypassTool struct {
@@ -28,32 +26,23 @@ func NewSigBypass(exec executor.Executor) *SigBypassTool {
 func (t *SigBypassTool) Name() string { return "kubedagger_sig_bypass" }
 
 func (t *SigBypassTool) Description() string {
-	return "Bypass Sigstore/cosign image signature verification by hooking the verification process in admission controllers. Allows unsigned or tampered images to pass signature policy checks."
+	return "Bypass Sigstore/cosign image signature verification. Injects a forged signature for the target image or disables signature verification entirely in admission policy, allowing unsigned or tampered images to deploy."
 }
 
 func (t *SigBypassTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"mode": {
 				"type": "string",
-				"enum": ["bypass", "forge", "disable", "status"],
-				"description": "Signature bypass action"
+				"enum": ["inject-sig", "disable-verify"],
+				"description": "Bypass mode (default: inject-sig)"
 			},
-			"image": {
+			"target_image": {
 				"type": "string",
 				"description": "Image reference to bypass verification for"
-			},
-			"policy": {
-				"type": "string",
-				"description": "Policy name to disable"
-			},
-			"registry": {
-				"type": "string",
-				"description": "Registry to bypass verification for"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -63,25 +52,16 @@ func (t *SigBypassTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Image, "image"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Policy, "policy"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Registry, "registry"); err != nil {
+	if err := validateSafeString(input.TargetImage, "target_image"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"sig-bypass", "--action", input.Action}
-	if input.Image != "" {
-		args = append(args, "--image", input.Image)
+	args := []string{"sig-bypass"}
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
-	if input.Policy != "" {
-		args = append(args, "--policy", input.Policy)
-	}
-	if input.Registry != "" {
-		args = append(args, "--registry", input.Registry)
+	if input.TargetImage != "" {
+		args = append(args, "--target-image", input.TargetImage)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -95,7 +75,7 @@ func (t *SigBypassTool) Execute(ctx context.Context, params json.RawMessage) (*m
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Sig Bypass: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Sig Bypass\n\n")
 	if output == "" {
 		sb.WriteString("Bypass active.\n")
 	} else {

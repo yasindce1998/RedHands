@@ -11,12 +11,9 @@ import (
 )
 
 type WebhookInput struct {
-	Action    string `json:"action"`
-	Name      string `json:"name,omitempty"`
+	Action    string `json:"action,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
-	Target    string `json:"target,omitempty"`
-	Port      int    `json:"port,omitempty"`
-	Intercept string `json:"intercept,omitempty"`
+	Image     string `json:"image,omitempty"`
 }
 
 type WebhookTool struct {
@@ -39,32 +36,18 @@ func (t *WebhookTool) InputSchema() json.RawMessage {
 		"properties": {
 			"action": {
 				"type": "string",
-				"enum": ["deploy", "remove", "status"],
-				"description": "Webhook action: deploy, remove, or check status"
-			},
-			"name": {
-				"type": "string",
-				"description": "Webhook name"
+				"enum": ["deploy", "remove"],
+				"description": "Webhook action (default: deploy)"
 			},
 			"namespace": {
 				"type": "string",
-				"description": "Namespace to target with the webhook"
+				"description": "Namespace to deploy the webhook service in (default: kube-system)"
 			},
-			"target": {
+			"image": {
 				"type": "string",
-				"description": "Webhook callback target URL or service"
-			},
-			"port": {
-				"type": "integer",
-				"description": "Webhook service port"
-			},
-			"intercept": {
-				"type": "string",
-				"enum": ["pods", "deployments", "secrets", "all"],
-				"description": "Resource types to intercept"
+				"description": "Container image for the webhook server"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -77,28 +60,19 @@ func (t *WebhookTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 	if err := validateNamespace(input.Namespace); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Name, "name"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Target, "target"); err != nil {
+	if err := validateSafeString(input.Image, "image"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"webhook", input.Action}
-	if input.Name != "" {
-		args = append(args, "--name", input.Name)
+	args := []string{"webhook"}
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
 	}
 	if input.Namespace != "" {
 		args = append(args, "--namespace", input.Namespace)
 	}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
-	}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
-	}
-	if input.Intercept != "" {
-		args = append(args, "--intercept", input.Intercept)
+	if input.Image != "" {
+		args = append(args, "--image", input.Image)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -112,7 +86,11 @@ func (t *WebhookTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Webhook: %s\n\n", input.Action)
+	action := input.Action
+	if action == "" {
+		action = "deploy"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger Webhook: %s\n\n", action)
 	if output == "" {
 		sb.WriteString("Operation complete.\n")
 	} else {

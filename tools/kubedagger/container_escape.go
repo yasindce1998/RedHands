@@ -11,11 +11,8 @@ import (
 )
 
 type ContainerEscapeInput struct {
-	Action    string `json:"action"`
-	Method    string `json:"method,omitempty"`
-	Target    string `json:"target,omitempty"`
-	Command   string `json:"command,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	Action    string `json:"action,omitempty"`
+	Technique string `json:"technique,omitempty"`
 }
 
 type ContainerEscapeTool struct {
@@ -29,7 +26,7 @@ func NewContainerEscape(exec executor.Executor) *ContainerEscapeTool {
 func (t *ContainerEscapeTool) Name() string { return "kubedagger_escape" }
 
 func (t *ContainerEscapeTool) Description() string {
-	return "Detect and execute container escape techniques. Checks for privileged containers, mounted docker sockets, writable hostPath, kernel exploits, and nsenter-based escapes. Can execute breakout to host namespace."
+	return "Detect and execute container escape techniques. Checks for privileged containers, hostPath mounts, host PID/network namespaces, and other breakout vectors. Use action 'detect' to enumerate vectors or 'execute' to perform the escape."
 }
 
 func (t *ContainerEscapeTool) InputSchema() json.RawMessage {
@@ -39,27 +36,14 @@ func (t *ContainerEscapeTool) InputSchema() json.RawMessage {
 			"action": {
 				"type": "string",
 				"enum": ["detect", "execute"],
-				"description": "detect: check for escape vectors; execute: perform container escape"
+				"description": "detect: check for escape vectors; execute: perform container escape (default: detect)"
 			},
-			"method": {
+			"technique": {
 				"type": "string",
-				"enum": ["privileged", "docker-socket", "hostpath", "nsenter", "cgroups", "kernel-exploit", "auto"],
-				"description": "Escape method to use (auto selects best available)"
-			},
-			"target": {
-				"type": "string",
-				"description": "Target container ID (default: current container)"
-			},
-			"command": {
-				"type": "string",
-				"description": "Command to execute on host after escape"
-			},
-			"namespace": {
-				"type": "string",
-				"description": "Target namespace for pod-level escapes"
+				"enum": ["privileged", "hostpath", "hostpid", "hostnet", "all"],
+				"description": "Escape technique to use (default: all)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -69,28 +53,12 @@ func (t *ContainerEscapeTool) Execute(ctx context.Context, params json.RawMessag
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
+	args := []string{"escape"}
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
 	}
-	if err := validateSafeString(input.Command, "command"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateNamespace(input.Namespace); err != nil {
-		return errorResult(err.Error()), nil
-	}
-
-	args := []string{"escape", input.Action}
-	if input.Method != "" {
-		args = append(args, "--method", input.Method)
-	}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
-	}
-	if input.Command != "" {
-		args = append(args, "--command", input.Command)
-	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	if input.Technique != "" {
+		args = append(args, "--technique", input.Technique)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -104,7 +72,11 @@ func (t *ContainerEscapeTool) Execute(ctx context.Context, params json.RawMessag
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Container Escape: %s\n\n", input.Action)
+	action := input.Action
+	if action == "" {
+		action = "detect"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger Container Escape: %s\n\n", action)
 	if output == "" {
 		sb.WriteString("No output.\n")
 	} else {

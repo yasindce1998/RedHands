@@ -13,9 +13,7 @@ import (
 // Coredump Suppress
 
 type CoredumpSuppressInput struct {
-	Action string `json:"action"`
-	PID    int    `json:"pid,omitempty"`
-	Target string `json:"target,omitempty"`
+	Pids string `json:"pids,omitempty"`
 }
 
 type CoredumpSuppressTool struct {
@@ -36,21 +34,11 @@ func (t *CoredumpSuppressTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"pids": {
 				"type": "string",
-				"enum": ["suppress", "allow", "status"],
-				"description": "Coredump suppression action"
-			},
-			"pid": {
-				"type": "integer",
-				"description": "Target process ID"
-			},
-			"target": {
-				"type": "string",
-				"description": "Target process name pattern"
+				"description": "Comma-separated list of target process IDs (e.g. '1234,5678')"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -60,16 +48,13 @@ func (t *CoredumpSuppressTool) Execute(ctx context.Context, params json.RawMessa
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
+	if err := validatePIDList(input.Pids); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"coredump-suppress", "--action", input.Action}
-	if input.PID > 0 {
-		args = append(args, "--pid", fmt.Sprintf("%d", input.PID))
-	}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
+	args := []string{"coredump-suppress"}
+	if input.Pids != "" {
+		args = append(args, "--pids", input.Pids)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -83,7 +68,7 @@ func (t *CoredumpSuppressTool) Execute(ctx context.Context, params json.RawMessa
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Coredump Suppress: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Coredump Suppress\n\n")
 	if output == "" {
 		sb.WriteString("Suppression active.\n")
 	} else {
@@ -100,10 +85,9 @@ func (t *CoredumpSuppressTool) Execute(ctx context.Context, params json.RawMessa
 // Timeskew
 
 type TimeskewInput struct {
-	Action string `json:"action"`
+	Pids   string `json:"pids,omitempty"`
 	Offset string `json:"offset,omitempty"`
-	PID    int    `json:"pid,omitempty"`
-	Target string `json:"target,omitempty"`
+	Mode   string `json:"mode,omitempty"`
 }
 
 type TimeskewTool struct {
@@ -117,32 +101,27 @@ func NewTimeskew(exec executor.Executor) *TimeskewTool {
 func (t *TimeskewTool) Name() string { return "kubedagger_timeskew" }
 
 func (t *TimeskewTool) Description() string {
-	return "Manipulate time perception for specific processes by hooking clock_gettime. Makes forensic timeline analysis unreliable by shifting timestamps in logs, files, and network packets from targeted processes."
+	return "Manipulate time perception for specific processes by hooking clock_gettime. Makes forensic timeline analysis unreliable by shifting, freezing, or jittering timestamps observed by targeted processes."
 }
 
 func (t *TimeskewTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
+			"pids": {
 				"type": "string",
-				"enum": ["skew", "restore", "status"],
-				"description": "Timeskew action"
+				"description": "Comma-separated list of target process IDs (e.g. '1234,5678')"
 			},
 			"offset": {
 				"type": "string",
-				"description": "Time offset (e.g., '-2h', '+30m', '-7d')"
+				"description": "Time offset in seconds (default: -3600)"
 			},
-			"pid": {
-				"type": "integer",
-				"description": "Target process ID"
-			},
-			"target": {
+			"mode": {
 				"type": "string",
-				"description": "Target process name"
+				"enum": ["shift", "freeze", "jitter"],
+				"description": "Timeskew mode (default: shift)"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -152,22 +131,22 @@ func (t *TimeskewTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
+	if err := validatePIDList(input.Pids); err != nil {
+		return errorResult(err.Error()), nil
+	}
 	if err := validateSafeString(input.Offset, "offset"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
-	}
 
-	args := []string{"timeskew", "--action", input.Action}
+	args := []string{"timeskew"}
+	if input.Pids != "" {
+		args = append(args, "--pids", input.Pids)
+	}
 	if input.Offset != "" {
 		args = append(args, "--offset", input.Offset)
 	}
-	if input.PID > 0 {
-		args = append(args, "--pid", fmt.Sprintf("%d", input.PID))
-	}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -181,7 +160,7 @@ func (t *TimeskewTool) Execute(ctx context.Context, params json.RawMessage) (*mc
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Timeskew: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger Timeskew\n\n")
 	if output == "" {
 		sb.WriteString("Timeskew active.\n")
 	} else {

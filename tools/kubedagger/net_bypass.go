@@ -11,11 +11,9 @@ import (
 )
 
 type NetBypassInput struct {
-	Target    string `json:"target"`
-	Port      int    `json:"port,omitempty"`
-	Protocol  string `json:"protocol,omitempty"`
-	Interface string `json:"interface,omitempty"`
-	Method    string `json:"method,omitempty"`
+	Mode     string `json:"mode,omitempty"`
+	DestIP   string `json:"dest_ip,omitempty"`
+	DestPort int    `json:"dest_port,omitempty"`
 }
 
 type NetBypassTool struct {
@@ -29,37 +27,27 @@ func NewNetBypass(exec executor.Executor) *NetBypassTool {
 func (t *NetBypassTool) Name() string { return "kubedagger_net_bypass" }
 
 func (t *NetBypassTool) Description() string {
-	return "Bypass Kubernetes NetworkPolicies using eBPF TC (traffic control) hooks to rewrite packet headers at the kernel level. Enables communication between pods that should be network-isolated according to policy."
+	return "Bypass Kubernetes NetworkPolicies using eBPF to reach blocked destinations. Sends traffic directly, encapsulates it inside allowed flows, or rewrites packet headers at the kernel level so isolated pods can communicate."
 }
 
 func (t *NetBypassTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"target": {
+			"mode": {
 				"type": "string",
-				"description": "Target IP or pod to reach through network policy"
+				"enum": ["direct", "encap", "rewrite"],
+				"description": "Bypass mode (default: direct)"
 			},
-			"port": {
+			"dest_ip": {
+				"type": "string",
+				"description": "Destination IP address to reach"
+			},
+			"dest_port": {
 				"type": "integer",
-				"description": "Target port"
-			},
-			"protocol": {
-				"type": "string",
-				"enum": ["tcp", "udp"],
-				"description": "Protocol to use"
-			},
-			"interface": {
-				"type": "string",
-				"description": "Network interface to hook"
-			},
-			"method": {
-				"type": "string",
-				"enum": ["tc-rewrite", "xdp-redirect", "raw-socket"],
-				"description": "Bypass technique to use"
+				"description": "Destination port"
 			}
-		},
-		"required": ["target"]
+		}
 	}`)
 }
 
@@ -69,25 +57,19 @@ func (t *NetBypassTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Interface, "interface"); err != nil {
+	if err := validateIP(input.DestIP); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"netbypass", "--target", input.Target}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
+	args := []string{"netbypass"}
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
-	if input.Protocol != "" {
-		args = append(args, "--protocol", input.Protocol)
+	if input.DestIP != "" {
+		args = append(args, "--dest-ip", input.DestIP)
 	}
-	if input.Interface != "" {
-		args = append(args, "--interface", input.Interface)
-	}
-	if input.Method != "" {
-		args = append(args, "--method", input.Method)
+	if input.DestPort > 0 {
+		args = append(args, "--dest-port", fmt.Sprintf("%d", input.DestPort))
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -101,7 +83,7 @@ func (t *NetBypassTool) Execute(ctx context.Context, params json.RawMessage) (*m
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Network Policy Bypass: %s\n\n", input.Target)
+	sb.WriteString("## KubeDagger Network Policy Bypass\n\n")
 	if output == "" {
 		sb.WriteString("Bypass established.\n")
 	} else {

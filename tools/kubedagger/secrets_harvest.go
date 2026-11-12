@@ -11,10 +11,7 @@ import (
 )
 
 type SecretsHarvestInput struct {
-	Namespace string `json:"namespace,omitempty"`
-	Source    string `json:"source,omitempty"`
-	Format   string `json:"format,omitempty"`
-	AllNS    bool   `json:"all_namespaces,omitempty"`
+	Sources string `json:"sources,omitempty"`
 }
 
 type SecretsHarvestTool struct {
@@ -28,30 +25,17 @@ func NewSecretsHarvest(exec executor.Executor) *SecretsHarvestTool {
 func (t *SecretsHarvestTool) Name() string { return "kubedagger_secrets_harvest" }
 
 func (t *SecretsHarvestTool) Description() string {
-	return "Harvest secrets and credentials from the cluster by intercepting kubelet volume mounts, environment variables, and projected service account tokens via eBPF hooks. Extracts K8s secrets, configmaps with credentials, cloud provider tokens, and TLS certificates."
+	return "Harvest secrets and credentials from multiple sources: environment variables, Kubernetes secrets, cloud metadata, docker configs, vault tokens, and kubeconfig files. Aggregates all discovered credentials in one pass."
 }
 
 func (t *SecretsHarvestTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"namespace": {
+			"sources": {
 				"type": "string",
-				"description": "Target namespace to harvest from"
-			},
-			"source": {
-				"type": "string",
-				"enum": ["env", "volume", "token", "configmap", "all"],
-				"description": "Source type to harvest from (default: all)"
-			},
-			"format": {
-				"type": "string",
-				"enum": ["text", "json"],
-				"description": "Output format"
-			},
-			"all_namespaces": {
-				"type": "boolean",
-				"description": "Harvest across all namespaces"
+				"enum": ["env", "k8s", "cloud", "docker", "vault", "kubeconfig", "all"],
+				"description": "Comma-separable source categories to harvest from (default: all)"
 			}
 		}
 	}`)
@@ -63,22 +47,13 @@ func (t *SecretsHarvestTool) Execute(ctx context.Context, params json.RawMessage
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validateSafeString(input.Sources, "sources"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
 	args := []string{"secrets", "harvest"}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
-	}
-	if input.Source != "" {
-		args = append(args, "--source", input.Source)
-	}
-	if input.Format != "" {
-		args = append(args, "--format", input.Format)
-	}
-	if input.AllNS {
-		args = append(args, "--all-namespaces")
+	if input.Sources != "" {
+		args = append(args, "--sources", input.Sources)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)

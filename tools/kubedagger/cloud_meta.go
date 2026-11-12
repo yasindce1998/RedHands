@@ -12,10 +12,6 @@ import (
 
 type CloudMetaInput struct {
 	Provider string `json:"provider,omitempty"`
-	Endpoint string `json:"endpoint,omitempty"`
-	Token    bool   `json:"token,omitempty"`
-	UserData bool   `json:"user_data,omitempty"`
-	All      bool   `json:"all,omitempty"`
 }
 
 type CloudMetaTool struct {
@@ -29,7 +25,7 @@ func NewCloudMeta(exec executor.Executor) *CloudMetaTool {
 func (t *CloudMetaTool) Name() string { return "kubedagger_cloud_meta" }
 
 func (t *CloudMetaTool) Description() string {
-	return "Access cloud provider metadata services (AWS IMDS, GCP metadata, Azure IMDS) by bypassing network policies with eBPF. Retrieves IAM credentials, instance identity tokens, user-data scripts, and cloud provider configuration."
+	return "Query the cloud provider metadata service (AWS IMDS, GCP metadata, Azure IMDS) for the current node. Retrieves IAM credentials and instance identity documents as JSON; use provider 'auto' to detect the cloud."
 }
 
 func (t *CloudMetaTool) InputSchema() json.RawMessage {
@@ -39,23 +35,7 @@ func (t *CloudMetaTool) InputSchema() json.RawMessage {
 			"provider": {
 				"type": "string",
 				"enum": ["aws", "gcp", "azure", "auto"],
-				"description": "Cloud provider (auto-detect if not specified)"
-			},
-			"endpoint": {
-				"type": "string",
-				"description": "Custom metadata endpoint URL"
-			},
-			"token": {
-				"type": "boolean",
-				"description": "Retrieve IAM/instance identity token"
-			},
-			"user_data": {
-				"type": "boolean",
-				"description": "Retrieve instance user-data/startup scripts"
-			},
-			"all": {
-				"type": "boolean",
-				"description": "Dump all available metadata"
+				"description": "Cloud provider (default: auto-detect)"
 			}
 		}
 	}`)
@@ -67,25 +47,9 @@ func (t *CloudMetaTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Endpoint, "endpoint"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-
 	args := []string{"cloud", "meta"}
 	if input.Provider != "" {
 		args = append(args, "--provider", input.Provider)
-	}
-	if input.Endpoint != "" {
-		args = append(args, "--endpoint", input.Endpoint)
-	}
-	if input.Token {
-		args = append(args, "--token")
-	}
-	if input.UserData {
-		args = append(args, "--user-data")
-	}
-	if input.All {
-		args = append(args, "--all")
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)

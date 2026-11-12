@@ -11,10 +11,10 @@ import (
 )
 
 type SATokenInput struct {
-	Action    string `json:"action"`
-	Namespace string `json:"namespace,omitempty"`
-	Pod       string `json:"pod,omitempty"`
-	Account   string `json:"account,omitempty"`
+	Action         string `json:"action"`
+	ServiceAccount string `json:"service_account,omitempty"`
+	Namespace      string `json:"namespace,omitempty"`
+	Audience       string `json:"audience,omitempty"`
 }
 
 type SATokenTool struct {
@@ -28,7 +28,7 @@ func NewSAToken(exec executor.Executor) *SATokenTool {
 func (t *SATokenTool) Name() string { return "kubedagger_sa_token" }
 
 func (t *SATokenTool) Description() string {
-	return "Harvest Kubernetes service account tokens from pods by reading projected volumes or intercepting TokenRequest API calls via eBPF. Extracted tokens can be used for lateral movement through the cluster API."
+	return "Mint or steal Kubernetes service account tokens. 'mint' requests a new TokenRequest-bound token for a service account; 'steal' harvests tokens projected into running pods. Extracted tokens can be used for lateral movement through the cluster API."
 }
 
 func (t *SATokenTool) InputSchema() json.RawMessage {
@@ -37,20 +37,20 @@ func (t *SATokenTool) InputSchema() json.RawMessage {
 		"properties": {
 			"action": {
 				"type": "string",
-				"enum": ["harvest", "intercept", "enumerate", "use"],
-				"description": "Token operation"
+				"enum": ["mint", "steal"],
+				"description": "Token operation (default: mint)"
+			},
+			"service_account": {
+				"type": "string",
+				"description": "Service account name to mint a token for"
 			},
 			"namespace": {
 				"type": "string",
-				"description": "Target namespace"
+				"description": "Target namespace (default: default)"
 			},
-			"pod": {
+			"audience": {
 				"type": "string",
-				"description": "Target pod name"
-			},
-			"account": {
-				"type": "string",
-				"description": "Service account name to target"
+				"description": "Intended audience for the minted token"
 			}
 		},
 		"required": ["action"]
@@ -66,22 +66,22 @@ func (t *SATokenTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 	if err := validateNamespace(input.Namespace); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Pod, "pod"); err != nil {
+	if err := validateSafeString(input.ServiceAccount, "service_account"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Account, "account"); err != nil {
+	if err := validateSafeString(input.Audience, "audience"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
 	args := []string{"sa-token", "--action", input.Action}
+	if input.ServiceAccount != "" {
+		args = append(args, "--service-account", input.ServiceAccount)
+	}
 	if input.Namespace != "" {
 		args = append(args, "--namespace", input.Namespace)
 	}
-	if input.Pod != "" {
-		args = append(args, "--pod", input.Pod)
-	}
-	if input.Account != "" {
-		args = append(args, "--account", input.Account)
+	if input.Audience != "" {
+		args = append(args, "--audience", input.Audience)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)

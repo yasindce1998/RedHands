@@ -11,11 +11,9 @@ import (
 )
 
 type TLSInterceptInput struct {
-	Target   string `json:"target,omitempty"`
-	Port     int    `json:"port,omitempty"`
-	PID      int    `json:"pid,omitempty"`
-	Duration int    `json:"duration,omitempty"`
-	Output   string `json:"output,omitempty"`
+	Action string `json:"action,omitempty"`
+	PID    int    `json:"pid,omitempty"`
+	Lib    string `json:"lib,omitempty"`
 }
 
 type TLSInterceptTool struct {
@@ -29,33 +27,26 @@ func NewTLSIntercept(exec executor.Executor) *TLSInterceptTool {
 func (t *TLSInterceptTool) Name() string { return "kubedagger_tls_intercept" }
 
 func (t *TLSInterceptTool) Description() string {
-	return "Intercept TLS-encrypted traffic by hooking OpenSSL/BoringSSL/GnuTLS read/write functions with eBPF uprobes. Captures plaintext data before encryption or after decryption without needing certificates or MITM proxy."
+	return "Intercept TLS-encrypted traffic by hooking OpenSSL or GnuTLS read/write functions with eBPF uprobes. Attach to a process, dump captured plaintext, or detach, all without needing certificates or a MITM proxy."
 }
 
 func (t *TLSInterceptTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"target": {
+			"action": {
 				"type": "string",
-				"description": "Target process name or pod to intercept"
-			},
-			"port": {
-				"type": "integer",
-				"description": "Filter by destination port"
+				"enum": ["attach", "dump", "detach"],
+				"description": "Intercept action (default: attach)"
 			},
 			"pid": {
 				"type": "integer",
-				"description": "Target process ID"
+				"description": "Target process ID to hook"
 			},
-			"duration": {
-				"type": "integer",
-				"description": "Capture duration in seconds"
-			},
-			"output": {
+			"lib": {
 				"type": "string",
-				"enum": ["text", "hex", "pcap"],
-				"description": "Output format"
+				"enum": ["openssl", "gnutls"],
+				"description": "TLS library used by the target process (default: openssl)"
 			}
 		}
 	}`)
@@ -67,25 +58,15 @@ func (t *TLSInterceptTool) Execute(ctx context.Context, params json.RawMessage) 
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Target, "target"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-
 	args := []string{"tls-intercept"}
-	if input.Target != "" {
-		args = append(args, "--target", input.Target)
-	}
-	if input.Port > 0 {
-		args = append(args, "--port", fmt.Sprintf("%d", input.Port))
+	if input.Action != "" {
+		args = append(args, "--action", input.Action)
 	}
 	if input.PID > 0 {
 		args = append(args, "--pid", fmt.Sprintf("%d", input.PID))
 	}
-	if input.Duration > 0 {
-		args = append(args, "--duration", fmt.Sprintf("%d", input.Duration))
-	}
-	if input.Output != "" {
-		args = append(args, "--output", input.Output)
+	if input.Lib != "" {
+		args = append(args, "--lib", input.Lib)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)

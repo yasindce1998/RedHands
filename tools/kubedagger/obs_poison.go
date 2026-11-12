@@ -11,10 +11,9 @@ import (
 )
 
 type ObsPoisonInput struct {
-	Target  string `json:"target"`
-	Action  string `json:"action,omitempty"`
-	Payload string `json:"payload,omitempty"`
-	Filter  string `json:"filter,omitempty"`
+	PoisonTarget string `json:"poison_target,omitempty"`
+	Endpoint     string `json:"endpoint,omitempty"`
+	Strategy     string `json:"strategy,omitempty"`
 }
 
 type ObsPoisonTool struct {
@@ -28,33 +27,28 @@ func NewObsPoison(exec executor.Executor) *ObsPoisonTool {
 func (t *ObsPoisonTool) Name() string { return "kubedagger_obs_poison" }
 
 func (t *ObsPoisonTool) Description() string {
-	return "Poison observability pipelines (Prometheus, OpenTelemetry, Jaeger) by intercepting and modifying metrics, traces, and logs at the kernel level. Inject false data, suppress alerts, or redirect telemetry to attacker-controlled endpoints."
+	return "Poison observability pipelines (Prometheus, OpenTelemetry, statsd) by tampering with metrics and telemetry in transit. Injects fake data, replays stale metrics, or corrupts payloads to hide attacker activity from dashboards and alerts."
 }
 
 func (t *ObsPoisonTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"target": {
+			"poison_target": {
 				"type": "string",
-				"enum": ["prometheus", "otel", "jaeger", "fluentd", "datadog"],
-				"description": "Observability system to poison"
+				"enum": ["prometheus", "otel", "statsd"],
+				"description": "Observability system to poison (default: prometheus)"
 			},
-			"action": {
+			"endpoint": {
 				"type": "string",
-				"enum": ["suppress", "inject", "modify", "redirect"],
-				"description": "Poisoning action"
+				"description": "Endpoint of the observability system to target"
 			},
-			"payload": {
+			"strategy": {
 				"type": "string",
-				"description": "Custom payload or metric value to inject"
-			},
-			"filter": {
-				"type": "string",
-				"description": "Filter pattern for which events to target"
+				"enum": ["inject", "replay", "corrupt"],
+				"description": "Poisoning strategy (default: inject)"
 			}
-		},
-		"required": ["target"]
+		}
 	}`)
 }
 
@@ -64,22 +58,19 @@ func (t *ObsPoisonTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Payload, "payload"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateSafeString(input.Filter, "filter"); err != nil {
+	if err := validateSafeString(input.Endpoint, "endpoint"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"obs-poison", "--target", input.Target}
-	if input.Action != "" {
-		args = append(args, "--action", input.Action)
+	args := []string{"obs-poison"}
+	if input.PoisonTarget != "" {
+		args = append(args, "--poison-target", input.PoisonTarget)
 	}
-	if input.Payload != "" {
-		args = append(args, "--payload", input.Payload)
+	if input.Endpoint != "" {
+		args = append(args, "--endpoint", input.Endpoint)
 	}
-	if input.Filter != "" {
-		args = append(args, "--filter", input.Filter)
+	if input.Strategy != "" {
+		args = append(args, "--strategy", input.Strategy)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -93,7 +84,11 @@ func (t *ObsPoisonTool) Execute(ctx context.Context, params json.RawMessage) (*m
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger Observability Poisoning: %s\n\n", input.Target)
+	target := input.PoisonTarget
+	if target == "" {
+		target = "prometheus"
+	}
+	fmt.Fprintf(&sb, "## KubeDagger Observability Poisoning: %s\n\n", target)
 	if output == "" {
 		sb.WriteString("Poisoning active.\n")
 	} else {

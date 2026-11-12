@@ -11,11 +11,10 @@ import (
 )
 
 type CRITamperInput struct {
-	Action    string `json:"action"`
-	Container string `json:"container,omitempty"`
-	Runtime   string `json:"runtime,omitempty"`
-	Config    string `json:"config,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
+	Runtime      string `json:"runtime,omitempty"`
+	Mode         string `json:"mode,omitempty"`
+	TargetImage  string `json:"target_image,omitempty"`
+	InjectBinary string `json:"inject_binary,omitempty"`
 }
 
 type CRITamperTool struct {
@@ -29,37 +28,32 @@ func NewCRITamper(exec executor.Executor) *CRITamperTool {
 func (t *CRITamperTool) Name() string { return "kubedagger_cri_tamper" }
 
 func (t *CRITamperTool) Description() string {
-	return "Tamper with the Container Runtime Interface (CRI) by hooking gRPC calls between kubelet and containerd/CRI-O. Can modify container creation requests to escalate privileges, disable security profiles, or inject capabilities."
+	return "Tamper with the Container Runtime Interface (CRI) by hooking gRPC calls between kubelet and containerd/CRI-O. Modifies container creation to inject image layers, hook entrypoints, or inject environment variables into target images."
 }
 
 func (t *CRITamperTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{
 		"type": "object",
 		"properties": {
-			"action": {
-				"type": "string",
-				"enum": ["escalate", "disable-seccomp", "add-caps", "modify-mount", "status"],
-				"description": "CRI tampering action"
-			},
-			"container": {
-				"type": "string",
-				"description": "Target container ID or name pattern"
-			},
 			"runtime": {
 				"type": "string",
-				"enum": ["containerd", "crio", "auto"],
-				"description": "Container runtime to target"
+				"enum": ["containerd", "crio"],
+				"description": "Container runtime to target (default: containerd)"
 			},
-			"config": {
+			"mode": {
 				"type": "string",
-				"description": "Configuration override (JSON)"
+				"enum": ["layer-inject", "entrypoint-hook", "env-inject"],
+				"description": "Tampering mode (default: layer-inject)"
 			},
-			"namespace": {
+			"target_image": {
 				"type": "string",
-				"description": "Target namespace for filtering"
+				"description": "Target image reference to tamper with"
+			},
+			"inject_binary": {
+				"type": "string",
+				"description": "Path to the binary to inject into target containers"
 			}
-		},
-		"required": ["action"]
+		}
 	}`)
 }
 
@@ -69,28 +63,25 @@ func (t *CRITamperTool) Execute(ctx context.Context, params json.RawMessage) (*m
 		return errorResult("invalid input: " + err.Error()), nil
 	}
 
-	if err := validateSafeString(input.Container, "container"); err != nil {
+	if err := validateSafeString(input.TargetImage, "target_image"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	if err := validateSafeString(input.Config, "config"); err != nil {
-		return errorResult(err.Error()), nil
-	}
-	if err := validateNamespace(input.Namespace); err != nil {
+	if err := validateSafeString(input.InjectBinary, "inject_binary"); err != nil {
 		return errorResult(err.Error()), nil
 	}
 
-	args := []string{"cri-tamper", "--action", input.Action}
-	if input.Container != "" {
-		args = append(args, "--container", input.Container)
-	}
+	args := []string{"cri-tamper"}
 	if input.Runtime != "" {
 		args = append(args, "--runtime", input.Runtime)
 	}
-	if input.Config != "" {
-		args = append(args, "--config", input.Config)
+	if input.Mode != "" {
+		args = append(args, "--mode", input.Mode)
 	}
-	if input.Namespace != "" {
-		args = append(args, "--namespace", input.Namespace)
+	if input.TargetImage != "" {
+		args = append(args, "--target-image", input.TargetImage)
+	}
+	if input.InjectBinary != "" {
+		args = append(args, "--inject-binary", input.InjectBinary)
 	}
 
 	result, err := t.exec.Run(ctx, "kubedagger-client", args...)
@@ -104,7 +95,7 @@ func (t *CRITamperTool) Execute(ctx context.Context, params json.RawMessage) (*m
 
 	output := strings.TrimSpace(string(result.Stdout))
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "## KubeDagger CRI Tamper: %s\n\n", input.Action)
+	sb.WriteString("## KubeDagger CRI Tamper\n\n")
 	if output == "" {
 		sb.WriteString("Tamper active.\n")
 	} else {

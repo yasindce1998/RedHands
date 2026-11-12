@@ -36,7 +36,7 @@ RUN python3 -m pip install --break-system-packages \
     "$(python3 /opt/redhands/install/dependencies.py python certipy)"
 
 COPY --from=go-tools /out/ /usr/local/bin/
-RUN for tool in chisel ligolo-proxy kubedagger-client kubedagger-operator kubedagger-server barzakh-adversary barzakh-scanner barzakh-server; do \
+RUN for tool in chisel ligolo-proxy kubedagger-client kubedagger-operator kubedagger-server barzakh-adversary barzakh-scanner barzakh-server staticzero-defense modem-firmware sdr-bridge aegis-shadow-defense; do \
       python3 /opt/redhands/install/dependencies.py install "$tool" --output /usr/local/bin || exit 1; \
     done
 

@@ -45,20 +45,21 @@ lab use) and the Barzakh server (REST scanner API). All three KubeDagger
 binaries (client, operator, server) are pinned to the same **v0.5.0** release,
 and all three Barzakh binaries (adversary, scanner, server) to **v0.7.0**.
 
-The Rust-built eBPF research toolsets — StaticZero (`staticzero-defense`,
-`modem-firmware`, `sdr-bridge`) and Aegis-Shadow (`aegis-shadow-defense`,
-`aegis-shadow-offense`) — are **not** bundled. They require a Rust nightly
-toolchain with `bpf-linker` and kernel-specific eBPF headers, which is not
-feasible to build or verify inside this image. To use them with the container,
-build them in a matching lab VM and bind-mount each binary individually into
-`/usr/local/bin` (already on `PATH`; per-file mounts do not shadow the tools
-the image installed there):
+The StaticZero and Aegis-Shadow defense engines also ship as verified release
+assets (Linux only, eBPF objects embedded): `staticzero-defense`,
+`modem-firmware`, and `sdr-bridge` (StaticZero v0.5.0) and
+`aegis-shadow-defense` (Aegis-Shadow v0.1.1) are installed into the image.
+The research **offense** binaries (`staticzero-offense`,
+`aegis-shadow-offense`) are deliberately **not** bundled: no RedHands tool
+executes them, and they belong in an isolated lab VM only. To use one with the
+container, download it from the matching release (checksum-verified via the
+`telecom` install profile on a host, or manually) and bind-mount it
+individually into `/usr/local/bin` (already on `PATH`; per-file mounts do not
+shadow the tools the image installed there):
 
 ```yaml
 volumes:
-  - ./local-bin/staticzero-defense:/usr/local/bin/staticzero-defense:ro
-  - ./local-bin/modem-firmware:/usr/local/bin/modem-firmware:ro
-  - ./local-bin/sdr-bridge:/usr/local/bin/sdr-bridge:ro
+  - ./local-bin/staticzero-offense:/usr/local/bin/staticzero-offense:ro
 ```
 
 The binary allowlist resolves tools by name on `PATH` at startup, so mounted

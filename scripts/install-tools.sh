@@ -46,6 +46,8 @@ Profiles:
   ad         Active Directory (nmap, impacket, crackmapexec, certipy, crack)
   k8s        Kubernetes (nmap, kubedagger-client, kubedagger-operator, kubedagger-server)
   uefi       UEFI bootkit simulation (barzakh-adversary, barzakh-scanner, barzakh-server)
+  telecom    Telecom research (staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge)
+  aegis      Linux eBPF research (aegis-shadow-defense)
   recon      Reconnaissance only (subfinder, amass, dns, wayback, gau, arjun)
   minimal    Just the essentials (nmap, nuclei, httpx, subfinder)
 
@@ -94,6 +96,8 @@ TOOLS_CERTIPY="certipy"
 TOOLS_TSHARK="tshark"
 TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator kubedagger-server"
 TOOLS_BARZAKH="barzakh-adversary barzakh-scanner barzakh-server"
+TOOLS_TELECOM="staticzero-defense staticzero-offense modem-firmware sdr-bridge"
+TOOLS_AEGIS="aegis-shadow-defense"
 
 get_profile_tools() {
     case "$1" in
@@ -117,6 +121,12 @@ get_profile_tools() {
             ;;
         uefi)
             echo "$TOOLS_BARZAKH"
+            ;;
+        telecom)
+            echo "$TOOLS_TELECOM"
+            ;;
+        aegis)
+            echo "$TOOLS_AEGIS"
             ;;
         minimal)
             echo "nmap nuclei httpx subfinder"
@@ -150,6 +160,13 @@ list_profiles() {
     echo ""
     echo -e "  ${GREEN}uefi${NC}       UEFI bootkit adversary simulation"
     echo "             barzakh-adversary, barzakh-scanner, barzakh-server"
+    echo ""
+    echo -e "  ${GREEN}telecom${NC}    Telecom security research (eBPF, Linux only)"
+    echo "             staticzero-defense, staticzero-offense,"
+    echo "             modem-firmware, sdr-bridge"
+    echo ""
+    echo -e "  ${GREEN}aegis${NC}      Linux eBPF security research"
+    echo "             aegis-shadow-defense"
     echo ""
     echo -e "  ${GREEN}recon${NC}      Reconnaissance"
     echo "             subfinder, amass, dig, waybackurls, gau, arjun, httpx,"
@@ -440,7 +457,7 @@ install_go_tools() {
 
 install_binary_releases() {
     local tool
-    for tool in chisel ligolo-proxy kubedagger-client kubedagger-operator barzakh-adversary barzakh-scanner feroxbuster; do
+    for tool in chisel ligolo-proxy kubedagger-client kubedagger-operator kubedagger-server barzakh-adversary barzakh-scanner barzakh-server staticzero-defense staticzero-offense modem-firmware sdr-bridge aegis-shadow-defense feroxbuster; do
         if [[ "$TOOLS" == *"$tool"* ]] && ! check_tool "$tool"; then
             log_step "Installing checksum-verified $tool..."
             python3 "$DEPENDENCIES" install "$tool" --output /usr/local/bin

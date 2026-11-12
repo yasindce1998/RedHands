@@ -363,6 +363,8 @@ Non-Docker installation system for native usage:
 - `ad` — nmap, impacket, crackmapexec, certipy, hashcat, john
 - `k8s` — nmap, kubedagger-client, kubedagger-operator, kubedagger-server
 - `uefi` — barzakh-adversary, barzakh-scanner, barzakh-server
+- `telecom` — staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge (Linux only)
+- `aegis` — aegis-shadow-defense (Linux only)
 - `recon` — recon plus web sets (subfinder, amass, dig, waybackurls, gau, arjun, httpx, katana, nikto, whatweb, testssl.sh)
 - `all` — everything
 

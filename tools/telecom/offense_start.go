@@ -135,20 +135,20 @@ func (t *OffenseStartTool) InputSchema() json.RawMessage {
 
 func (t *OffenseStartTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.ToolResult, error) {
 	var input struct {
-		LogsDir       string   `json:"logs_dir"`
-		Groups        []string `json:"groups"`
-		All           bool     `json:"all"`
-		TargetIMSI    string   `json:"target_imsi"`
-		BpfPath       string   `json:"bpf_path"`
-		GtpIface      string   `json:"gtp_iface"`
-		ImsIface      string   `json:"ims_iface"`
-		WifiIface     string   `json:"wifi_iface"`
-		SbiIface      string   `json:"sbi_iface"`
-		SdrIface      string   `json:"sdr_iface"`
-		SatIface      string   `json:"sat_iface"`
-		WpanIface     string   `json:"wpan_iface"`
-		UavIface      string   `json:"uav_iface"`
-		FronthaulIface string  `json:"fronthaul_iface"`
+		LogsDir        string   `json:"logs_dir"`
+		Groups         []string `json:"groups"`
+		All            bool     `json:"all"`
+		TargetIMSI     string   `json:"target_imsi"`
+		BpfPath        string   `json:"bpf_path"`
+		GtpIface       string   `json:"gtp_iface"`
+		ImsIface       string   `json:"ims_iface"`
+		WifiIface      string   `json:"wifi_iface"`
+		SbiIface       string   `json:"sbi_iface"`
+		SdrIface       string   `json:"sdr_iface"`
+		SatIface       string   `json:"sat_iface"`
+		WpanIface      string   `json:"wpan_iface"`
+		UavIface       string   `json:"uav_iface"`
+		FronthaulIface string   `json:"fronthaul_iface"`
 	}
 	if err := json.Unmarshal(params, &input); err != nil {
 		return errorResult("invalid input: " + err.Error()), nil

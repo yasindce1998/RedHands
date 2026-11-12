@@ -288,7 +288,13 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		srv.RegisterTool(telecom.NewFirmwareExtract(d.Exec))
 		srv.RegisterTool(telecom.NewFirmwareDiff(d.Exec))
 		srv.RegisterTool(telecom.NewFirmwareNvDump(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwarePatch(d.Exec))
+		srv.RegisterTool(telecom.NewFirmwareMonitor(d.Exec))
 		srv.RegisterTool(telecom.NewSDRScan(d.Exec))
+		srv.RegisterTool(telecom.NewSDRCapture(d.Exec))
+		srv.RegisterTool(telecom.NewSDRInject(d.Exec))
+		srv.RegisterTool(telecom.NewSDRRelay(d.Exec))
+		srv.RegisterTool(telecom.NewSDRSelftest(d.Exec))
 		srv.RegisterTool(telecom.NewThreats())
 		srv.RegisterTool(telecom.NewAlerts())
 		srv.RegisterTool(telecom.NewStats())
@@ -299,6 +305,9 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			srv.RegisterTool(telecom.NewOffenseStart(d.ProcMgr))
 			srv.RegisterTool(telecom.NewOffenseStop(d.ProcMgr))
 			srv.RegisterTool(telecom.NewOffenseStatus(d.ProcMgr))
+			srv.RegisterTool(telecom.NewCorrelatorStart(d.ProcMgr))
+			srv.RegisterTool(telecom.NewCorrelatorStop(d.ProcMgr))
+			srv.RegisterTool(telecom.NewCorrelatorStatus(d.ProcMgr))
 		}
 	}
 

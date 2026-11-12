@@ -47,6 +47,7 @@ var All = []string{
 	"tshark",
 	"barzakh-adversary", "barzakh-scanner", "barzakh-server",
 	"staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge",
+	"protocol-correlator",
 	"aegis-shadow-defense", "aegis-shadow-offense",
 	"bloodhound-python", "responder", "evil-winrm", "python3",
 	"airmon-ng", "airodump-ng", "aircrack-ng", "bettercap",

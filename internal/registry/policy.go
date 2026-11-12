@@ -64,8 +64,19 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true, RetrySafe: true}
 	}
 	// Status queries over managed daemons are read-only.
-	for _, name := range []string{"aegis_defense_status", "telecom_defense_status", "aegis_offense_status", "telecom_offense_status", "kubedagger_server_status", "barzakh_server_status"} {
+	for _, name := range []string{"aegis_defense_status", "telecom_defense_status", "aegis_offense_status", "telecom_offense_status", "telecom_correlator_status", "kubedagger_server_status", "barzakh_server_status"} {
 		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true, RequiresPrivileges: true}
 	}
+	// Daemon stops are replayable operator actions.
+	for _, name := range []string{"telecom_correlator_stop"} {
+		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true, RetrySafe: true}
+	}
+	// RF transmission (SDR inject/relay/selftest) and baseband firmware
+	// patching are high-impact and regulated; approval-gated.
+	for _, name := range []string{"telecom_sdr_inject", "telecom_sdr_relay", "telecom_sdr_selftest", "telecom_firmware_patch"} {
+		policies[name] = mcp.ToolPolicy{RequiresPrivileges: true}
+	}
+	// The correlator binds a loopback TCP listener.
+	policies["telecom_correlator_start"] = mcp.ToolPolicy{NetworkAccess: true}
 	return policies
 }

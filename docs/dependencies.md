@@ -50,10 +50,10 @@ assets (Linux only, eBPF objects embedded): `staticzero-defense`,
 `modem-firmware`, and `sdr-bridge` (StaticZero v0.5.0) and
 `aegis-shadow-defense` (Aegis-Shadow v0.1.1) are installed into the image.
 The research **offense** binaries (`staticzero-offense`,
-`aegis-shadow-offense`) are deliberately **not** bundled: no RedHands tool
-executes them, and they belong in an isolated lab VM only. To use one with the
-container, download it from the matching release (checksum-verified via the
-`telecom` install profile on a host, or manually) and bind-mount it
+`aegis-shadow-offense`) are pinned and installed by the `telecom` and `aegis`
+profiles on hosts, but are deliberately **not** bundled in the container
+image: they run at kernel level in an isolated lab VM, not inside the server
+container. To use one with the container, bind-mount it
 individually into `/usr/local/bin` (already on `PATH`; per-file mounts do not
 shadow the tools the image installed there):
 

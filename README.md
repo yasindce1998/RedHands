@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-231-00fff2?style=flat-square" alt="231 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-237-00fff2?style=flat-square" alt="237 Tools"></a>
 </p>
 
 <p align="center">
@@ -56,6 +56,7 @@ sudo make install-tools PROFILE=network   # network/infrastructure tools
 sudo make install-tools PROFILE=ad        # Active Directory tools
 sudo make install-tools PROFILE=k8s       # Kubernetes offensive tools
 sudo make install-tools PROFILE=uefi      # UEFI bootkit simulation
+sudo make install-tools PROFILE=recon     # deep reconnaissance tools
 sudo make install-tools PROFILE=all       # everything
 
 # Check what's installed
@@ -110,12 +111,12 @@ docker compose run --rm -i redhands
 | Profile | Tools Included | Use Case |
 |---------|---------------|----------|
 | `minimal` | nmap, subfinder, httpx, nuclei | Quick recon and scanning |
-| `web` | minimal + ffuf, katana, nikto, sqlmap, feroxbuster | Web application testing |
-| `network` | minimal + masscan, rustscan, tshark, chisel, ligolo | Network/infrastructure |
-| `ad` | minimal + impacket, certipy, crackmapexec, hashcat, john | Active Directory attacks |
+| `web` | nmap, recon set (subfinder, amass, dig, waybackurls, gau, arjun), web set (httpx, katana, nikto, whatweb, testssl.sh), ffuf, gobuster, feroxbuster, masscan, rustscan, nuclei, sqlmap | Web application testing |
+| `network` | nmap, masscan, rustscan, tshark, chisel, ligolo | Network/infrastructure |
+| `ad` | nmap, impacket, certipy, crackmapexec, hashcat, john | Active Directory attacks |
 | `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offensive (eBPF) |
 | `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI bootkit adversary simulation |
-| `recon` | minimal + amass, gau, waybackurls, arjun, whatweb | Deep reconnaissance |
+| `recon` | recon set (subfinder, amass, dig, waybackurls, gau, arjun) + web set (httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
 | `all` | Everything | Full offensive toolkit |
 
 Profiles describe desired dependencies, not a guarantee every dependency is available
@@ -149,6 +150,11 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 - Security tools on PATH (installed via scripts above, Docker, or manually)
 
 ## Available Tools
+
+237 tools are registered across 30 toolsets. A default startup serves 230 of
+them: the two credstore tools additionally require `REDHANDS_CREDSTORE_KEY`,
+and the five GoPhish phishing tools additionally require `REDHANDS_GOPHISH_*`
+environment variables.
 
 ### Nmap (toolset: `nmap`)
 
@@ -623,11 +629,23 @@ All settings via environment variables:
 | `REDHANDS_TLS_KEY` | — | TLS private key path |
 | `REDHANDS_TLS_CA` | — | CA certificate for mTLS client verification |
 | `REDHANDS_PLUGINS_DIR` | `./plugins` | Directory for JSON plugin definitions |
+| `REDHANDS_PLUGIN_POLL_INTERVAL` | `5s` | Plugin directory polling interval |
 | `REDHANDS_CREDSTORE_KEY` | — | Strong encryption key required for credential persistence |
+| `REDHANDS_CREDSTORE_FILE` | `credstore.enc` | Encrypted credential store file |
+| `REDHANDS_TARGETDB_FILE` | `targetdb.json` | Target database file |
+| `REDHANDS_TARGETDB_AUTOSAVE` | `true` | Persist target database changes immediately |
+| `REDHANDS_ENGAGEMENT_DIR` | `engagements` | Engagement metadata directory |
+| `REDHANDS_DRY_RUN` | `false` | Preview executions without running tools |
+| `REDHANDS_OPSEC_PROFILE` | — | OPSEC profile name (parsed; proxy routing not yet wired) |
+| `REDHANDS_IOC_FILE` | — | Indicator-of-compromise list file (parsed; matching not yet wired) |
+| `REDHANDS_TCP_ADDR` | — | TCP transport listen address; requires `REDHANDS_AUTH=apikey` (e.g. 127.0.0.1:8082) |
+| `REDHANDS_DASHBOARD_ADDR` | — | Dashboard HTTP listen address (parsed; dashboard not yet wired) |
+| `REDHANDS_GOPHISH_URL` | — | GoPhish API base URL (enables the phishing toolset) |
+| `REDHANDS_GOPHISH_API_KEY` | — | GoPhish API key |
 | `REDHANDS_MAX_CONCURRENT` | `4` | Maximum active tool calls across clients and workflows |
 | `REDHANDS_MAX_QUEUED` | `16` | Maximum queued calls; further requests fail without executing |
 | `REDHANDS_APPROVED_TOOLS` | — | Exact comma-separated names approved by the operator for high-impact/unclassified tools |
-| `REDHANDS_WORKFLOW_TIMEOUT` | `30m` | Total deadline for a sequential workflow |
+| `REDHANDS_WORKFLOW_TIMEOUT` | `30m` | Total deadline for a sequential workflow or campaign |
 | `REDHANDS_WORKFLOW_STATE_DIR` | `workflow_state` | Campaign checkpoint directory |
 | `REDHANDS_WORKFLOW_TEMPLATES_DIR` | `playbooks` | Playbook template directory |
 | `REDHANDS_WORKFLOW_MAX_PARALLEL` | `4` | Max concurrent steps inside a campaign parallel group (≤32) |
@@ -703,7 +721,7 @@ make test           # Run tests with race detector
 make lint           # Run golangci-lint
 make docker         # Build Docker image
 make install        # Install binary to /usr/local/bin
-make install-tools  # Install security tools (PROFILE=minimal|web|network|ad|all)
+make install-tools  # Install security tools (PROFILE=minimal|web|network|ad|k8s|uefi|recon|all)
 make check-deps     # Check which tools are available
 ```
 
@@ -734,8 +752,8 @@ The Docker image includes a subset of supported security tools (check dependenci
 before use; some tools require additional installation or privileges):
 - **apt/source**: nmap, masscan, tshark, hashcat, john, nikto, whatweb
 - **pip**: impacket, certipy-ad
-- **Go tools**: subfinder, httpx, nuclei, ffuf, katana, gobuster, gau
-- **Releases**: chisel, ligolo-ng, kubedagger
+- **Go tools**: subfinder, httpx, nuclei, ffuf, katana, gobuster, gau, waybackurls
+- **Releases**: chisel, ligolo-ng, kubedagger (client, operator, server v0.5.0), barzakh (adversary, scanner, server v0.7.0)
 
 ## License
 

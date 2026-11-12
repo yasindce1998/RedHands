@@ -45,6 +45,10 @@ type EnhancedEngine struct {
 	maxParallel int
 	recorder    StepRecorder
 
+	// engagementCheck validates an engagement binding before a campaign
+	// starts; it is supplied by the application layer.
+	engagementCheck func(name string) error
+
 	runMu   sync.Mutex
 	running map[string]*runningCampaign
 }
@@ -91,9 +95,14 @@ func (e *EnhancedEngine) RunEnhanced(ctx context.Context, req *EnhancedWorkflowR
 		return nil, err
 	}
 
+	if err := e.checkEngagement(req.Engagement); err != nil {
+		return nil, err
+	}
+
 	state := &State{
 		WorkflowID: workflowID,
 		Name:       req.Name,
+		Engagement: req.Engagement,
 		Steps:      steps,
 		Results:    make(map[string]StepResult),
 		NextIndex:  0,
@@ -123,6 +132,11 @@ func (e *EnhancedEngine) Resume(ctx context.Context, workflowID string) (*Workfl
 		return nil, fmt.Errorf("workflow %s is %s, cannot resume", workflowID, state.Status)
 	}
 	if err := validateSteps(state.Steps); err != nil {
+		return nil, err
+	}
+	// The engagement binding is re-validated on resume: the operator may
+	// have switched engagements between runs.
+	if err := e.checkEngagement(state.Engagement); err != nil {
 		return nil, err
 	}
 
@@ -195,6 +209,13 @@ func (e *EnhancedEngine) SetRecorder(r StepRecorder) {
 	e.recorder = r
 }
 
+// SetEngagementCheck attaches the validator used when a campaign binds to a
+// named engagement. The application layer resolves engagement names/IDs and
+// active state; the engine calls it before any step executes.
+func (e *EnhancedEngine) SetEngagementCheck(check func(name string) error) {
+	e.engagementCheck = check
+}
+
 func (e *EnhancedEngine) registerRun(id string, cancel context.CancelFunc) *runningCampaign {
 	entry := &runningCampaign{cancel: cancel, done: make(chan struct{})}
 	e.runMu.Lock()
@@ -224,6 +245,20 @@ func (e *EnhancedEngine) isCancelled(id string) bool {
 	defer e.runMu.Unlock()
 	entry, ok := e.running[id]
 	return ok && entry.cancelled
+}
+
+// checkEngagement validates an optional engagement binding. An empty name
+// means the campaign is unbound. Every step still passes the scope
+// middleware; the binding makes the intended engagement an explicit
+// contract that fails fast instead of running against the wrong scope.
+func (e *EnhancedEngine) checkEngagement(name string) error {
+	if name == "" {
+		return nil
+	}
+	if e.engagementCheck == nil {
+		return fmt.Errorf("engagement binding %q rejected: engagement scoping is not configured on this server", name)
+	}
+	return e.engagementCheck(name)
 }
 
 // validateSteps enforces campaign limits before anything executes.

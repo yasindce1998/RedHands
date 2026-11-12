@@ -125,7 +125,7 @@ func TestCampaignEndToEndRecordsIntoTargetDB(t *testing.T) {
 	srv.RegisterTool(&jsonTool{name: "fake_scan", text: "```json\n{\"hosts\":[{\"ip\":\"192.0.2.10\"},{\"ip\":\"192.0.2.11\"}]}\n```"})
 	db := targetdb.NewStore("", false)
 	cfg := &config.Config{WorkflowStateDir: t.TempDir(), WorkflowTemplateDir: t.TempDir(), WorkflowMaxParallel: 2}
-	SetupCampaign(srv, cfg, db)
+	SetupCampaign(srv, cfg, db, nil)
 
 	runResp := srv.HandleRaw(json.RawMessage(`{"jsonrpc":"2.0","id":1,"method":"campaign/run","params":{"id":"e2e-record","steps":[{"id":"scan","tool":"fake_scan","mitre":["T1595.002"],"record":[{"type":"host","path":"hosts","fields":{"ip":"ip"}}]}]}}`))
 	if runResp == nil || !strings.Contains(string(runResp), `"success":true`) {

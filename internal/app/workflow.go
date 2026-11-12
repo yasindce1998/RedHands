@@ -3,8 +3,10 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/yasindce1998/redhands/pkg/config"
+	"github.com/yasindce1998/redhands/pkg/engagement"
 	"github.com/yasindce1998/redhands/pkg/mcp"
 	"github.com/yasindce1998/redhands/pkg/report"
 	"github.com/yasindce1998/redhands/pkg/targetdb"
@@ -42,7 +44,9 @@ func SetupWorkflow(srv *mcp.Server) *workflow.Engine {
 // through the server middleware chain exactly like a direct tools/call.
 // When a target database is provided, record rules on steps persist
 // discovered hosts, services, credentials, and findings automatically.
-func SetupCampaign(srv *mcp.Server, cfg *config.Config, targetDB *targetdb.Store) *workflow.EnhancedEngine {
+// When an engagement manager is provided, campaigns can bind to a named
+// engagement that must be the active engagement.
+func SetupCampaign(srv *mcp.Server, cfg *config.Config, targetDB *targetdb.Store, engMgr *engagement.Manager) *workflow.EnhancedEngine {
 	engine := workflow.NewEnhancedEngine(
 		toolExecutor(srv),
 		cfg.WorkflowStateDir,
@@ -52,6 +56,32 @@ func SetupCampaign(srv *mcp.Server, cfg *config.Config, targetDB *targetdb.Store
 	if targetDB != nil {
 		engine.SetRecorder(NewCampaignRecorder(targetDB))
 	}
+	if engMgr != nil {
+		engine.SetEngagementCheck(engagementCheck(engMgr))
+	}
 	srv.SetCampaignEngine(engine)
 	return engine
+}
+
+// engagementCheck validates a campaign's engagement binding: the engagement
+// must exist and be the active engagement, so every step's scope checks run
+// against the engagement the operator intended.
+func engagementCheck(mgr *engagement.Manager) func(name string) error {
+	return func(name string) error {
+		var found *engagement.Engagement
+		for _, e := range mgr.List() {
+			if e.ID == name || e.Name == name {
+				found = e
+				break
+			}
+		}
+		if found == nil {
+			return fmt.Errorf("engagement %q not found; create it with engagement_create", name)
+		}
+		active := mgr.Active()
+		if active == nil || active.ID != found.ID {
+			return fmt.Errorf("engagement %q is not the active engagement; switch to it with engagement_switch before running bound campaigns", name)
+		}
+		return nil
+	}
 }

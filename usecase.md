@@ -35,10 +35,10 @@ A comprehensive reference for all scenarios, workflows, and configurations suppo
 
 ## Overview
 
-RedHands is an MCP (Model Context Protocol) server that exposes 225 offensive security tools across 30 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
+RedHands is an MCP (Model Context Protocol) server that exposes 231 offensive security tools across 30 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
 
 **Key Features:**
-- 225 tools across 30 specialized toolsets
+- 231 tools across 30 specialized toolsets
 - Zero external Go dependencies (stdlib only)
 - Three transport modes: stdio, SSE, WebSocket
 - Built-in authentication (API key, mTLS)
@@ -250,8 +250,8 @@ REDHANDS_TOOLSETS=nmap,recon,web ./redhands
 | `crackmapexec` | 5 | Network Exploitation |
 | `certipy` | 6 | AD Certificate Services |
 | `tshark` | 5 | Packet Analysis |
-| `kubedagger` | 66 | Kubernetes Offense |
-| `barzakh` | 10 | UEFI Firmware Security |
+| `kubedagger` | 69 | Kubernetes Offense |
+| `barzakh` | 13 | UEFI Firmware Security |
 | `telecom` | 12 | Telecom/Baseband Security (StaticZero) |
 | `aegis` | 9 | Linux eBPF Research (Aegis-Shadow) |
 
@@ -1220,6 +1220,28 @@ the server restarts mid-run:
 ```
 
 The interrupted step re-runs from its checkpoint.
+
+### Engagement-Scoped Campaigns
+
+Bind a campaign to the active engagement so every step's targets are checked
+against that engagement's scope — and fail fast if the operator switched
+engagements:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "campaign/run",
+  "id": 1,
+  "params": {
+    "engagement": "lab-1",
+    "steps": [ { "tool": "nmap_port_scan", "params": { "target": "192.0.2.0/24" } } ]
+  }
+}
+```
+
+The named engagement must exist (created with `engagement_create`) and be the
+active one (`engagement_switch`). Bindings persist with the campaign and are
+re-validated on `campaign/resume`.
 
 ### Daemon Steps in Campaigns
 

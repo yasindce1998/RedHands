@@ -37,6 +37,37 @@ GO-2026-6859 (CVE-2026-97054), which affects Go 1.26.10 and earlier and Go 1.27 
 The application itself still uses only Go's standard library; passphrase derivation
 uses its PBKDF2 implementation rather than adding a cryptography dependency.
 
+## Container image contents
+
+The Docker image installs every release binary in `scripts/dependencies.json`
+through the verified installer, including the KubeDagger server (C2 server for
+lab use, pinned to the same v0.1.0 release as the client and operator) and the
+Barzakh server (REST scanner API). `barzakh-server` is pinned to Barzakh v0.7.0
+because the v0.1.1 release that pins `barzakh-adversary`/`barzakh-scanner` does
+not publish a server binary; the two pins can be aligned when those tools are
+next reviewed against a newer release.
+
+The Rust-built eBPF research toolsets — StaticZero (`staticzero-defense`,
+`modem-firmware`, `sdr-bridge`) and Aegis-Shadow (`aegis-shadow-defense`,
+`aegis-shadow-offense`) — are **not** bundled. They require a Rust nightly
+toolchain with `bpf-linker` and kernel-specific eBPF headers, which is not
+feasible to build or verify inside this image. To use them with the container,
+build them in a matching lab VM and bind-mount each binary individually into
+`/usr/local/bin` (already on `PATH`; per-file mounts do not shadow the tools
+the image installed there):
+
+```yaml
+volumes:
+  - ./local-bin/staticzero-defense:/usr/local/bin/staticzero-defense:ro
+  - ./local-bin/modem-firmware:/usr/local/bin/modem-firmware:ro
+  - ./local-bin/sdr-bridge:/usr/local/bin/sdr-bridge:ro
+```
+
+The binary allowlist resolves tools by name on `PATH` at startup, so mounted
+binaries are discovered automatically; a missing binary is reported as missing
+rather than replaced with an unverified download. Any other server binary that
+is not published in a reviewed release must be provided the same way.
+
 ## Known gaps
 
 - Distribution packages and container base tags still receive upstream updates.

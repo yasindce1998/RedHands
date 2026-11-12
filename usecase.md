@@ -66,7 +66,7 @@ curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/
 curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/install.sh | bash -s -- --with-tools --profile=web
 ```
 
-Available profiles: `minimal`, `web`, `network`, `ad`, `k8s`, `uefi`, `recon`, `all`
+Available profiles: `minimal`, `web`, `network`, `ad`, `k8s`, `uefi`, `telecom`, `aegis`, `recon`, `all`
 
 #### Build from Source
 
@@ -77,7 +77,7 @@ make build
 sudo make install
 
 # Install security tool dependencies
-sudo make install-tools PROFILE=web    # or: minimal, network, ad, k8s, uefi, recon, all
+sudo make install-tools PROFILE=web    # or: minimal, network, ad, k8s, uefi, telecom, aegis, recon, all
 
 # Check which tools are available
 make check-deps
@@ -115,6 +115,8 @@ The Docker image includes a subset of supported security tools (see docs/depende
 | `ad` | nmap, impacket, crackmapexec, certipy, hashcat, john | Active Directory attacks |
 | `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offense |
 | `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI firmware security |
+| `telecom` | staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge | Telecom security research (eBPF, Linux only) |
+| `aegis` | aegis-shadow-defense | Linux eBPF research (Aegis-Shadow) |
 | `recon` | recon+web toolsets (subfinder, amass, dig, waybackurls, gau, arjun, httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
 | `all` | Everything above combined | Full offensive toolkit |
 
@@ -1511,6 +1513,8 @@ docker compose --profile secure up redhands-secure
 | Tunneling | chisel v1.11.5, ligolo-ng v0.8.3 |
 | KubeDagger | kubedagger-client, kubedagger-operator, kubedagger-server (all v0.5.0) |
 | Barzakh | barzakh-adversary, barzakh-scanner, barzakh-server (all v0.7.0) |
+| StaticZero | staticzero-defense, modem-firmware, sdr-bridge (v0.5.0, eBPF embedded; offense binary not bundled) |
+| Aegis-Shadow | aegis-shadow-defense (v0.1.1, eBPF embedded; offense binary not bundled) |
 
 ### Custom Plugins with Docker
 

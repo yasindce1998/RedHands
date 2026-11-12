@@ -46,7 +46,7 @@ var All = []string{
 	"certipy",
 	"tshark",
 	"barzakh-adversary", "barzakh-scanner", "barzakh-server",
-	"staticzero-defense", "modem-firmware", "sdr-bridge",
+	"staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge",
 	"aegis-shadow-defense", "aegis-shadow-offense",
 	"bloodhound-python", "responder", "evil-winrm", "python3",
 	"airmon-ng", "airodump-ng", "aircrack-ng", "bettercap",

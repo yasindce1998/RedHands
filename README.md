@@ -56,6 +56,8 @@ sudo make install-tools PROFILE=network   # network/infrastructure tools
 sudo make install-tools PROFILE=ad        # Active Directory tools
 sudo make install-tools PROFILE=k8s       # Kubernetes offensive tools
 sudo make install-tools PROFILE=uefi      # UEFI bootkit simulation
+sudo make install-tools PROFILE=telecom   # StaticZero telecom research (Linux only)
+sudo make install-tools PROFILE=aegis     # Aegis-Shadow eBPF research (Linux only)
 sudo make install-tools PROFILE=recon     # deep reconnaissance tools
 sudo make install-tools PROFILE=all       # everything
 
@@ -116,6 +118,8 @@ docker compose run --rm -i redhands
 | `ad` | nmap, impacket, certipy, crackmapexec, hashcat, john | Active Directory attacks |
 | `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offensive (eBPF) |
 | `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI bootkit adversary simulation |
+| `telecom` | staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge | Telecom security research (eBPF, Linux only) |
+| `aegis` | aegis-shadow-defense | Linux eBPF security research (Aegis-Shadow) |
 | `recon` | recon set (subfinder, amass, dig, waybackurls, gau, arjun) + web set (httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
 | `all` | Everything | Full offensive toolkit |
 
@@ -336,9 +340,9 @@ baseband firmware). Authorized lab use only.
 | `telecom_defense_stop` | Stop a managed defense engine daemon |
 | `telecom_defense_status` | Status of managed defense engine daemons |
 
-StaticZero binaries (`staticzero-defense`, `modem-firmware`, `sdr-bridge`) are
-built from the Rust workspace with `cargo xtask build-ebpf` and must be on PATH;
-they are not bundled with the install profiles.
+StaticZero binaries ship as checksum-verified release assets (v0.5.0, Linux
+only, eBPF embedded) and install via the `telecom` profile:
+`sudo make install-tools PROFILE=telecom`.
 
 ### Aegis-Shadow (toolset: `aegis`)
 
@@ -721,7 +725,7 @@ make test           # Run tests with race detector
 make lint           # Run golangci-lint
 make docker         # Build Docker image
 make install        # Install binary to /usr/local/bin
-make install-tools  # Install security tools (PROFILE=minimal|web|network|ad|k8s|uefi|recon|all)
+make install-tools  # Install security tools (PROFILE=minimal|web|network|ad|k8s|uefi|telecom|aegis|recon|all)
 make check-deps     # Check which tools are available
 ```
 
@@ -753,7 +757,7 @@ before use; some tools require additional installation or privileges):
 - **apt/source**: nmap, masscan, tshark, hashcat, john, nikto, whatweb
 - **pip**: impacket, certipy-ad
 - **Go tools**: subfinder, httpx, nuclei, ffuf, katana, gobuster, gau, waybackurls
-- **Releases**: chisel, ligolo-ng, kubedagger (client, operator, server v0.5.0), barzakh (adversary, scanner, server v0.7.0)
+- **Releases**: chisel, ligolo-ng, kubedagger (client, operator, server v0.5.0), barzakh (adversary, scanner, server v0.7.0), staticzero (defense, modem-firmware, sdr-bridge v0.5.0), aegis-shadow-defense (v0.1.1)
 
 ## License
 

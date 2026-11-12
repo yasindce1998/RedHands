@@ -44,13 +44,13 @@ func EvaluateConditionWithIndexed(cond *Condition, named map[string]StepResult, 
 		return !ok
 	case "json_equals":
 		v, ok := lookupResultPath(r, cond.Path)
-		return ok && valueToString(v) == cond.Value
+		return ok && ValueToString(v) == cond.Value
 	case "json_not_equals":
 		v, ok := lookupResultPath(r, cond.Path)
-		return ok && valueToString(v) != cond.Value
+		return ok && ValueToString(v) != cond.Value
 	case "json_contains":
 		v, ok := lookupResultPath(r, cond.Path)
-		return ok && strings.Contains(valueToString(v), cond.Value)
+		return ok && strings.Contains(ValueToString(v), cond.Value)
 	case "json_gt":
 		return compareJSONNumbers(r, cond.Path, cond.Value, func(got, want float64) bool { return got > want })
 	case "json_lt":
@@ -92,7 +92,7 @@ func compareJSONNumbers(r StepResult, path, value string, cmp func(got, want flo
 	if !ok {
 		return false
 	}
-	got, err := strconv.ParseFloat(valueToString(v), 64)
+	got, err := strconv.ParseFloat(ValueToString(v), 64)
 	if err != nil {
 		return false
 	}

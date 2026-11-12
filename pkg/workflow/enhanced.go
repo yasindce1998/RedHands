@@ -43,6 +43,7 @@ type EnhancedEngine struct {
 	state       *StateManager
 	templates   *TemplateManager
 	maxParallel int
+	recorder    StepRecorder
 
 	runMu   sync.Mutex
 	running map[string]*runningCampaign
@@ -188,6 +189,12 @@ func (e *EnhancedEngine) Templates() *TemplateManager {
 	return e.templates
 }
 
+// SetRecorder attaches a step recorder that persists structured items
+// extracted from step output into the target database.
+func (e *EnhancedEngine) SetRecorder(r StepRecorder) {
+	e.recorder = r
+}
+
 func (e *EnhancedEngine) registerRun(id string, cancel context.CancelFunc) *runningCampaign {
 	entry := &runningCampaign{cancel: cancel, done: make(chan struct{})}
 	e.runMu.Lock()
@@ -273,6 +280,16 @@ func validateSteps(steps []EnhancedStep) error {
 			if step.Condition != nil {
 				if !validConditionOps[step.Condition.Op] {
 					return fmt.Errorf("step %d has invalid condition op %q", i, step.Condition.Op)
+				}
+			}
+			for j, rule := range step.Record {
+				if err := validateRecordRule(rule); err != nil {
+					return fmt.Errorf("step %d record rule %d: %w", i, j, err)
+				}
+			}
+			for _, id := range step.MITRE {
+				if !ValidMITREID(id) {
+					return fmt.Errorf("step %d has invalid MITRE technique ID %q (expected e.g. T1613 or T1552.007)", i, id)
 				}
 			}
 		}
@@ -363,6 +380,11 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 			results, failed := e.RunParallel(ctx, step.Parallel, state.Results, allResults)
 			for idx, r := range results {
 				r.ID = parallelStepID(step.Parallel, idx, stepID)
+				if r.Success {
+					e.recordStep(state, step.Parallel[idx], r.ID, &r)
+					state.aggregateMITRE(step.Parallel[idx])
+					state.Results[r.ID] = r
+				}
 				allResults = append(allResults, r)
 				outputBytes += len(r.Text)
 			}
@@ -422,6 +444,15 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 					// "" and "stop"
 					return e.fail(state, allResults, i, ""), nil
 				}
+			}
+
+			if r.Success {
+				e.recordStep(state, step, stepID, &r)
+				state.Results[stepID] = r
+				state.aggregateMITRE(step)
+				// recordStep may annotate the result; refresh the copy in
+				// the result list.
+				allResults[len(allResults)-1] = r
 			}
 		}
 
@@ -513,6 +544,7 @@ func buildResult(state *State, results []StepResult, success bool) *WorkflowResu
 		Status:     state.Status,
 		Steps:      results,
 		Success:    success,
+		MITRE:      state.Techniques,
 	}
 }
 

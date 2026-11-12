@@ -7,6 +7,7 @@ import (
 	"github.com/yasindce1998/redhands/pkg/config"
 	"github.com/yasindce1998/redhands/pkg/mcp"
 	"github.com/yasindce1998/redhands/pkg/report"
+	"github.com/yasindce1998/redhands/pkg/targetdb"
 	"github.com/yasindce1998/redhands/pkg/workflow"
 )
 
@@ -39,13 +40,18 @@ func SetupWorkflow(srv *mcp.Server) *workflow.Engine {
 // SetupCampaign wires the multi-stage campaign engine (campaign/run, status,
 // resume, cancel, list, and playbook template methods). Every step executes
 // through the server middleware chain exactly like a direct tools/call.
-func SetupCampaign(srv *mcp.Server, cfg *config.Config) *workflow.EnhancedEngine {
+// When a target database is provided, record rules on steps persist
+// discovered hosts, services, credentials, and findings automatically.
+func SetupCampaign(srv *mcp.Server, cfg *config.Config, targetDB *targetdb.Store) *workflow.EnhancedEngine {
 	engine := workflow.NewEnhancedEngine(
 		toolExecutor(srv),
 		cfg.WorkflowStateDir,
 		cfg.WorkflowTemplateDir,
 		cfg.WorkflowMaxParallel,
 	)
+	if targetDB != nil {
+		engine.SetRecorder(NewCampaignRecorder(targetDB))
+	}
 	srv.SetCampaignEngine(engine)
 	return engine
 }

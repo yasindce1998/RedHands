@@ -8,6 +8,6 @@
   "steps": [
     { "id": "subdomains", "tool": "subfinder_enum", "params": { "domain": "{{domain}}" }, "on_fail": "stop" },
     { "id": "probe", "tool": "httpx_probe", "params": { "target": "${subdomains.text}", "status_code": true, "title": true, "tech_detect": true }, "on_fail": "continue" },
-    { "id": "vulns", "tool": "nuclei_scan", "params": { "target": "${probe.text}", "severity": "{{severity}}" }, "on_fail": "continue" }
+    { "id": "vulns", "tool": "nuclei_scan", "params": { "target": "${probe.text}", "severity": "{{severity}}" }, "on_fail": "continue", "mitre": ["T1595.002"] }
   ]
 }

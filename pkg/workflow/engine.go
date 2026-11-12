@@ -27,6 +27,9 @@ type StepResult struct {
 	Success bool   `json:"success"`
 	Skipped bool   `json:"skipped,omitempty"`
 	Text    string `json:"text"`
+	// Recorded counts items written to the target database by this step's
+	// record rules.
+	Recorded int `json:"recorded,omitempty"`
 }
 
 // WorkflowResult is the combined output of all steps.
@@ -35,6 +38,9 @@ type WorkflowResult struct {
 	Status     string       `json:"status,omitempty"`
 	Steps      []StepResult `json:"steps"`
 	Success    bool         `json:"success"`
+	// MITRE lists the unique ATT&CK technique IDs tagged on executed steps,
+	// ready for detection-rule generation (e.g. kubedagger_detection).
+	MITRE []string `json:"mitre_techniques,omitempty"`
 }
 
 // ToolExecutor is the function signature for executing a tool by name.

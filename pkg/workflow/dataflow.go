@@ -118,7 +118,7 @@ func substituteString(s string, budget *int, named map[string]StepResult, indexe
 			continue
 		}
 		b.WriteString(s[last:m[0]])
-		text := valueToString(val)
+		text := ValueToString(val)
 		if *budget < len(text) {
 			return nil, fmt.Errorf("substituted campaign parameters exceed 10 MiB")
 		}
@@ -220,8 +220,18 @@ func lookupPath(raw json.RawMessage, path string) (any, bool) {
 	if err := decoder.Decode(&value); err != nil {
 		return nil, false
 	}
+	return LookupPathValue(value, path)
+}
+
+// LookupPathValue resolves a dot-separated path against an already-decoded
+// JSON value (maps, slices, json.Number scalars). Numeric segments index into
+// arrays. It is exported for step recorders that inspect step output.
+func LookupPathValue(value any, path string) (any, bool) {
 	current := value
 	for _, seg := range strings.Split(path, ".") {
+		if seg == "" {
+			continue
+		}
 		switch typed := current.(type) {
 		case map[string]any:
 			next, ok := typed[seg]
@@ -242,8 +252,9 @@ func lookupPath(raw json.RawMessage, path string) (any, bool) {
 	return current, true
 }
 
-// valueToString renders a resolved value for embedding inside a larger string.
-func valueToString(v any) string {
+// ValueToString renders a resolved value for embedding inside a larger string.
+// Exported for step recorders that map JSON values onto database fields.
+func ValueToString(v any) string {
 	switch typed := v.(type) {
 	case string:
 		return typed

@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-261-00fff2?style=flat-square" alt="261 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-262-00fff2?style=flat-square" alt="262 Tools"></a>
 </p>
 
 <p align="center">
@@ -155,7 +155,7 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 
 ## Available Tools
 
-261 tools are registered across 30 toolsets. A default startup serves 254 of
+262 tools are registered across 30 toolsets. A default startup serves 255 of
 them: the two credstore tools additionally require `REDHANDS_CREDSTORE_KEY`,
 and the five GoPhish phishing tools additionally require `REDHANDS_GOPHISH_*`
 environment variables.
@@ -405,6 +405,7 @@ offense rootkit loader can each be started as a managed background daemon
 | `aegis_offense_start` | ☠️ Launch the Aegis-Shadow eBPF rootkit loader as a managed daemon (destructive `deadman_switch`/`wipe_bytecode` are opt-in with warnings; disposable VM only) |
 | `aegis_offense_stop` | Stop a managed offense loader daemon |
 | `aegis_offense_status` | Status of managed offense loader daemons |
+| `aegis_c2_send` | ☠️ Send a command to a running rootkit over its encrypted C2 channel (hide/unhide pid, obfuscate file, exfil, kill-switch; fire-and-forget; requires the `aegis-c2` CLI from Aegis-Shadow ≥ v0.2.0) |
 
 ### System
 

@@ -325,6 +325,7 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			srv.RegisterTool(aegis.NewOffenseStart(d.ProcMgr))
 			srv.RegisterTool(aegis.NewOffenseStop(d.ProcMgr))
 			srv.RegisterTool(aegis.NewOffenseStatus(d.ProcMgr))
+			srv.RegisterTool(aegis.NewC2Send(d.Exec))
 		}
 	}
 

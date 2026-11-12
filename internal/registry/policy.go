@@ -78,5 +78,8 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 	}
 	// The correlator binds a loopback TCP listener.
 	policies["telecom_correlator_start"] = mcp.ToolPolicy{NetworkAccess: true}
+	// Driving a running rootkit over its C2 channel (hide/unhide/exfil/
+	// kill-switch) touches a live target; approval-gated.
+	policies["aegis_c2_send"] = mcp.ToolPolicy{NetworkAccess: true, RequiresPrivileges: true}
 	return policies
 }

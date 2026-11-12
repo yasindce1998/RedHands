@@ -49,6 +49,7 @@ var All = []string{
 	"staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge",
 	"protocol-correlator",
 	"aegis-shadow-defense", "aegis-shadow-offense",
+	"aegis-c2",
 	"bloodhound-python", "responder", "evil-winrm", "python3",
 	"airmon-ng", "airodump-ng", "aircrack-ng", "bettercap",
 	"frida", "objection", "apktool", "adb",

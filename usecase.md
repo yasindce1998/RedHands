@@ -35,10 +35,10 @@ A comprehensive reference for all scenarios, workflows, and configurations suppo
 
 ## Overview
 
-RedHands is an MCP (Model Context Protocol) server that exposes 231 offensive security tools across 30 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
+RedHands is an MCP (Model Context Protocol) server that exposes 237 registered offensive security tools across 30 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
 
 **Key Features:**
-- 231 tools across 30 specialized toolsets
+- 237 registered tools across 30 specialized toolsets (230 on a default startup; credstore and GoPhish tools are env-gated)
 - Zero external Go dependencies (stdlib only)
 - Three transport modes: stdio, SSE, WebSocket
 - Built-in authentication (API key, mTLS)
@@ -66,7 +66,7 @@ curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/
 curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/install.sh | bash -s -- --with-tools --profile=web
 ```
 
-Available profiles: `minimal`, `web`, `network`, `ad`, `recon`, `all`
+Available profiles: `minimal`, `web`, `network`, `ad`, `k8s`, `uefi`, `recon`, `all`
 
 #### Build from Source
 
@@ -77,7 +77,7 @@ make build
 sudo make install
 
 # Install security tool dependencies
-sudo make install-tools PROFILE=web    # or: minimal, network, ad, recon, all
+sudo make install-tools PROFILE=web    # or: minimal, network, ad, k8s, uefi, recon, all
 
 # Check which tools are available
 make check-deps
@@ -103,18 +103,20 @@ docker build -t redhands .
 docker run -it redhands
 ```
 
-The Docker image includes all security tools pre-installed — no additional setup required.
+The Docker image includes a subset of supported security tools (see docs/dependencies.md for contents and gaps).
 
 ### Installation Profiles
 
 | Profile | Includes | Use Case |
 |---------|----------|----------|
 | `minimal` | nmap, subfinder, httpx, nuclei | Quick recon and scanning |
-| `web` | minimal + ffuf, katana, nikto, sqlmap, feroxbuster, whatweb, testssl | Web application testing |
-| `network` | minimal + masscan, rustscan, tshark, chisel, ligolo-ng | Network/infrastructure assessments |
-| `ad` | minimal + impacket, certipy, crackmapexec, hashcat, john | Active Directory attacks |
-| `recon` | minimal + amass, gau, waybackurls, arjun, whatweb | Deep reconnaissance |
-| `all` | Everything | Full offensive toolkit |
+| `web` | nmap, recon+web+fuzz toolsets (subfinder, amass, dig, waybackurls, gau, arjun, httpx, katana, nikto, whatweb, testssl.sh, ffuf, gobuster, feroxbuster), masscan, rustscan, nuclei, sqlmap | Web application testing |
+| `network` | nmap, masscan, rustscan, tshark, chisel, ligolo-proxy | Network/infrastructure assessments |
+| `ad` | nmap, impacket, crackmapexec, certipy, hashcat, john | Active Directory attacks |
+| `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offense |
+| `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI firmware security |
+| `recon` | recon+web toolsets (subfinder, amass, dig, waybackurls, gau, arjun, httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
+| `all` | Everything above combined | Full offensive toolkit |
 
 ### Quick Start with Claude Code
 
@@ -134,10 +136,12 @@ Add to your MCP client configuration:
 ### Quick Start with SSE (Remote)
 
 ```bash
-REDHANDS_TRANSPORT=sse REDHANDS_SSE_ADDR=:8080 redhands
+REDHANDS_TRANSPORT=sse REDHANDS_SSE_ADDR=127.0.0.1:8080 redhands
 ```
 
 Connect from any MCP client supporting SSE transport at `http://localhost:8080/sse`.
+
+> **Note:** Non-loopback listeners (e.g. `0.0.0.0:8080`) require authentication AND TLS — the server refuses to start otherwise (see docs/security-hardening.md).
 
 ---
 
@@ -160,7 +164,7 @@ REDHANDS_TRANSPORT=stdio ./redhands
 HTTP-based transport for remote access.
 
 ```bash
-REDHANDS_TRANSPORT=sse REDHANDS_SSE_ADDR=:8080 ./redhands
+REDHANDS_TRANSPORT=sse REDHANDS_SSE_ADDR=127.0.0.1:8080 ./redhands
 ```
 
 **Endpoints:**
@@ -177,7 +181,7 @@ REDHANDS_TRANSPORT=sse REDHANDS_SSE_ADDR=:8080 ./redhands
 Full-duplex communication over WebSocket (RFC 6455).
 
 ```bash
-REDHANDS_TRANSPORT=ws REDHANDS_WS_ADDR=:8081 ./redhands
+REDHANDS_TRANSPORT=ws REDHANDS_WS_ADDR=127.0.0.1:8081 ./redhands
 ```
 
 **Endpoints:**
@@ -206,7 +210,6 @@ REDHANDS_AUTH=apikey REDHANDS_API_KEY=your-secret-key REDHANDS_TRANSPORT=sse ./r
 
 Clients authenticate via:
 - HTTP header: `X-API-Key: your-secret-key`
-- Query parameter: `?api_key=your-secret-key`
 
 ### Mutual TLS (mTLS)
 
@@ -1480,23 +1483,19 @@ Use `{{.field_name}}` in `args_template` to reference input parameters:
 # Build the image
 docker build -t redhands .
 
-# Run with stdio (interactive)
-docker run -it redhands
-
-# Run with SSE transport
-docker run -d -p 8080:8080 -e REDHANDS_TRANSPORT=sse redhands
-
-# Run with WebSocket transport
-docker run -d -p 8081:8081 -e REDHANDS_TRANSPORT=ws redhands
+# Local stdio use (interactive; no ports published)
+docker compose run --rm -i redhands
 ```
+
+Raw `docker run -p 8080:8080 -e REDHANDS_TRANSPORT=sse redhands` (or the `-p 8081:8081` WebSocket variant) will not start: publishing the port binds a non-loopback listener, which requires authentication AND TLS.
 
 ### Docker Compose
 
 ```bash
-# Start default service (SSE on 8080, WS on 8081)
-docker compose up redhands
+# Local stdio use (attach an MCP client to the container's stdio)
+docker compose run --rm -i redhands
 
-# Start secure service (API key auth on 8443)
+# Remote use: secure profile (SSE on 127.0.0.1:8443, API key auth + TLS required)
 docker compose --profile secure up redhands-secure
 ```
 
@@ -1508,28 +1507,24 @@ docker compose --profile secure up redhands-secure
 | Password | hashcat, john |
 | Web | whatweb, nikto |
 | Python | impacket, certipy-ad |
-| Go-based | subfinder, httpx, nuclei, ffuf, katana, gobuster, gau |
+| Go-based | subfinder, httpx, nuclei, ffuf, katana, gobuster, gau, waybackurls |
 | Tunneling | chisel v1.11.5, ligolo-ng v0.8.3 |
+| KubeDagger | kubedagger-client, kubedagger-operator, kubedagger-server (all v0.5.0) |
+| Barzakh | barzakh-adversary, barzakh-scanner, barzakh-server (all v0.7.0) |
 
 ### Custom Plugins with Docker
 
 ```bash
-docker run -d \
-  -p 8080:8080 \
+docker compose run --rm -i \
   -v ./my-plugins:/opt/redhands/plugins:ro \
-  -e REDHANDS_TRANSPORT=sse \
   redhands
 ```
 
 ### Docker with Authentication
 
 ```bash
-docker run -d \
-  -p 8080:8080 \
-  -e REDHANDS_TRANSPORT=sse \
-  -e REDHANDS_AUTH=apikey \
-  -e REDHANDS_API_KEY=my-secret-key \
-  redhands
+# The secure compose profile enforces API key auth + TLS on 127.0.0.1:8443
+REDHANDS_API_KEY=your-secret-key docker compose --profile secure up redhands-secure
 ```
 
 ---
@@ -1544,17 +1539,42 @@ docker run -d \
 | `REDHANDS_RATE_LIMIT` | `10` | Requests per second (token bucket refill) |
 | `REDHANDS_RATE_BURST` | `20` | Maximum burst capacity |
 | `REDHANDS_CACHE_TTL` | `5m` | Result cache time-to-live |
-| `REDHANDS_CACHE_SIZE` | `100` | Maximum cached results (LRU) |
+| `REDHANDS_CACHE_SIZE` | `100` | Maximum cached pure-function results (oldest-expiry eviction) |
 | `REDHANDS_AUDIT_FILE` | `audit.jsonl` | Audit log file path |
 | `REDHANDS_TRANSPORT` | `stdio` | Transport: `stdio`, `sse`, or `ws` |
-| `REDHANDS_SSE_ADDR` | `:8080` | SSE listen address |
-| `REDHANDS_WS_ADDR` | `:8081` | WebSocket listen address |
+| `REDHANDS_SSE_ADDR` | `127.0.0.1:8080` | SSE listen address |
+| `REDHANDS_WS_ADDR` | `127.0.0.1:8081` | WebSocket listen address |
+| `REDHANDS_TCP_ADDR` | — | TCP transport listen address (mTLS only; no API-key support) |
+| `REDHANDS_DASHBOARD_ADDR` | — | Dashboard listen address (disabled when unset) |
 | `REDHANDS_PLUGINS_DIR` | `./plugins` | Plugin definitions directory |
+| `REDHANDS_PLUGIN_POLL_INTERVAL` | `5s` | Plugin directory polling interval |
 | `REDHANDS_AUTH` | `none` | Authentication: `none`, `apikey`, or `mtls` |
-| `REDHANDS_API_KEY` | — | API key (required when `auth=apikey`) |
+| `REDHANDS_API_KEY` | — | API key (required when `auth=apikey`; accepted only via the `X-API-Key` header) |
 | `REDHANDS_TLS_CERT` | — | TLS certificate file path |
 | `REDHANDS_TLS_KEY` | — | TLS private key file path |
 | `REDHANDS_TLS_CA` | — | CA certificate for mTLS verification |
+| `REDHANDS_TARGETDB_FILE` | `targetdb.json` | Target database file path |
+| `REDHANDS_TARGETDB_AUTOSAVE` | `true` | Autosave the target database on change |
+| `REDHANDS_ENGAGEMENT_DIR` | `engagements` | Engagement records directory |
+| `REDHANDS_CREDSTORE_FILE` | `credstore.enc` | Encrypted credential store file path |
+| `REDHANDS_CREDSTORE_KEY` | — | Encryption key for the credential store (enables the credstore tools) |
+| `REDHANDS_MAX_CONCURRENT` | `4` | Maximum active tool calls across clients and workflows |
+| `REDHANDS_MAX_QUEUED` | `16` | Maximum queued calls; further requests fail without executing |
+| `REDHANDS_APPROVED_TOOLS` | — | Exact comma-separated names approved by the operator for high-impact/unclassified tools |
+| `REDHANDS_WORKFLOW_TIMEOUT` | `30m` | Total deadline for a sequential workflow |
+| `REDHANDS_WORKFLOW_STATE_DIR` | `workflow_state` | Campaign checkpoint directory |
+| `REDHANDS_WORKFLOW_TEMPLATES_DIR` | `playbooks` | Playbook template directory |
+| `REDHANDS_WORKFLOW_MAX_PARALLEL` | `4` | Max concurrent steps inside a campaign parallel group (≤32) |
+| `REDHANDS_EVIDENCE_DIR` | `evidence` | Artifact directory with persistent metadata index |
+| `REDHANDS_LOOT_DIR` | `loot` | Directory containing the atomic `loot.json` store |
+| `REDHANDS_DRY_RUN` | `false` | Dry-run mode: preview workflows without executing tools (`true`/`false`) |
+| `REDHANDS_OPSEC_PROFILE` | — | OPSEC profile name |
+| `REDHANDS_IOC_FILE` | — | Indicator-of-compromise watch file |
+| `REDHANDS_OPSEC_PROXIES` | — | **Rejected at startup when set** — not supported by the active server; unset it |
+| `REDHANDS_OPERATOR_ID` | — | **Rejected at startup when set** — not supported by the active server; unset it |
+| `REDHANDS_SYNC_PEERS` | — | **Rejected at startup when set** — not supported by the active server; unset it |
+| `REDHANDS_WEBHOOK_URLS` | — | **Rejected at startup when set** — not supported by the active server; unset it |
+| `REDHANDS_WEBHOOK_EVENTS` | — | **Rejected at startup when set** — not supported by the active server; unset it |
 
 ---
 
@@ -1576,7 +1596,7 @@ docker run -d \
 
 7. **Audit Logging** — Every tool invocation is logged to a JSONL audit file with timestamp, tool name, parameters, and result.
 
-8. **Caching** — LRU cache prevents redundant expensive operations (configurable TTL and size).
+8. **Caching** — Result cache (oldest-expiry eviction) applies only to pure MITRE/risk-score lookups, never scans or state-changing tools.
 
 ### Deployment Recommendations
 

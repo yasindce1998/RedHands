@@ -4,7 +4,7 @@
 
 RedHands is an MCP (Model Context Protocol) server that exposes offensive security tools to AI agents. It follows the same architecture patterns used by GitHub's MCP server and Atlassian's MCP server — a single-binary Go server with zero external dependencies, multi-transport support (stdio/SSE/WebSocket), tool chaining, structured output parsing, report generation, and a JSON plugin system.
 
-**Current state:** v0.2.0 — 231 tools across 30 toolsets, multi-transport (stdio/SSE/WebSocket), authentication (API key/mTLS), sequential workflow engine plus the multi-stage campaign engine (conditions, parallelism, goto recovery, checkpoint/resume, playbooks, target-database recording, MITRE ATT&CK tagging), structured parsers, report generation, plugin system, Docker image with all tools pre-installed.
+**Current state:** v0.5.0 — 237 registered tools across 30 toolsets, multi-transport (stdio/SSE/WebSocket), authentication (API key/mTLS), sequential workflow engine plus the multi-stage campaign engine (conditions, parallelism, goto recovery, checkpoint/resume, playbooks, engagement binding, target-database recording, MITRE ATT&CK tagging), managed daemon lifecycle for defense engines and C2/scanner servers, structured parsers, report generation, plugin system, Docker image with a verified tool subset.
 
 ---
 
@@ -47,7 +47,7 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 
 ---
 
-## Toolsets & Tools (125 total)
+## Toolsets & Tools (237 registered across 30 toolsets)
 
 ### Toolset: `nmap` — Nmap Suite (4 tools)
 
@@ -185,11 +185,107 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 | `tshark_extract` | tshark | Extract fields from captures |
 | `tshark_follow` | tshark | Follow TCP/UDP/HTTP streams |
 
-### Toolset: `kubedagger` — Kubernetes Offensive (57 tools)
+### Toolset: `kubedagger` — Kubernetes Offensive (69 tools)
 
 | Tool | Binary | Description |
 |------|--------|-------------|
-| 57 eBPF-powered tools | kubedagger | Container escape, syscall hooking, network sniffing, process hiding, crypto mining, rootkit deployment, and more |
+| 66 eBPF-powered CLI wrappers | kubedagger-client | Container escape, syscall hooking, network sniffing, process hiding, crypto mining, rootkit deployment, C2/disruption/evasion, operator tooling, and more |
+| `kubedagger_server_start/stop/status` | kubedagger-server | Managed C2 server daemon lifecycle (events feed `kubedagger_report`) |
+
+### Toolset: `barzakh` — UEFI Bootkit Adversary Simulation (13 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `barzakh_list`, `barzakh_generate`, `barzakh_corpus`, `barzakh_scan`, `barzakh_validate`, `barzakh_scenario`, `barzakh_robustness`, `barzakh_detectors`, `barzakh_baseline`, `barzakh_intel` | barzakh-adversary | UEFI bootkit payload generation/corpus management and scanning with 138 detectors, scenario validation, robustness/detector/baseline/intel tooling |
+| `barzakh_server_start/stop/status` | barzakh-server | Managed REST scanner-server daemon lifecycle |
+
+### Toolset: `telecom` — StaticZero Telecom Defense (12 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `telecom_doctor`, `telecom_firmware_analyze`, `telecom_firmware_extract`, `telecom_firmware_diff`, `telecom_firmware_nv_dump`, `telecom_sdr_scan` | staticzero-defense / modem-firmware / sdr-bridge | Defense preflight, baseband firmware static analysis, receive-only LTE scanning |
+| `telecom_threats`, `telecom_alerts`, `telecom_stats`, `telecom_defense_start/stop/status` | staticzero-defense | Defense-engine HTTP queries and managed defense-engine lifecycle |
+
+### Toolset: `aegis` — Aegis-Shadow Analysis (9 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `aegis_alerts_parse`, `aegis_alerts_tail`, `aegis_modules_list`, `aegis_defense_config_read`, `aegis_defense_config_write`, `aegis_offense_plan` | aegis-shadow | Read-only rootkit alert parsing/tailing, module catalog, defense config, offense planning (renders the manual command line instead of executing it) |
+| `aegis_defense_start/stop/status` | aegis-shadow-defense | Managed defense-engine lifecycle |
+
+### Toolset: `bloodhound` — AD Graph Analysis (4 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `bloodhound_collect`, `bloodhound_find_path`, `bloodhound_mark_owned`, `bloodhound_analyze` | bloodhound-python | Active Directory data collection and attack-path analysis |
+
+### Toolset: `responder` — LLMNR/NBT-NS Poisoning (4 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `responder_start`, `responder_analyze`, `responder_logs`, `responder_status` | responder | Credential poisoning with capture analysis and log review |
+
+### Toolset: `evilwinrm` — WinRM Shell (5 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `evilwinrm_shell`, `evilwinrm_upload`, `evilwinrm_download`, `evilwinrm_dll_inject`, `evilwinrm_ps_exec` | evil-winrm | WinRM remote shell with file transfer, DLL injection, and PsExec |
+
+### Toolset: `coercion` — AD Forced Authentication (4 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `coercion_petitpotam`, `coercion_printerbug`, `coercion_dfscoerce`, `coercion_check` | python3 (PetitPotam / dementor / DFSCoerce) | Forced-authentication coercion attacks and target susceptibility checks |
+
+### Toolset: `phishing` — GoPhish Campaigns (5 tools, env-gated)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `phishing_campaign_create`, `phishing_campaign_status`, `phishing_template_create`, `phishing_landing_create`, `phishing_groups_create` | GoPhish API | Phishing campaign/template/landing/group management; registered only when `REDHANDS_GOPHISH_URL` and `REDHANDS_GOPHISH_API_KEY` are set |
+
+### Toolset: `wireless` — Wi-Fi Attacks (6 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `wireless_monitor`, `wireless_scan`, `wireless_deauth`, `wireless_capture`, `wireless_crack`, `wireless_bettercap` | aircrack-ng / bettercap | Monitor mode, AP scanning, deauth, capture, handshake cracking, MITM |
+
+### Toolset: `mobile` — Mobile Testing (6 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `mobile_frida_attach`, `mobile_frida_spawn`, `mobile_objection`, `mobile_apk_decompile`, `mobile_apk_repackage`, `mobile_adb_shell` | frida / objection / apktool / adb | Dynamic instrumentation, APK analysis/repackaging, device shell |
+
+### Toolset: `cloud` — Cloud Security (8 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `cloud_scout_aws`, `cloud_scout_azure`, `cloud_prowler`, `cloud_pacu_enum`, `cloud_roadtools_auth`, `cloud_roadtools_dump`, `cloud_enum_s3`, `cloud_enum_blobs` | scout / prowler / pacu / roadtx / aws | AWS/Azure security review, exploitation, auth abuse, storage enumeration |
+
+### Toolset: `targetdb` — Target Database (6 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `targetdb_add_host`, `targetdb_list_hosts`, `targetdb_add_finding`, `targetdb_query_findings`, `targetdb_add_cred`, `targetdb_list_creds` | — | Persistent recording and querying of hosts, findings, and credential metadata |
+
+### Toolset: `intelligence` — Intelligence Layer (6 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `correlation_analyze`, `attackgraph_build`, `attackgraph_path`, `attackgraph_export`, `mitre_lookup`, `risk_score_calculate` | — | Finding correlation, attack-graph build/path/export, MITRE ATT&CK lookup, risk scoring |
+
+### Toolset: `operations` — Engagement Operations (8 tools; 2 env-gated)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `engagement_create`, `engagement_switch`, `engagement_list`, `loot_add`, `loot_list`, `loot_search` | — | Engagement scoping and loot management |
+| `credstore_add`, `credstore_search` | — | Encrypted credential store; registered only when `REDHANDS_CREDSTORE_KEY` is set |
+
+### Toolset: `reporting` — Reporting & Evidence (5 tools)
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `report_sarif`, `report_executive`, `report_compliance` | — | SARIF export, executive summaries, compliance mapping |
+| `evidence_list`, `evidence_screenshot` | — | Evidence artifact index and validated PNG screenshot capture |
 
 ### System (always enabled, 1 tool)
 
@@ -199,7 +295,7 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 
 ### Default Toolsets
 
-When `REDHANDS_TOOLSETS` is unset: all toolsets are enabled.
+When `REDHANDS_TOOLSETS` is unset: all toolsets are enabled. 230 tools are registered on default startup; the 5 GoPhish tools additionally require `REDHANDS_GOPHISH_URL`/`REDHANDS_GOPHISH_API_KEY` and the 2 credstore tools additionally require `REDHANDS_CREDSTORE_KEY`, for 237 registered tools in total.
 
 ---
 
@@ -260,13 +356,14 @@ Non-Docker installation system for native usage:
 | `scripts/install-tools.ps1` | Full tool dependency installer with profiles | Windows |
 | `scripts/check-deps.sh` | Dependency checker with install hints | Linux, macOS |
 
-**Profiles** map to common engagement types:
+**Profiles** map to common engagement types (matching `scripts/install-tools.sh`):
 - `minimal` — nmap, subfinder, httpx, nuclei
-- `web` — web assessment (adds ffuf, katana, nikto, sqlmap, feroxbuster)
-- `network` — infrastructure (adds masscan, rustscan, tshark, chisel, ligolo)
-- `ad` — Active Directory (adds impacket, certipy, crackmapexec, hashcat, john)
-- `k8s` — Kubernetes offensive (nmap, kubedagger-client, kubedagger-operator)
-- `recon` — deep recon (adds amass, gau, waybackurls, arjun)
+- `web` — nmap plus the recon, web, and fuzz sets, masscan, rustscan, nuclei, sqlmap
+- `network` — nmap, masscan, rustscan, tshark, chisel, ligolo-proxy
+- `ad` — nmap, impacket, crackmapexec, certipy, hashcat, john
+- `k8s` — nmap, kubedagger-client, kubedagger-operator, kubedagger-server
+- `uefi` — barzakh-adversary, barzakh-scanner, barzakh-server
+- `recon` — recon plus web sets (subfinder, amass, dig, waybackurls, gau, arjun, httpx, katana, nikto, whatweb, testssl.sh)
 - `all` — everything
 
 **OS detection**: install-tools.sh detects Debian/Fedora/Arch/macOS and uses the correct package manager (apt/dnf/pacman/brew).
@@ -307,7 +404,37 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 
 ## Release History
 
-### v0.2.1 — Non-Docker Installation (current)
+### v0.5.0 — Campaign Framework & Managed Servers (current)
+
+- **Multi-stage campaign engine wired at startup**: `campaign/run`, `status`, `list`, `resume`, `cancel`, `templates`, `template/get`, `template/save` — conditional steps (text and JSON-path operators), parallel fan-out with failure aggregation, `goto:` failure recovery with a bounded jump budget, per-step checkpoint/resume and cancellation; `REDHANDS_WORKFLOW_STATE_DIR`, `REDHANDS_WORKFLOW_TEMPLATES_DIR`, `REDHANDS_WORKFLOW_MAX_PARALLEL` now functional
+- **Structured dataflow**: `$prev.json.path`, `$step[N].json.path`, `${id.json.path}` extraction from raw or markdown-fenced JSON with native type preservation
+- **Playbooks**: point-and-shoot campaign templates shipped in `./playbooks` with validation tests
+- **Engagement binding**: campaigns bind to the active engagement (failing fast on a mismatch) and bindings are re-validated on resume
+- **Target-database recording and MITRE ATT&CK tagging**: record rules map step output to targetdb hosts/services/credentials/findings; steps accept `mitre:` technique tags aggregated into campaign results
+- **CLI campaign commands**: `redhands-cli campaign run`, `run playbook`, `status`, `list`, `resume`, `cancel`, `templates`
+- **KubeDagger CLI-accurate wrappers + 12 new tools**: every wrapper corrected against the real `kubedagger-client` cobra CLI; new `fs_watch`, `pipe_prog`, `postgres`, `proctree`, `mitre_export`, `detection`, `report`, `vap_backdoor`, `operator_status` tools (69 tools total; 358 test cases)
+- **Barzakh expansion**: corrected scan/flags drift; new `barzakh_validate`, `barzakh_scenario`, `barzakh_robustness`, `barzakh_detectors`, `barzakh_baseline`, `barzakh_intel` tools (13 tools total, 138 detectors)
+- **New toolsets**: `telecom` (StaticZero — doctor, firmware analysis, SDR scan, defense API; 12 tools) and `aegis` (Aegis-Shadow analysis; 9 tools)
+- **Managed daemon lifecycle with secret redaction**: `kubedagger_server_{start,stop,status}` and `barzakh_server_{start,stop,status}` via the background process manager, which redacts secret-bearing flag values in all recorded argv
+- **Docker image**: `kubedagger-server` and `barzakh-server` installed via the checksum-verified dependency lock
+- **237 registered tools** across 30 toolsets
+
+### v0.4.0 — Offensive Security Platform Expansion
+
+- **8 new toolsets**: BloodHound (4), Responder (4), Evil-WinRM (5), Coercion (4), Phishing (5, GoPhish API), Wireless (6), Mobile (6), Cloud (8)
+- **Intelligence layer**: target database, attack-graph build/path/export, MITRE ATT&CK lookup, risk scoring, finding correlation
+- **Engagement operations**: engagement create/switch/list, loot add/list/search, encrypted credential store
+- **Reporting**: SARIF export, executive summary, compliance mapping, evidence capture with screenshot validation
+- **Infrastructure**: hot-reload plugins, TCP transport, dry-run mode, `redhands-cli` companion CLI, web dashboard
+- **Workflow/OPSEC prototypes**: parallel/conditional/resumable workflow orchestration, OPSEC middleware (traffic shaping, jitter, source rotation, IOC tracking), webhooks, and multi-operator sync added as library prototypes — not wired into startup (the campaign engine shipped in v0.5.0; the remaining prototype settings are rejected as unsupported configuration)
+- **Code quality**: golangci-lint/errcheck/staticcheck fixes and error-handling refactors across the codebase
+
+### v0.3.0 — KubeDagger Install Infrastructure & Barzakh Toolset
+
+- **KubeDagger installation infrastructure**: `kubedagger-client` and `kubedagger-operator` (v0.1.0 release) integrated into the Dockerfile, install scripts, and dependency checker; new `k8s` install profile
+- **Barzakh UEFI toolset**: replaced the JSON plugins with a typed Go toolset (`barzakh_list`, `barzakh_generate`, `barzakh_corpus`, `barzakh_scan`) backed by the `barzakh-adversary`/`barzakh-scanner` binaries
+
+### v0.2.1 — Non-Docker Installation
 
 - **One-line installer**: `curl -fsSL .../install.sh | bash` for binary download or build from source
 - **Profile-based tool installation**: `minimal`, `web`, `network`, `ad`, `recon`, `all` profiles matching REDHANDS_TOOLSETS concepts
@@ -346,7 +473,7 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 
 ## Release Plan
 
-### v0.3.0 — Observability & Deployment (Next)
+### Remaining — Observability & Deployment
 
 **Goal:** Production-ready deployment with full observability.
 
@@ -356,18 +483,22 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 | Structured logging | slog with JSON output, configurable level |
 | Metrics | Tool call count, duration histogram, error rate |
 | Helm chart | Kubernetes deployment with configurable resources |
-| Health endpoint | `GET /health` for load balancers (SSE/WS modes) |
 
-### v0.4.0 — Advanced Features
+The health endpoint planned for this milestone is done: `GET /health` is available on the SSE and WS transports.
+
+### Advanced Features (v0.4.0 scope — current status)
 
 **Goal:** Intelligent workflow support and expanded coverage.
 
-| Deliverable | Details |
-|-------------|---------|
-| Workflow hints | Tool descriptions that guide AI agents to chain tools logically |
-| Finding dedup | Cross-tool finding deduplication |
-| Conditional workflows | Branching based on step results |
-| Additional tools | BloodHound, Responder, Evil-WinRM, Rubeus per user demand |
+| Deliverable | Details | Status |
+|-------------|---------|--------|
+| Workflow hints | Tool descriptions that guide AI agents to chain tools logically | Planned |
+| Finding dedup | Cross-tool finding deduplication | Planned |
+| Conditional workflows | Branching based on step results | Shipped in v0.5.0 (campaign engine: conditions, parallel fan-out, goto recovery) |
+| BloodHound toolset | AD attack-path analysis | Shipped in v0.4.0 (4 tools) |
+| Responder toolset | LLMNR/NBT-NS poisoning | Shipped in v0.4.0 (4 tools) |
+| Evil-WinRM toolset | WinRM shell | Shipped in v0.4.0 (5 tools) |
+| Rubeus | Kerberos interaction toolkit | Not implemented |
 
 ---
 
@@ -409,7 +540,7 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 | Concurrent scans supported | 10+ simultaneous without degradation |
 | Binary startup time | <100ms to first `tools/list` response |
 | Test coverage | >80% on pkg/ packages |
-| Supported tools | 125 shipped (v0.2.0), expanding |
+| Supported tools | 237 registered (v0.5.0), expanding |
 | Container image size | <500MB with all tools installed |
 | Zero external Go dependencies | Maintained across all releases |
 
@@ -423,6 +554,6 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 | mcp-atlassian | Jira/Confluence | Different domain; Python, similar patterns |
 | PentestGPT | AI pentesting | Monolithic, no MCP, not composable |
 | HackerGPT | AI security chat | Chat-only, no tool protocol |
-| RedHands | Security tool MCP | Standardized MCP protocol, composable with any AI agent, 125 tools |
+| RedHands | Security tool MCP | Standardized MCP protocol, composable with any AI agent, 237 registered tools |
 
 RedHands is the first production-grade MCP server purpose-built for offensive security tooling.

@@ -6,7 +6,7 @@
     Installs security tool dependencies for RedHands MCP server.
     Supports: Chocolatey, Scoop, and direct downloads.
 .PARAMETER Profile
-    Installation profile: all, web, network, ad, recon, minimal
+    Installation profile: all, web, network, ad, k8s, uefi, recon, minimal
 .PARAMETER Check
     Only check which tools are installed (no installation)
 .PARAMETER List
@@ -49,15 +49,15 @@ $ToolProfiles = @{
                 "nikto", "whatweb", "sqlmap", "testssl.sh", "arjun", "amass",
                 "chisel", "ligolo-proxy", "feroxbuster", "waybackurls",
                 "impacket-secretsdump", "crackmapexec", "certipy",
-                "kubedagger-client", "kubedagger-operator",
-                "barzakh-adversary", "barzakh-scanner")
+                "kubedagger-client", "kubedagger-operator", "kubedagger-server",
+                "barzakh-adversary", "barzakh-scanner", "barzakh-server")
     web     = @("nmap", "subfinder", "httpx", "nuclei", "ffuf", "katana", "gobuster",
                 "gau", "nikto", "whatweb", "sqlmap", "testssl.sh", "arjun",
                 "feroxbuster", "waybackurls", "masscan", "rustscan", "amass")
     network = @("nmap", "masscan", "rustscan", "tshark", "chisel", "ligolo-proxy")
     ad      = @("nmap", "impacket-secretsdump", "crackmapexec", "certipy", "hashcat", "john")
-    k8s     = @("nmap", "kubedagger-client", "kubedagger-operator")
-    uefi    = @("barzakh-adversary", "barzakh-scanner")
+    k8s     = @("nmap", "kubedagger-client", "kubedagger-operator", "kubedagger-server")
+    uefi    = @("barzakh-adversary", "barzakh-scanner", "barzakh-server")
     recon   = @("subfinder", "httpx", "katana", "whatweb", "arjun", "gau", "waybackurls", "amass")
     minimal = @("nmap", "nuclei", "httpx", "subfinder")
 }
@@ -262,7 +262,7 @@ function Install-BinaryReleases {
     $python = if (Test-Tool "python") { "python" } elseif (Test-Tool "python3") { "python3" } else { $null }
     if (-not $python) { throw "Python 3 is required for verified binary installation" }
     $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } elseif ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "386" }
-    foreach ($name in @("chisel", "ligolo-proxy", "kubedagger-client", "kubedagger-operator", "barzakh-adversary", "barzakh-scanner", "feroxbuster")) {
+    foreach ($name in @("chisel", "ligolo-proxy", "kubedagger-client", "kubedagger-operator", "kubedagger-server", "barzakh-adversary", "barzakh-scanner", "barzakh-server", "feroxbuster")) {
         if (($tools -contains $name) -and -not (Test-Tool $name)) {
             $variants = $DependencyLock.artifacts.$name
             if (-not $variants."windows-$arch") {

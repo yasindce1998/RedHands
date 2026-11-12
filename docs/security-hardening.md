@@ -166,13 +166,17 @@ OS sandbox. Use dedicated environments and only authorized targets.
 
 ## Unsupported configuration and remaining work
 
-The running server currently supports only sequential workflows. Enhanced workflow
-state/templates/parallelism, proxy profiles, multi-operator sync, and webhook notifications
-are not wired into startup. Their environment settings now cause a configuration error,
-rather than being silently ignored. Do not assume the underlying library prototypes are
-production features.
+The multi-stage campaign engine (`campaign/run`, `status`, `list`, `resume`, `cancel`,
+`templates`) is wired into startup. `REDHANDS_WORKFLOW_STATE_DIR`,
+`REDHANDS_WORKFLOW_TEMPLATES_DIR`, and `REDHANDS_WORKFLOW_MAX_PARALLEL` are functional.
+The environment settings that are rejected as unsupported at startup (a configuration
+error rather than silent acceptance) are `REDHANDS_OPSEC_PROXIES`, `REDHANDS_OPERATOR_ID`,
+`REDHANDS_SYNC_PEERS`, `REDHANDS_WEBHOOK_URLS`, and `REDHANDS_WEBHOOK_EVENTS`. Remaining
+unsupported work: proxy profiles, multi-operator sync, webhook notifications, and the
+Streamable HTTP transport. Do not assume the underlying library prototypes for those
+features are production features.
 
 See [dependency maintenance](dependencies.md) for lock/checksum coverage and its limits.
 Engagement data isolation, durable job scheduling, complete real-binary compatibility
-coverage, and Streamable HTTP remain separate work. This patch fixes the existing legacy
-SSE client/server path; it does not claim modern MCP transport support.
+coverage, and Streamable HTTP remain separate work. The SSE client/server path is the
+existing legacy implementation; it does not claim modern MCP transport support.

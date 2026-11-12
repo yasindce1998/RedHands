@@ -41,11 +41,9 @@ uses its PBKDF2 implementation rather than adding a cryptography dependency.
 
 The Docker image installs every release binary in `scripts/dependencies.json`
 through the verified installer, including the KubeDagger server (C2 server for
-lab use, pinned to the same v0.1.0 release as the client and operator) and the
-Barzakh server (REST scanner API). `barzakh-server` is pinned to Barzakh v0.7.0
-because the v0.1.1 release that pins `barzakh-adversary`/`barzakh-scanner` does
-not publish a server binary; the two pins can be aligned when those tools are
-next reviewed against a newer release.
+lab use) and the Barzakh server (REST scanner API). All three KubeDagger
+binaries (client, operator, server) are pinned to the same **v0.5.0** release,
+and all three Barzakh binaries (adversary, scanner, server) to **v0.7.0**.
 
 The Rust-built eBPF research toolsets — StaticZero (`staticzero-defense`,
 `modem-firmware`, `sdr-bridge`) and Aegis-Shadow (`aegis-shadow-defense`,

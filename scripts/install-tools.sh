@@ -44,10 +44,13 @@ Profiles:
   web        Web application assessment (nmap, recon, web, fuzz, vuln)
   network    Network assessment (nmap, scan, tshark, tunnel)
   ad         Active Directory (nmap, impacket, crackmapexec, certipy, crack)
-  k8s        Kubernetes (nmap, kubedagger-client, kubedagger-operator)
-  uefi       UEFI bootkit simulation (barzakh-adversary, barzakh-scanner)
+  k8s        Kubernetes (nmap, kubedagger-client, kubedagger-operator, kubedagger-server)
+  uefi       UEFI bootkit simulation (barzakh-adversary, barzakh-scanner, barzakh-server)
   recon      Reconnaissance only (subfinder, amass, dns, wayback, gau, arjun)
   minimal    Just the essentials (nmap, nuclei, httpx, subfinder)
+
+Note: Sliver is not installed by any profile; install sliver-client manually from a
+trusted release if you need the sliver toolset.
 
 Examples:
   $0                          # Full install
@@ -82,14 +85,15 @@ TOOLS_SCAN="masscan rustscan"
 TOOLS_VULN="nuclei"
 TOOLS_EXPLOIT="sqlmap"
 TOOLS_IMPACKET="impacket-secretsdump impacket-psexec impacket-wmiexec impacket-smbclient impacket-dcomexec impacket-getTGT impacket-getST impacket-ntlmrelayx"
-TOOLS_SLIVER="sliver-client"
+# Sliver (sliver-client) is deliberately not installed by any profile; install it
+# manually from a trusted release if the sliver toolset is needed.
 TOOLS_TUNNEL="chisel ligolo-proxy"
 TOOLS_CRACK="hashcat john"
 TOOLS_CME="crackmapexec"
 TOOLS_CERTIPY="certipy"
 TOOLS_TSHARK="tshark"
-TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator"
-TOOLS_BARZAKH="barzakh-adversary barzakh-scanner"
+TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator kubedagger-server"
+TOOLS_BARZAKH="barzakh-adversary barzakh-scanner barzakh-server"
 
 get_profile_tools() {
     case "$1" in
@@ -127,7 +131,7 @@ get_profile_tools() {
 list_profiles() {
     echo -e "${CYAN}Available Profiles${NC}"
     echo ""
-    echo -e "  ${GREEN}all${NC}        Full pentest toolkit (all 125+ tools)"
+    echo -e "  ${GREEN}all${NC}        Full pentest toolkit (all registered tools)"
     echo "             nmap, recon, web, fuzz, scan, vuln, exploit, impacket,"
     echo "             tunnel, crack, crackmapexec, certipy, tshark"
     echo ""
@@ -142,10 +146,10 @@ list_profiles() {
     echo "             nmap, impacket suite, crackmapexec, certipy, hashcat, john"
     echo ""
     echo -e "  ${GREEN}k8s${NC}        Kubernetes offensive (eBPF-powered)"
-    echo "             nmap, kubedagger-client, kubedagger-operator"
+    echo "             nmap, kubedagger-client, kubedagger-operator, kubedagger-server"
     echo ""
     echo -e "  ${GREEN}uefi${NC}       UEFI bootkit adversary simulation"
-    echo "             barzakh-adversary, barzakh-scanner"
+    echo "             barzakh-adversary, barzakh-scanner, barzakh-server"
     echo ""
     echo -e "  ${GREEN}recon${NC}      Reconnaissance"
     echo "             subfinder, amass, dig, waybackurls, gau, arjun, httpx,"

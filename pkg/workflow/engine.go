@@ -228,5 +228,3 @@ func (w *substitutionWriter) WriteString(text string) (int, error) {
 	*w.remaining -= len(text)
 	return w.Builder.WriteString(text)
 }
-
-

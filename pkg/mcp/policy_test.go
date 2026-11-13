@@ -27,7 +27,9 @@ func TestWorkflowDeadline(t *testing.T) {
 
 func TestNotificationsHaveNoResponse(t *testing.T) {
 	srv := NewServer("test", "1")
-	srv.RegisterTool(&mockTool{})
+	if err := srv.RegisterTool(&mockTool{}); err != nil {
+		t.Fatal(err)
+	}
 	for _, message := range []string{`{"jsonrpc":"2.0","method":"ping"}`, `{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":1}}`, `{"jsonrpc":"2.0","method":"unknown"}`} {
 		if response := srv.HandleRaw(json.RawMessage(message)); response != nil {
 			t.Fatalf("notification produced response: %s", response)
@@ -37,7 +39,9 @@ func TestNotificationsHaveNoResponse(t *testing.T) {
 
 func TestToolArgumentsMustBeObjects(t *testing.T) {
 	srv := NewServer("test", "1")
-	srv.RegisterTool(&mockTool{})
+	if err := srv.RegisterTool(&mockTool{}); err != nil {
+		t.Fatal(err)
+	}
 	for _, args := range []string{`null`, `[]`, `"text"`, `{invalid`} {
 		if _, err := srv.ExecuteTool(context.Background(), "test_tool", json.RawMessage(args)); err == nil {
 			t.Fatalf("accepted %s", args)

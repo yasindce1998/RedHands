@@ -190,10 +190,15 @@ func (e *EnhancedEngine) StartAsync(ctx context.Context, req *EnhancedWorkflowRe
 		return "", false, err
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	// Register synchronously: on platforms where the advisory lock is a
+	// no-op (non-unix), the in-process running map is the only
+	// double-start guard, so it must be populated before this call
+	// returns.
+	e.registerRun(prep.state.WorkflowID, cancel)
 	go func() {
 		defer prep.lock.release()
-		ctx, cancel := context.WithCancel(ctx)
-		e.registerRun(prep.state.WorkflowID, cancel)
+		defer cancel()
 		defer e.unregisterRun(prep.state.WorkflowID)
 		// The result is durably recorded in the state (including
 		// FinalResult on completion); an asynchronous caller consumes it

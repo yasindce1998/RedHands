@@ -33,7 +33,7 @@ func acquireRunLock(stateDir, workflowID string) (*runLock, error) {
 	// flock locks are tied to the open file description, so a second open in
 	// the same process conflicts just like one from another process.
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		f.Close()
+		_ = f.Close()
 		return nil, fmt.Errorf("campaign %s is %w", workflowID, ErrAlreadyRunning)
 	}
 	return &runLock{f: f}, nil

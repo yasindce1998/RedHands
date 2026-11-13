@@ -61,23 +61,24 @@ func run() error {
 
 	app.SetupMiddleware(srv, &cfg, auditLogger, authCfg, stores.EngMgr)
 
-	registry.RegisterAll(srv, &registry.Deps{
-		Exec:      execr,
-		Cfg:       &cfg,
-		TargetDB:  stores.TargetDB,
-		Graph:     stores.Graph,
-		EngMgr:    stores.EngMgr,
-		Loot:      stores.Loot,
-		CredStore: stores.CredStore,
-		Evidence:  stores.Evidence,
-		ProcMgr:   procMgr,
-	})
-
 	stopPlugins := app.SetupPlugins(srv, &cfg, execr)
 	defer stopPlugins()
 
 	app.SetupWorkflow(srv)
-	app.SetupCampaign(srv, &cfg, stores.TargetDB, stores.EngMgr)
+	campaignEngine := app.SetupCampaign(srv, &cfg, stores.TargetDB, stores.EngMgr)
+
+	registry.RegisterAll(srv, &registry.Deps{
+		Exec:        execr,
+		Cfg:         &cfg,
+		TargetDB:    stores.TargetDB,
+		Graph:       stores.Graph,
+		EngMgr:      stores.EngMgr,
+		Loot:        stores.Loot,
+		CredStore:   stores.CredStore,
+		Evidence:    stores.Evidence,
+		ProcMgr:     procMgr,
+		CampaignEng: campaignEngine,
+	})
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()

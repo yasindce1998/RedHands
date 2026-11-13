@@ -38,8 +38,8 @@ func setupTestServer(t *testing.T, dryRun bool) (*mcp.Server, *targetdb.Store, s
 	srv := mcp.NewServer("test", "1")
 	SetupMiddleware(srv, &cfg, logger, ac, engagement.NewManager(filepath.Join(dir, "engagements")))
 	db := targetdb.NewStore(filepath.Join(dir, "db.json"), true)
-	srv.RegisterTool(targettools.NewAddHostTool(db))
-	srv.RegisterTool(targettools.NewListHostsTool(db))
+	_ = srv.RegisterTool(targettools.NewAddHostTool(db))
+	_ = srv.RegisterTool(targettools.NewListHostsTool(db))
 	srv.SetToolPolicy("targetdb_add_host", mcp.ToolPolicy{})
 	srv.SetToolPolicy("targetdb_list_hosts", mcp.ToolPolicy{ReadOnly: true})
 	SetupWorkflow(srv)
@@ -96,7 +96,7 @@ func TestWorkflowAuthorizationAndNoMutationCaching(t *testing.T) {
 
 func TestWarmPureCacheStillRequiresAuthentication(t *testing.T) {
 	srv, _, _, _ := setupTestServer(t, false)
-	srv.RegisterTool(intelligence.NewMitreLookupTool())
+	_ = srv.RegisterTool(intelligence.NewMitreLookupTool())
 	srv.SetToolPolicy("mitre_lookup", mcp.ToolPolicy{ReadOnly: true, Cacheable: true})
 	ctx := auth.InjectAuthContext(context.Background(), "operator")
 	args := json.RawMessage(`{"technique_id":"T1046"}`)
@@ -127,7 +127,7 @@ func TestWorkflowHonorsRateLimitAndScope(t *testing.T) {
 		srv := mcp.NewServer("test", "1")
 		SetupMiddleware(srv, &cfg, logger, auth.Config{Mode: "none"}, mgr)
 		db := targetdb.NewStore("", false)
-		srv.RegisterTool(targettools.NewAddHostTool(db))
+		_ = srv.RegisterTool(targettools.NewAddHostTool(db))
 		srv.SetToolPolicy("targetdb_add_host", mcp.ToolPolicy{})
 		SetupWorkflow(srv)
 		response := srv.HandleRaw(json.RawMessage(`{"jsonrpc":"2.0","id":1,"method":"workflow/run","params":{"steps":[{"tool":"targetdb_add_host","params":{"ip":"192.0.2.1"}},{"tool":"targetdb_add_host","params":{"ip":"192.0.2.2"}}]}}`))
@@ -244,7 +244,7 @@ func TestDryRunWorkflowWritesAudit(t *testing.T) {
 	cfg.DryRun = true
 	SetupMiddleware(srv, &cfg, logger, auth.Config{Mode: "none"}, nil)
 	db := targetdb.NewStore("", false)
-	srv.RegisterTool(targettools.NewAddHostTool(db))
+	_ = srv.RegisterTool(targettools.NewAddHostTool(db))
 	SetupWorkflow(srv)
 	srv.HandleRaw(json.RawMessage(`{"jsonrpc":"2.0","id":1,"method":"workflow/run","params":{"steps":[{"tool":"targetdb_add_host","params":{"ip":"192.0.2.1"}}]}}`))
 	if err := logger.Close(); err != nil {

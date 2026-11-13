@@ -4,6 +4,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -72,16 +73,31 @@ func TestCancellationKillsChildProcessGroup(t *testing.T) {
 		t.Fatal("executor did not stop")
 	}
 	// An orphaned killed child may remain a zombie until the container's PID 1
-	// reaps it. Either disappearance or zombie state proves it is no longer running.
-	data, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
-	if os.IsNotExist(err) {
-		return
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	fields := strings.Fields(string(data))
-	if len(fields) < 3 || fields[2] != "Z" {
-		t.Fatalf("child still running after cancellation: %s", data)
+	// reaps it. Either disappearance or zombie state proves it is no longer
+	// running. The SIGKILL delivery and state transition are asynchronous, so
+	// poll briefly before declaring the child alive.
+	deadline = time.After(2 * time.Second)
+	for {
+		data, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
+		// ENOENT (already reaped) and ESRCH (task exiting mid-read) both
+		// prove the child is gone.
+		if os.IsNotExist(err) || errors.Is(err, syscall.ESRCH) {
+			return
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		fields := strings.Fields(string(data))
+		if len(fields) < 3 {
+			t.Fatalf("unexpected procfs stat line: %s", data)
+		}
+		if fields[2] == "Z" {
+			return
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("child still running after cancellation: %s", data)
+		case <-ticker.C:
+		}
 	}
 }

@@ -22,6 +22,18 @@ func toolExecutor(srv *mcp.Server) workflow.ToolExecutor {
 		if err != nil {
 			return "", false, err
 		}
+		// MRTR: an input_required result (approval gate tripped on a
+		// task-tracked campaign) is surfaced to the engine as an
+		// approval-required error so it pauses the campaign instead of
+		// failing the step.
+		if mcp.IsInputRequired(result) {
+			areq := &workflow.ApprovalRequiredError{Tool: toolName}
+			if req, ok := result.InputRequests[mcp.ApprovalInputKey]; ok {
+				areq.RequestID = req.RequestID
+				areq.Message = req.Message
+			}
+			return "", false, areq
+		}
 		text := ""
 		for _, c := range result.Content {
 			if c.Type == "text" {

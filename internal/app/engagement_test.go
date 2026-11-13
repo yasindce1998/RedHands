@@ -12,7 +12,7 @@ import (
 
 func TestCampaignEngagementBindingEndToEnd(t *testing.T) {
 	srv := mcp.NewServer("test", "1")
-	srv.RegisterTool(&jsonTool{name: "fake_scan", text: "scan done"})
+	_ = srv.RegisterTool(&jsonTool{name: "fake_scan", text: "scan done"})
 
 	mgr := engagement.NewManager(t.TempDir())
 	lab, err := mgr.Create("lab-1", "test-client", []string{"192.0.2.0/24"})

@@ -41,7 +41,7 @@ func TestWorkflowAndDirectCallsShareApproval(t *testing.T) {
 			srv := mcp.NewServer("test", "1")
 			SetupMiddleware(srv, &cfg, logger, auth.Config{Mode: "none"}, nil)
 			calls := 0
-			srv.RegisterTool(restrictedTestTool{calls: &calls})
+			_ = srv.RegisterTool(restrictedTestTool{calls: &calls})
 			SetupWorkflow(srv)
 			direct, err := srv.ExecuteTool(context.Background(), "restricted_test", json.RawMessage(`{"approved":true}`))
 			if err != nil {

@@ -71,7 +71,7 @@ func NewBackgroundManager(cfg Config) *BackgroundManager {
 var secretFlagValues = map[string]bool{
 	"-psk": true, "--psk": true,
 	"-key": true, "--key": true,
-	"--api-key": true,
+	"--api-key":    true,
 	"--obfusc-key": true, "-obfusc-key": true,
 	"--webui-token": true, "-webui-token": true,
 	"--cert-key": true, "--key-file": true, "-key-file": true,

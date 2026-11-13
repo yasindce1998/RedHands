@@ -74,17 +74,25 @@ func (tm *TemplateManager) List() []*Template {
 }
 
 // Instantiate creates a workflow request from a template with variable substitution.
+// The caller's vars map is never modified: defaults are applied to a copy.
 func (tm *TemplateManager) Instantiate(name string, vars map[string]string) (*EnhancedWorkflowRequest, error) {
 	t, ok := tm.Get(name)
 	if !ok {
 		return nil, fmt.Errorf("template %q not found", name)
 	}
 
+	// Work on a copy so required-variable checks and defaults do not leak
+	// back into the caller's map (which may be shared across requests).
+	resolved := make(map[string]string, len(vars)+len(t.Vars))
+	for k, v := range vars {
+		resolved[k] = v
+	}
+
 	for _, v := range t.Vars {
 		if v.Required {
-			if _, ok := vars[v.Name]; !ok {
+			if _, ok := resolved[v.Name]; !ok {
 				if v.Default != "" {
-					vars[v.Name] = v.Default
+					resolved[v.Name] = v.Default
 				} else {
 					return nil, fmt.Errorf("required variable %q not provided", v.Name)
 				}
@@ -94,8 +102,8 @@ func (tm *TemplateManager) Instantiate(name string, vars map[string]string) (*En
 
 	// Apply defaults for non-required vars
 	for _, v := range t.Vars {
-		if _, ok := vars[v.Name]; !ok && v.Default != "" {
-			vars[v.Name] = v.Default
+		if _, ok := resolved[v.Name]; !ok && v.Default != "" {
+			resolved[v.Name] = v.Default
 		}
 	}
 
@@ -106,7 +114,7 @@ func (tm *TemplateManager) Instantiate(name string, vars map[string]string) (*En
 	}
 
 	s := string(data)
-	for k, v := range vars {
+	for k, v := range resolved {
 		s = strings.ReplaceAll(s, "{{"+k+"}}", v)
 	}
 
@@ -118,7 +126,7 @@ func (tm *TemplateManager) Instantiate(name string, vars map[string]string) (*En
 	return &EnhancedWorkflowRequest{
 		Name:  name,
 		Steps: steps,
-		Vars:  vars,
+		Vars:  resolved,
 	}, nil
 }
 

@@ -19,8 +19,31 @@ func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSONRP
 			return s.errorResponse(req.ID, ErrCodeUnauthorized, err.Error())
 		}
 	}
+	// Modern-era version negotiation and per-request capability parsing:
+	// _meta is parsed once here. A request that carries _meta with a
+	// protocol version must name one this server speaks; a request with
+	// no _meta at all is legacy-era and is served without validation
+	// (dual-era tolerance). A request whose clientCapabilities declares
+	// the tasks extension marks the context, so engine-side handlers and
+	// the approval middleware negotiate the extension per request.
+	if meta, ok := ParseRequestMeta(req.Params); ok {
+		if meta.ProtocolVersion != "" && !protocolVersionSupported(meta.ProtocolVersion) {
+			// Notifications cannot carry an error response, so an
+			// unsupported version on an ID-less message is dropped
+			// silently.
+			if len(req.ID) == 0 {
+				return nil
+			}
+			return unsupportedProtocolVersionError(req.ID, meta.ProtocolVersion)
+		}
+		if meta.ClientCapabilities != nil && meta.ClientCapabilities.Extensions != nil {
+			if _, has := meta.ClientCapabilities.Extensions[TasksExtension]; has {
+				ctx = WithTasksExtension(ctx)
+			}
+		}
+	}
 	// JSON-RPC notifications execute without a response. Never emit ID-less replies.
-	if len(req.ID) == 0 && req.Method != MethodInitialized {
+	if len(req.ID) == 0 {
 		if strings.HasPrefix(req.Method, "notifications/") {
 			return nil
 		}
@@ -33,10 +56,11 @@ func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSONRP
 	case MethodInitialize:
 		return s.handleInitialize(req)
 	case MethodInitialized:
-		s.mu.Lock()
-		s.initialized = true
-		s.mu.Unlock()
+		// Legacy-era initialized notification. The server is stateless, so
+		// there is no session state to flip; the notification is accepted.
 		return nil
+	case MethodServerDiscover:
+		return s.handleServerDiscover(req)
 	case MethodToolsList:
 		return s.handleToolsList(req)
 	case MethodToolsCall:
@@ -45,6 +69,14 @@ func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSONRP
 		return s.handleWorkflowRun(ctx, req)
 	case MethodCampaignRun:
 		return s.handleCampaignRun(ctx, req)
+	case MethodCampaignStart:
+		return s.handleCampaignStart(ctx, req)
+	case MethodTasksGet:
+		return s.handleTasksGet(req)
+	case MethodTasksCancel:
+		return s.handleTasksCancel(req)
+	case MethodTasksUpdate:
+		return s.handleTasksUpdate(req)
 	case MethodCampaignResume:
 		if s.campaign == nil {
 			return s.errorResponse(req.ID, ErrCodeMethodNotFound, "campaign engine not configured")
@@ -76,8 +108,16 @@ func (s *Server) handleInitialize(req *JSONRPCRequest) *JSONRPCResponse {
 		}
 	}
 
+	// Dual-era version negotiation: echo the client's revision when the
+	// server speaks it, otherwise fall back to the legacy default.
+	version := LegacyProtocolVersion2024
+	if protocolVersionSupported(params.ProtocolVersion) {
+		version = params.ProtocolVersion
+	}
+
 	result := InitializeResult{
-		ProtocolVersion: "2024-11-05",
+		ProtocolVersion:  version,
+		ProtocolVersions: SupportedProtocolVersions(),
 		Capabilities: ServerCaps{
 			Tools: &ToolsCap{ListChanged: false},
 		},
@@ -87,6 +127,28 @@ func (s *Server) handleInitialize(req *JSONRPCRequest) *JSONRPCResponse {
 		},
 	}
 
+	return s.successResponse(req.ID, result)
+}
+
+// handleServerDiscover answers the stateless modern discovery request:
+// no handshake, no session; the result names the server and every
+// protocol revision it speaks.
+func (s *Server) handleServerDiscover(req *JSONRPCRequest) *JSONRPCResponse {
+	result := DiscoverResult{
+		ProtocolVersion:  ProtocolVersion,
+		ServerInfo:       ServerInfo{Name: s.name, Version: s.version},
+		ProtocolVersions: SupportedProtocolVersions(),
+		Capabilities: DiscoverCaps{
+			Tools: &ToolsCap{},
+			// The tasks extension methods (campaign/start async,
+			// tasks/get, tasks/cancel, tasks/update) are always
+			// implemented, so the extension is always advertised; clients
+			// opt in per-request via _meta.clientCapabilities.extensions.
+			Extensions: map[string]json.RawMessage{
+				TasksExtension: json.RawMessage(`{}`),
+			},
+		},
+	}
 	return s.successResponse(req.ID, result)
 }
 
@@ -106,7 +168,7 @@ func (s *Server) handleToolsList(req *JSONRPCRequest) *JSONRPCResponse {
 		})
 	}
 
-	return s.successResponse(req.ID, ToolsListResult{Tools: tools})
+	return s.successResponse(req.ID, ToolsListResult{Tools: tools, TTLMs: ToolsListTTLMS})
 }
 
 func (s *Server) handleToolsCall(ctx context.Context, req *JSONRPCRequest) *JSONRPCResponse {
@@ -118,6 +180,15 @@ func (s *Server) handleToolsCall(ctx context.Context, req *JSONRPCRequest) *JSON
 	_, ok := s.GetTool(params.Name)
 	if !ok {
 		return s.errorResponse(req.ID, ErrCodeInvalidParams, fmt.Sprintf("unknown tool: %s", params.Name))
+	}
+
+	// MRTR: inputResponses ride alongside the tool arguments in the call
+	// params and are threaded into the execution context (never into the
+	// arguments themselves — approval cannot come from model-supplied
+	// input). The approval middleware only honors them when this same
+	// request also declared the tasks extension.
+	if len(params.InputResponses) > 0 {
+		ctx = WithInputResponses(ctx, params.InputResponses)
 	}
 
 	result, err := s.ExecuteTool(ctx, params.Name, params.Arguments)
@@ -233,5 +304,26 @@ func (s *Server) errorResponse(id json.RawMessage, code int, message string) *JS
 		JSONRPC: JSONRPCVersion,
 		ID:      id,
 		Error:   &JSONRPCError{Code: code, Message: message},
+	}
+}
+
+// unsupportedVersionData is the structured payload attached to
+// ErrCodeUnsupportedProtocolVersion responses.
+type unsupportedVersionData struct {
+	Supported []string `json:"supported"`
+	Requested string   `json:"requested"`
+}
+
+// unsupportedProtocolVersionError builds the -32022 error shared by the
+// handler (body _meta) and the streamable HTTP transport (headers).
+func unsupportedProtocolVersionError(id json.RawMessage, requested string) *JSONRPCResponse {
+	return &JSONRPCResponse{
+		JSONRPC: JSONRPCVersion,
+		ID:      id,
+		Error: &JSONRPCError{
+			Code:    ErrCodeUnsupportedProtocolVersion,
+			Message: fmt.Sprintf("unsupported protocol version %q", requested),
+			Data:    unsupportedVersionData{Supported: []string{ProtocolVersion}, Requested: requested},
+		},
 	}
 }

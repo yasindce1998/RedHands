@@ -11,7 +11,7 @@ import (
 type mockTool struct{}
 
 func (m *mockTool) Name() string        { return "test_tool" }
-func (m *mockTool) Description() string  { return "A test tool" }
+func (m *mockTool) Description() string { return "A test tool" }
 func (m *mockTool) InputSchema() json.RawMessage {
 	return json.RawMessage(`{"type":"object","properties":{"msg":{"type":"string"}},"required":["msg"]}`)
 }
@@ -29,7 +29,9 @@ func (m *mockTool) Execute(_ context.Context, params json.RawMessage) (*ToolResu
 
 func TestInitializeHandshake(t *testing.T) {
 	srv := NewServer("test-server", "1.0.0")
-	srv.RegisterTool(&mockTool{})
+	if err := srv.RegisterTool(&mockTool{}); err != nil {
+		t.Fatal(err)
+	}
 
 	input := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test-client","version":"1.0"}}}` + "\n"
 	input += `{"jsonrpc":"2.0","method":"notifications/initialized"}` + "\n"
@@ -70,7 +72,9 @@ func TestInitializeHandshake(t *testing.T) {
 
 func TestToolsList(t *testing.T) {
 	srv := NewServer("test-server", "1.0.0")
-	srv.RegisterTool(&mockTool{})
+	if err := srv.RegisterTool(&mockTool{}); err != nil {
+		t.Fatal(err)
+	}
 
 	input := `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` + "\n"
 
@@ -104,7 +108,9 @@ func TestToolsList(t *testing.T) {
 
 func TestToolsCall(t *testing.T) {
 	srv := NewServer("test-server", "1.0.0")
-	srv.RegisterTool(&mockTool{})
+	if err := srv.RegisterTool(&mockTool{}); err != nil {
+		t.Fatal(err)
+	}
 
 	input := `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"test_tool","arguments":{"msg":"hello"}}}` + "\n"
 

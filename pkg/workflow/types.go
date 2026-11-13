@@ -1,6 +1,16 @@
 package workflow
 
-import "encoding/json"
+// Package workflow note: this package depends on pkg/mcp solely for the
+// per-request context contract (tasks-extension capability marker and
+// inputResponses) shared between the engine and the approval middleware.
+// The dependency is one-directional: pkg/mcp never imports this package.
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/yasindce1998/redhands/pkg/mcp"
+)
 
 // EnhancedStep extends Step with parallel execution, conditions, failure handling,
 // structured recording, and MITRE ATT&CK tagging.
@@ -48,10 +58,10 @@ type Condition struct {
 
 // EnhancedWorkflowRequest supports the full feature set.
 type EnhancedWorkflowRequest struct {
-	ID       string         `json:"id,omitempty"`
-	Name     string         `json:"name,omitempty"`
-	Steps    []EnhancedStep `json:"steps"`
-	Template string         `json:"template,omitempty"`
+	ID       string            `json:"id,omitempty"`
+	Name     string            `json:"name,omitempty"`
+	Steps    []EnhancedStep    `json:"steps"`
+	Template string            `json:"template,omitempty"`
 	Vars     map[string]string `json:"vars,omitempty"`
 	// Engagement optionally binds the campaign to a named engagement. The
 	// named engagement must exist and be the active engagement; every step's
@@ -61,23 +71,98 @@ type EnhancedWorkflowRequest struct {
 
 // State represents a checkpoint of workflow execution.
 type State struct {
-	WorkflowID string                  `json:"workflow_id"`
-	Name       string                  `json:"name,omitempty"`
+	WorkflowID string `json:"workflow_id"`
+	Name       string `json:"name,omitempty"`
 	// Engagement records the engagement a campaign is bound to; it is
 	// re-validated on resume.
-	Engagement string                  `json:"engagement,omitempty"`
-	Steps      []EnhancedStep          `json:"steps"`
-	Results    map[string]StepResult   `json:"results"`
-	NextIndex  int                     `json:"next_index"`
-	Status     string                  `json:"status"` // "running", "paused", "cancelled", "completed", "failed"
-	Error      string                  `json:"error,omitempty"`
+	Engagement string                `json:"engagement,omitempty"`
+	Steps      []EnhancedStep        `json:"steps"`
+	Results    map[string]StepResult `json:"results"`
+	NextIndex  int                   `json:"next_index"`
+	Status     string                `json:"status"` // "running", "paused", "cancelled", "completed", "failed"
+	Error      string                `json:"error,omitempty"`
 	// JumpsUsed counts executed "goto:step_id" recovery jumps, persisted so
 	// resumed campaigns keep their loop budget.
-	JumpsUsed int      `json:"jumps_used,omitempty"`
-	Techniques []string `json:"techniques,omitempty"`
-	CreatedAt int64    `json:"created_at,omitempty"`
-	UpdatedAt int64    `json:"updated_at,omitempty"`
+	JumpsUsed int `json:"jumps_used,omitempty"`
+	// FinalResult persists the completed campaign's WorkflowResult (the
+	// same JSON campaign/run returns) so tasks/get can serve it verbatim
+	// after the run finishes. Populated only on completion.
+	FinalResult json.RawMessage `json:"final_result,omitempty"`
+	// PendingApproval records an operator-approval gate that paused a
+	// task-tracked campaign (MRTR). The gated step re-runs on resume once
+	// the operator's tasks/update response is recorded here.
+	PendingApproval *PendingApproval `json:"pending_approval,omitempty"`
+	Techniques      []string         `json:"techniques,omitempty"`
+	CreatedAt       int64            `json:"created_at,omitempty"`
+	UpdatedAt       int64            `json:"updated_at,omitempty"`
 }
+
+// PendingApproval is the checkpoint record of an approval gate that paused
+// a task-tracked campaign. It carries the elicitation identity (request
+// id, message) the server issued and, once the operator answers via
+// tasks/update, the consumed response.
+type PendingApproval struct {
+	// Tool is the gated step's tool name.
+	Tool string `json:"tool"`
+	// StepID is the gated step's id.
+	StepID string `json:"step_id"`
+	// RequestID identifies the elicitation request shown to the operator.
+	RequestID string `json:"request_id"`
+	// Message is the elicitation prompt.
+	Message string `json:"message,omitempty"`
+	// Response is the operator's inputResponses["approval"] payload.
+	Response json.RawMessage `json:"response,omitempty"`
+	// Resolved records the interpreted decision once answered:
+	// "approved" or "denied". Consumed (cleared) when the gated step
+	// re-runs on resume.
+	Resolved string `json:"resolved,omitempty"`
+}
+
+// Approval decisions recorded on a PendingApproval.
+const (
+	ApprovalDecisionApproved = "approved"
+	ApprovalDecisionDenied   = "denied"
+)
+
+// Decision interprets the recorded response. responded reports whether an
+// operator answer exists at all; when it does, approved reports whether it
+// grants approval. A response that is present but not affirmative is a
+// denial (fail closed).
+func (pa *PendingApproval) Decision() (approved, responded bool) {
+	if pa == nil || len(pa.Response) == 0 {
+		return false, false
+	}
+	return mcp.IsAffirmativeApproval(pa.Response), true
+}
+
+// ErrApprovalRequired is the sentinel wrapped by errors returned from a
+// tool executor when a step's tool tripped the operator-approval gate and
+// the campaign is task-tracked (the approval middleware returned an
+// input_required result instead of a hard failure).
+var ErrApprovalRequired = errors.New("tool requires operator approval")
+
+// ApprovalRequiredError carries the elicitation details of an approval
+// gate from the execution layer (which saw the input_required tool result)
+// into the engine, which pauses the campaign with them.
+type ApprovalRequiredError struct {
+	// Tool is the gated tool's name.
+	Tool string
+	// RequestID is the elicitation request id issued for the gate.
+	RequestID string
+	// Message is the elicitation prompt issued for the gate.
+	Message string
+}
+
+func (e *ApprovalRequiredError) Error() string {
+	if e.Message != "" {
+		return fmt.Sprintf("tool %q requires operator approval: %s", e.Tool, e.Message)
+	}
+	return fmt.Sprintf("tool %q requires operator approval", e.Tool)
+}
+
+// Unwrap makes errors.Is(err, ErrApprovalRequired) work through the
+// executor's error path.
+func (e *ApprovalRequiredError) Unwrap() error { return ErrApprovalRequired }
 
 // Template is a reusable workflow definition with variable placeholders.
 type Template struct {
@@ -93,14 +178,4 @@ type TemplateVar struct {
 	Description string `json:"description,omitempty"`
 	Default     string `json:"default,omitempty"`
 	Required    bool   `json:"required"`
-}
-
-// ScheduleEntry represents a scheduled workflow execution.
-type ScheduleEntry struct {
-	ID       string                  `json:"id"`
-	Cron     string                  `json:"cron"`
-	Workflow EnhancedWorkflowRequest `json:"workflow"`
-	Enabled  bool                    `json:"enabled"`
-	LastRun  int64                   `json:"last_run,omitempty"`
-	NextRun  int64                   `json:"next_run,omitempty"`
 }

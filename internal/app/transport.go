@@ -36,6 +36,9 @@ func ValidateConfig(cfg *config.Config, ac auth.Config) error {
 	if cfg.Transport == "ws" {
 		addresses = append(addresses, cfg.WSAddr)
 	}
+	if cfg.Transport == "http" {
+		addresses = append(addresses, cfg.HTTPAddr)
+	}
 	for _, addr := range addresses {
 		if addr == "" {
 			continue
@@ -55,6 +58,16 @@ func ValidateConfig(cfg *config.Config, ac auth.Config) error {
 }
 
 func RunTransport(ctx context.Context, srv *mcp.Server, cfg *config.Config, ac auth.Config, tdb *targetdb.Store) error {
+	// The streamable HTTP transport only listens when selected; make sure
+	// it never falls back to an all-interfaces default.
+	if cfg.Transport == "http" {
+		if cfg.HTTPAddr == "" {
+			cfg.HTTPAddr = "127.0.0.1:8082"
+		}
+		if cfg.HTTPPath == "" {
+			cfg.HTTPPath = mcp.DefaultHTTPPath
+		}
+	}
 	if err := ValidateConfig(cfg, ac); err != nil {
 		return err
 	}
@@ -118,6 +131,8 @@ func RunTransport(ctx context.Context, srv *mcp.Server, cfg *config.Config, ac a
 		return srv.ServeSSEWithOptions(ctx, cfg.SSEAddr, opts)
 	case "ws":
 		return srv.ServeWebSocketWithOptions(ctx, cfg.WSAddr, opts)
+	case "http":
+		return srv.ServeStreamableHTTPWithPath(ctx, cfg.HTTPAddr, cfg.HTTPPath, opts)
 	default:
 		return srv.ServeStdio(ctx)
 	}

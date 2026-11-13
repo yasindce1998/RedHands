@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-269-00fff2?style=flat-square" alt="269 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-277-00fff2?style=flat-square" alt="277 Tools"></a>
 </p>
 
 <p align="center">
@@ -155,7 +155,7 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 
 ## Available Tools
 
-269 tools are registered across 31 toolsets. A default startup serves 262 of
+277 tools are registered across 32 toolsets. A default startup serves 270 of
 them: the two credstore tools additionally require `REDHANDS_CREDSTORE_KEY`,
 and the five GoPhish phishing tools additionally require `REDHANDS_GOPHISH_*`
 environment variables.
@@ -435,13 +435,22 @@ runs are bounded by `REDHANDS_TIMEOUT`.
 
 ## Transports
 
-RedHands supports three transport modes:
+RedHands supports four transport modes:
 
 | Transport | Use Case | Config |
 |-----------|----------|--------|
 | **stdio** (default) | Local use with Claude Code, Cursor, VS Code | `REDHANDS_TRANSPORT=stdio` |
-| **SSE** | Local HTTP or authenticated remote HTTPS | `REDHANDS_TRANSPORT=sse` (loopback by default) |
-| **WebSocket** | Real-time bidirectional (raw frame protocol) | `REDHANDS_TRANSPORT=ws` (loopback by default) |
+| **HTTP** (Streamable) | Modern MCP `2026-07-28` clients: stateless single-endpoint JSON-RPC | `REDHANDS_TRANSPORT=http` (`REDHANDS_HTTP_ADDR`, default `127.0.0.1:8082`; `REDHANDS_HTTP_PATH`, default `/mcp`) |
+| **SSE** | Legacy HTTP clients (deprecated-era transport) | `REDHANDS_TRANSPORT=sse` (loopback by default) |
+| **WebSocket** | Real-time bidirectional (custom transport) | `REDHANDS_TRANSPORT=ws` (loopback by default) |
+
+The HTTP transport implements the modern spec: POST-only `/mcp` endpoint,
+required `MCP-Protocol-Version`/`Mcp-Method` (and `Mcp-Name` for `tools/call`)
+headers validated against the body, `405` for GET/DELETE, `404`+`-32601` for
+unknown methods, `202` for notifications, and per-request `_meta` protocol
+version validation (`-32022` with the supported list). Legacy clients that
+open with `initialize` are served by the dual-era handshake on every
+transport. Non-loopback listeners require authentication **and TLS**.
 
 ## Authentication
 
@@ -572,17 +581,37 @@ to end, including a final detection-rule generation step.
 
 | Method | Params | Description |
 |--------|--------|-------------|
-| `campaign/run` | steps or `template`+`vars` | Execute a campaign; checkpoints every step |
+| `campaign/run` | steps or `template`+`vars` | Execute a campaign synchronously; checkpoints every step |
+| `campaign/start` | same as `campaign/run` | **Async**: with the Tasks extension declared, returns a `CreateTaskResult` (taskId, ttlMs, pollIntervalMs) and runs detached from the request; without it, identical to `campaign/run`. Idempotent: re-starting a running ID returns the live task |
 | `campaign/status` | `workflow_id` | Load persisted state |
 | `campaign/list` | — | List all saved campaigns |
 | `campaign/resume` | `workflow_id` | Continue a paused/cancelled campaign |
-| `campaign/cancel` | `workflow_id` | Cancel a running campaign |
+| `campaign/cancel` | `workflow_id` | Cancel a running campaign (works cross-replica: the engine re-reads persisted state at each checkpoint) |
 | `campaign/templates` | — | List playbook templates |
 | `campaign/template/get` | `name` | Fetch one template |
 | `campaign/template/save` | template JSON | Validate and persist a playbook |
+| `tasks/get` | `taskId` | Poll a task: `working`/`input_required`/`completed`/`failed`/`cancelled`; terminal states carry the result or error |
+| `tasks/cancel` | `taskId` | Cooperatively cancel a task (acks immediately) |
+| `tasks/update` | `taskId`, `inputResponses` | Submit approval responses for a paused task (unknown keys are acked and ignored) |
 
 Campaigns interrupted mid-step (cancellation or timeout) checkpoint as
-`paused` and re-run the interrupted step on resume.
+`paused` and re-run the interrupted step on resume. Every campaign is
+single-writer (an advisory flock per workflow ID): a duplicate start of a
+running campaign returns its live task instead of corrupting the checkpoint.
+
+### Approval gating (MRTR)
+
+Tools that require operator approval (high-impact tools not listed in
+`REDHANDS_APPROVED_TOOLS`) no longer need to block. When the request declares
+the Tasks extension, an approval-gated `tools/call` answers with
+`resultType: "input_required"` and an `elicitation/create` approval request;
+the client re-issues the same call with `inputResponses: {"approval":
+{"approved": true}}` and the single call executes (audited as an approval
+bypass). Inside a task-tracked campaign, an approval-gated step pauses the
+task (`input_required` via `tasks/get`), the response arrives through
+`tasks/update`, and `campaign/resume` re-runs the step. Requests without the
+capability fail closed with the classic message. Responses never ride in
+tool arguments — only in the dedicated `inputResponses` field.
 
 ### Playbooks
 

@@ -434,7 +434,7 @@ func TestCampaignCancel(t *testing.T) {
 
 	go func() {
 		_, _ = engine.RunEnhanced(context.Background(), &EnhancedWorkflowRequest{
-			ID: "cancel-test",
+			ID:    "cancel-test",
 			Steps: []EnhancedStep{{ID: "hang", Tool: "hang"}},
 		})
 	}()

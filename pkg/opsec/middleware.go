@@ -15,10 +15,10 @@ type Middleware struct {
 	profile *Profile
 	tracker *Tracker
 
-	mu          sync.Mutex
-	callCounts  map[string]int // target -> calls this minute
-	lastMinute  time.Time
-	totalCalls  int
+	mu         sync.Mutex
+	callCounts map[string]int // target -> calls this minute
+	lastMinute time.Time
+	totalCalls int
 }
 
 // NewMiddleware creates an OPSEC middleware with the given profile and IOC tracker.

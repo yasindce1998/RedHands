@@ -28,7 +28,7 @@ func SetupMiddleware(srv *mcp.Server, cfg *config.Config, auditLogger *audit.Fil
 	if cfg.DryRun {
 		srv.Use(dryrun.NewInterceptor().Middleware)
 	}
-	srv.Use(execution.Approval(cfg.ApprovedTools))
+	srv.Use(execution.ApprovalWithAudit(cfg.ApprovedTools, auditLogger))
 	limiter, err := execution.NewLimiter(cfg.MaxConcurrent, cfg.MaxQueued, cfg.Timeout)
 	if err != nil {
 		panic(err)

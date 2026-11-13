@@ -14,16 +14,18 @@ import (
 // mockEngine is a recording fake for the Engine interface: every handler
 // stores the exact params it received and returns a canned result.
 type mockEngine struct {
-	runParams       json.RawMessage
-	statusParams    json.RawMessage
-	listParams      json.RawMessage
-	resumeParams    json.RawMessage
-	cancelParams    json.RawMessage
-	templatesParams json.RawMessage
-	getParams       json.RawMessage
-	saveParams      json.RawMessage
+	runParams        json.RawMessage
+	statusParams     json.RawMessage
+	listParams       json.RawMessage
+	resumeParams     json.RawMessage
+	cancelParams     json.RawMessage
+	templatesParams  json.RawMessage
+	getParams        json.RawMessage
+	saveParams       json.RawMessage
+	startAsyncParams json.RawMessage
 
-	runErr error
+	runErr         error
+	alreadyRunning bool
 }
 
 var (
@@ -78,6 +80,14 @@ func (m *mockEngine) GetTemplateFromJSON(params json.RawMessage) (json.RawMessag
 func (m *mockEngine) SaveTemplateFromJSON(params json.RawMessage) (json.RawMessage, error) {
 	m.saveParams = params
 	return saveResult, nil
+}
+
+func (m *mockEngine) StartAsyncFromJSON(_ context.Context, params json.RawMessage) (string, bool, error) {
+	m.startAsyncParams = params
+	if m.runErr != nil {
+		return "", false, m.runErr
+	}
+	return "wf-123", m.alreadyRunning, nil
 }
 
 // Compile-time check: the real engine satisfies the local interface.

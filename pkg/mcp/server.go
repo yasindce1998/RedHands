@@ -32,6 +32,17 @@ type CampaignEngine interface {
 	TemplatesFromJSON(params json.RawMessage) (json.RawMessage, error)
 	GetTemplateFromJSON(params json.RawMessage) (json.RawMessage, error)
 	SaveTemplateFromJSON(params json.RawMessage) (json.RawMessage, error)
+	// StartAsyncFromJSON is campaign/start's async path: it validates the
+	// params, durably persists the initial running state, launches the
+	// campaign in a background goroutine on the supplied context, and
+	// returns the task id (= workflow id). alreadyRunning reports that a
+	// campaign with the same id is in flight (idempotent re-start); the
+	// caller answers with the live task instead of an error.
+	StartAsyncFromJSON(ctx context.Context, params json.RawMessage) (taskID string, alreadyRunning bool, err error)
+	// TaskUpdateFromJSON is the engine side of tasks/update: it records
+	// client inputResponses on a paused campaign's pending approval
+	// request. Unknown or stale keys are acknowledged and ignored.
+	TaskUpdateFromJSON(params json.RawMessage) (json.RawMessage, error)
 }
 
 // ReportGenerator generates a report from raw JSON params.

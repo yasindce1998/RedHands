@@ -1095,6 +1095,7 @@ through the same approval/scope/rate-limit middleware as a direct `tools/call`.
 | Method | Description |
 |--------|-------------|
 | `campaign/run` | Execute a campaign (inline steps or a playbook template) |
+| `campaign/start` | Start a campaign; async task creation when the request declares the `io.modelcontextprotocol/tasks` extension, otherwise identical to `campaign/run` |
 | `campaign/status` | Get persisted state for a workflow ID |
 | `campaign/list` | List all saved campaigns |
 | `campaign/resume` | Resume a paused or cancelled campaign |
@@ -1102,6 +1103,47 @@ through the same approval/scope/rate-limit middleware as a direct `tools/call`.
 | `campaign/templates` | List playbook templates |
 | `campaign/template/get` | Fetch a playbook definition |
 | `campaign/template/save` | Validate and save a new playbook |
+| `tasks/get` | Poll a task's status (`working`, `input_required`, `completed`, `failed`, `cancelled`) and, once completed, its persisted result |
+| `tasks/cancel` | Cancel a task |
+| `tasks/update` | Answer a task's `inputRequests` (e.g. an operator-approval elicitation) with `inputResponses` |
+
+### Tasks Extension (`io.modelcontextprotocol/tasks`)
+
+A client declares the extension per request in `params._meta`:
+
+```json
+{
+  "jsonrpc": "2.0", "method": "campaign/start", "id": 1,
+  "params": {
+    "id": "recon-42",
+    "steps": [ { "id": "sweep", "tool": "nmap_port_scan", "params": { "target": "10.0.0.0/24" } } ],
+    "_meta": {
+      "io.modelcontextprotocol/clientCapabilities": {
+        "extensions": { "io.modelcontextprotocol/tasks": {} }
+      }
+    }
+  }
+}
+```
+
+The server answers with a task (`resultType: "task"`, `taskId` = workflow ID,
+`status: "working"`, `ttlMs`, `pollIntervalMs`) and executes the campaign in
+the background — the run is detached from the request lifetime but keeps the
+caller's context values (auth identity). Poll `tasks/get` until `completed`;
+the completed task carries the exact `campaign/run` output as its `result`.
+A duplicate `campaign/start` for a running campaign returns the live task
+(idempotent). Without the declaration, `campaign/start` is fully synchronous.
+
+**MRTR approval gating**: when a request that declared the extension calls an
+approval-gated tool via `tools/call`, the server answers
+`resultType: "input_required"` with an `inputRequests.approval` elicitation
+instead of failing; the client re-issues the same call with
+`params.inputResponses: {"approval": {"approved": true}}` (or `false` to
+deny) and the bypass applies to that single call (audited as
+`approval/bypass`). Approval can never come from tool arguments. Inside a
+task-tracked campaign, a gated step pauses the task as `input_required`; the
+operator answers via `tasks/update` and resumes with `campaign/resume`.
+Without the declared capability the server fails closed exactly as before.
 
 ### Point-and-Shoot: Playbooks
 

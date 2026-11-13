@@ -31,7 +31,9 @@ func (t *StartTool) Description() string {
 		"record rules (persist hosts/services/credentials/findings to the target DB), and mitre ATT&CK technique IDs (e.g. T1613, T1552.007). " +
 		"Optional top-level: id (custom workflow id), name, engagement (binds the run to a named engagement that must be active — every " +
 		"step's scope checks run against it). Every step executes through the full server middleware chain (audit, auth, rate limits, " +
-		"scope, dry-run, approval) exactly like a direct tool call. The result's first line states the workflow_id: poll progress with " +
+		"scope, dry-run, approval) exactly like a direct tool call. When the calling request declares the io.modelcontextprotocol/tasks " +
+		"extension, the campaign starts in the background and this tool returns a task (taskId, status working, ttlMs, pollIntervalMs) — " +
+		"poll it with campaign_status or tasks/get. The result's first line states the workflow_id: poll progress with " +
 		"campaign_status, resume paused or cancelled runs with campaign_resume, stop with campaign_cancel. Unknown fields are rejected."
 }
 
@@ -161,6 +163,13 @@ func (t *StartTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.T
 		return errorResult("id " + idRule)
 	}
 
+	// Tasks extension (io.modelcontextprotocol/tasks): when the calling
+	// request declared the extension, start the campaign in the background
+	// and return the task form instead of running synchronously.
+	if mcp.TasksExtensionEnabled(ctx) {
+		return t.startAsync(ctx, params)
+	}
+
 	data, err := t.engine.RunFromJSON(ctx, params)
 	if err != nil {
 		return errorResult("campaign failed to start: " + err.Error())
@@ -177,4 +186,50 @@ func (t *StartTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.T
 		guidance = fmt.Sprintf("Poll progress with campaign_status (workflow_id %q); resume a paused or cancelled run with campaign_resume; stop a running one with campaign_cancel.", id)
 	}
 	return renderResult(summary, guidance, data)
+}
+
+// startAsync launches the campaign in the background (campaign/start's
+// task-tracked path) and surfaces the task id unmissably.
+func (t *StartTool) startAsync(ctx context.Context, params json.RawMessage) (*mcp.ToolResult, error) {
+	// Detach from the tools/call request lifetime while keeping the
+	// caller's context values (auth identity, the tasks-extension marker)
+	// so every step runs through the full middleware chain with the
+	// caller's identity and can elicit approval instead of failing.
+	runCtx := mcp.WithTasksExtension(context.WithoutCancel(ctx))
+	taskID, alreadyRunning, err := t.engine.StartAsyncFromJSON(runCtx, params)
+	if err != nil {
+		return errorResult("campaign failed to start: " + err.Error())
+	}
+
+	task := mcp.TaskRef{
+		TaskID:         taskID,
+		Status:         mcp.TaskStatusWorking,
+		TTLMs:          mcp.TaskTTLMS,
+		PollIntervalMs: mcp.TaskPollIntervalMS,
+	}
+	summary := fmt.Sprintf("Task %s started — poll with campaign_status or tasks/get.", taskID)
+	if alreadyRunning {
+		summary = fmt.Sprintf("Task %s is already running — poll with campaign_status or tasks/get.", taskID)
+	}
+	guidance := fmt.Sprintf("Poll progress with campaign_status or tasks/get (taskId %q); resume a paused run with campaign_resume; stop it with campaign_cancel or tasks/cancel.", taskID)
+
+	result, err := renderResult(summary, guidance, mustMarshalTask(task))
+	if err != nil {
+		return nil, err
+	}
+	// Mirror the method-level CreateTaskResult shape for machine clients.
+	structured, err := json.Marshal(mcp.CreateTaskResult{ResultType: mcp.ResultTypeTask, Task: task})
+	if err == nil {
+		result.StructuredContent = structured
+	}
+	return result, nil
+}
+
+// mustMarshalTask renders a TaskRef as JSON for renderResult.
+func mustMarshalTask(task mcp.TaskRef) json.RawMessage {
+	data, err := json.Marshal(task)
+	if err != nil {
+		return json.RawMessage(`{}`)
+	}
+	return data
 }

@@ -19,16 +19,28 @@ func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSONRP
 			return s.errorResponse(req.ID, ErrCodeUnauthorized, err.Error())
 		}
 	}
-	// Modern-era version negotiation: a request that carries _meta with a
-	// protocol version must name one this server speaks. A request with no
-	// _meta at all is legacy-era and is served without validation
-	// (dual-era tolerance). Notifications cannot carry an error response,
-	// so an unsupported version on an ID-less message is dropped silently.
-	if meta, ok := ParseRequestMeta(req.Params); ok && meta.ProtocolVersion != "" && !protocolVersionSupported(meta.ProtocolVersion) {
-		if len(req.ID) == 0 {
-			return nil
+	// Modern-era version negotiation and per-request capability parsing:
+	// _meta is parsed once here. A request that carries _meta with a
+	// protocol version must name one this server speaks; a request with
+	// no _meta at all is legacy-era and is served without validation
+	// (dual-era tolerance). A request whose clientCapabilities declares
+	// the tasks extension marks the context, so engine-side handlers and
+	// the approval middleware negotiate the extension per request.
+	if meta, ok := ParseRequestMeta(req.Params); ok {
+		if meta.ProtocolVersion != "" && !protocolVersionSupported(meta.ProtocolVersion) {
+			// Notifications cannot carry an error response, so an
+			// unsupported version on an ID-less message is dropped
+			// silently.
+			if len(req.ID) == 0 {
+				return nil
+			}
+			return unsupportedProtocolVersionError(req.ID, meta.ProtocolVersion)
 		}
-		return unsupportedProtocolVersionError(req.ID, meta.ProtocolVersion)
+		if meta.ClientCapabilities != nil && meta.ClientCapabilities.Extensions != nil {
+			if _, has := meta.ClientCapabilities.Extensions[TasksExtension]; has {
+				ctx = WithTasksExtension(ctx)
+			}
+		}
 	}
 	// JSON-RPC notifications execute without a response. Never emit ID-less replies.
 	if len(req.ID) == 0 {
@@ -57,6 +69,14 @@ func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) *JSONRP
 		return s.handleWorkflowRun(ctx, req)
 	case MethodCampaignRun:
 		return s.handleCampaignRun(ctx, req)
+	case MethodCampaignStart:
+		return s.handleCampaignStart(ctx, req)
+	case MethodTasksGet:
+		return s.handleTasksGet(req)
+	case MethodTasksCancel:
+		return s.handleTasksCancel(req)
+	case MethodTasksUpdate:
+		return s.handleTasksUpdate(req)
 	case MethodCampaignResume:
 		if s.campaign == nil {
 			return s.errorResponse(req.ID, ErrCodeMethodNotFound, "campaign engine not configured")
@@ -120,8 +140,13 @@ func (s *Server) handleServerDiscover(req *JSONRPCRequest) *JSONRPCResponse {
 		ProtocolVersions: SupportedProtocolVersions(),
 		Capabilities: DiscoverCaps{
 			Tools: &ToolsCap{},
-			// Extensions are advertised only when they exist; none do yet,
-			// so the map stays nil and the field is omitted.
+			// The tasks extension methods (campaign/start async,
+			// tasks/get, tasks/cancel, tasks/update) are always
+			// implemented, so the extension is always advertised; clients
+			// opt in per-request via _meta.clientCapabilities.extensions.
+			Extensions: map[string]json.RawMessage{
+				TasksExtension: json.RawMessage(`{}`),
+			},
 		},
 	}
 	return s.successResponse(req.ID, result)
@@ -155,6 +180,15 @@ func (s *Server) handleToolsCall(ctx context.Context, req *JSONRPCRequest) *JSON
 	_, ok := s.GetTool(params.Name)
 	if !ok {
 		return s.errorResponse(req.ID, ErrCodeInvalidParams, fmt.Sprintf("unknown tool: %s", params.Name))
+	}
+
+	// MRTR: inputResponses ride alongside the tool arguments in the call
+	// params and are threaded into the execution context (never into the
+	// arguments themselves — approval cannot come from model-supplied
+	// input). The approval middleware only honors them when this same
+	// request also declared the tasks extension.
+	if len(params.InputResponses) > 0 {
+		ctx = WithInputResponses(ctx, params.InputResponses)
 	}
 
 	result, err := s.ExecuteTool(ctx, params.Name, params.Arguments)

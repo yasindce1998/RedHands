@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/yasindce1998/redhands/pkg/mcp"
 )
 
 // Campaign limits, mirroring the sequential engine's hard caps.
@@ -79,6 +81,32 @@ func NewEnhancedEngine(exec ToolExecutor, stateDir, templatesDir string, maxPara
 
 // RunEnhanced executes an enhanced workflow with all features.
 func (e *EnhancedEngine) RunEnhanced(ctx context.Context, req *EnhancedWorkflowRequest) (*WorkflowResult, error) {
+	prep, err := e.prepareRun(req)
+	if err != nil {
+		return nil, err
+	}
+	defer prep.lock.release()
+
+	ctx, cancel := context.WithCancel(ctx)
+	e.registerRun(prep.state.WorkflowID, cancel)
+	defer e.unregisterRun(prep.state.WorkflowID)
+
+	return e.executeSteps(ctx, prep.state)
+}
+
+// preparedRun is a validated, locked, and durably-started campaign. The
+// initial running-state save in prepareRun is the durable record that a
+// task exists; it happens before any caller is answered.
+type preparedRun struct {
+	state *State
+	lock  *runLock
+}
+
+// prepareRun validates the request, takes the per-campaign single-writer
+// lock, and persists the initial running state. Callers must release
+// prep.lock when execution ends (RunEnhanced synchronously, StartAsync's
+// background goroutine otherwise).
+func (e *EnhancedEngine) prepareRun(req *EnhancedWorkflowRequest) (*preparedRun, error) {
 	steps := req.Steps
 
 	// If using a template, instantiate it.
@@ -114,7 +142,6 @@ func (e *EnhancedEngine) RunEnhanced(ctx context.Context, req *EnhancedWorkflowR
 	if err != nil {
 		return nil, err
 	}
-	defer lock.release()
 
 	state := &State{
 		WorkflowID: workflowID,
@@ -133,14 +160,47 @@ func (e *EnhancedEngine) RunEnhanced(ctx context.Context, req *EnhancedWorkflowR
 	// campaign visible to Cancel from other replicas before the first
 	// checkpoint.
 	if err := e.state.Save(state); err != nil {
+		lock.release()
 		return nil, fmt.Errorf("save initial state: %w", err)
 	}
+	return &preparedRun{state: state, lock: lock}, nil
+}
 
-	ctx, cancel := context.WithCancel(ctx)
-	e.registerRun(workflowID, cancel)
-	defer e.unregisterRun(workflowID)
+// StartAsync durably starts a campaign in the background (the async path
+// of campaign/start and the campaign_start tool). The initial running
+// state is persisted synchronously, BEFORE StartAsync returns, so a task
+// id handed to the client always addresses an existing checkpoint. The
+// execution itself runs on ctx in a goroutine that owns the run lock; ctx
+// must be detached from any request lifetime (the protocol layer passes a
+// cancellation-free context that keeps the caller's context values).
+//
+// Idempotency: when a campaign with the same id is already in flight
+// (single-writer lock held elsewhere), StartAsync does not error; it
+// returns the existing workflow id with alreadyRunning=true so the caller
+// can answer a duplicate start with the live task.
+func (e *EnhancedEngine) StartAsync(ctx context.Context, req *EnhancedWorkflowRequest) (workflowID string, alreadyRunning bool, err error) {
+	prep, err := e.prepareRun(req)
+	if err != nil {
+		if errors.Is(err, ErrAlreadyRunning) && req.ID != "" {
+			// A duplicate start of a named campaign addresses the live
+			// task. (A generated id colliding with a running campaign is
+			// astronomically unlikely; treat it as a plain error.)
+			return req.ID, true, nil
+		}
+		return "", false, err
+	}
 
-	return e.executeSteps(ctx, state)
+	go func() {
+		defer prep.lock.release()
+		ctx, cancel := context.WithCancel(ctx)
+		e.registerRun(prep.state.WorkflowID, cancel)
+		defer e.unregisterRun(prep.state.WorkflowID)
+		// The result is durably recorded in the state (including
+		// FinalResult on completion); an asynchronous caller consumes it
+		// via tasks/get.
+		_, _ = e.executeSteps(ctx, prep.state)
+	}()
+	return prep.state.WorkflowID, false, nil
 }
 
 // Resume continues a paused or cancelled workflow from its last checkpoint.
@@ -560,18 +620,69 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 			if err != nil {
 				return e.fail(state, allResults, i, err.Error()), nil
 			}
-			text, success, execErr := e.execute(ctx, step.Tool, params)
 
-			// Cancellation or timeout mid-step pauses rather than fails; the
-			// interrupted step re-runs from its checkpoint on resume.
-			if ctx.Err() != nil {
-				return e.pause(ctx, state, allResults, i), ctx.Err()
+			// MRTR approval-gate resolution: when this campaign was paused
+			// on an approval gate, consume the operator's tasks/update
+			// decision before (re)running the gated step. An approval
+			// re-runs the step with a one-call approval bypass carried in
+			// the execution context (never in the step params); a denial
+			// records a failed step and applies the step's on_fail policy
+			// through the shared failure path below. A stale or unanswered
+			// gate falls through and re-trips below, pausing again with a
+			// fresh request id.
+			execCtx := ctx
+			denied := false
+			if pa := state.PendingApproval; pa != nil {
+				state.PendingApproval = nil
+				if pa.StepID == stepID {
+					approved, responded := pa.Decision()
+					if responded {
+						if approved {
+							// The approval was obtained through the
+							// tasks protocol (tasks/update on a
+							// task-tracked campaign), so the re-run
+							// re-establishes the tasks-extension marker on
+							// the execution context itself: the resume
+							// request need not re-declare the capability.
+							// The response grants exactly this one call.
+							execCtx = mcp.WithTasksExtension(mcp.WithInputResponses(ctx, map[string]json.RawMessage{
+								mcp.ApprovalInputKey: pa.Response,
+							}))
+						} else {
+							denied = true
+						}
+					}
+				}
+				// A gate for a different step id is stale (e.g. the
+				// checkpoint moved); drop it and fail closed by letting
+				// the gate re-trip if the tool still requires approval.
 			}
 
-			r := StepResult{Tool: step.Tool, ID: stepID, Success: success, Text: text}
-			if execErr != nil {
-				r.Success = false
-				r.Text = fmt.Sprintf("execution error: %s", execErr.Error())
+			var r StepResult
+			if denied {
+				r = StepResult{Tool: step.Tool, ID: stepID, Success: false, Text: "approval denied"}
+			} else {
+				text, success, execErr := e.execute(execCtx, step.Tool, params)
+
+				// MRTR: a task-tracked campaign whose step tripped the
+				// operator-approval gate pauses (checkpointed, resumable)
+				// instead of failing the step.
+				var approvalReq *ApprovalRequiredError
+				if errors.As(execErr, &approvalReq) {
+					return e.pauseForApproval(state, allResults, i, step, stepID, approvalReq), nil
+				}
+
+				// Cancellation or timeout mid-step pauses rather than fails; the
+				// interrupted step re-runs from its checkpoint on resume.
+				if ctx.Err() != nil {
+					return e.pause(ctx, state, allResults, i), ctx.Err()
+				}
+
+				r = StepResult{Tool: step.Tool, ID: stepID, Success: success, Text: text}
+				if execErr != nil {
+					r.Success = false
+					r.Text = fmt.Sprintf("execution error: %s", execErr.Error())
+				}
 			}
 			allResults = append(allResults, r)
 			state.Results[stepID] = r
@@ -590,7 +701,11 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 				}
 				if step.OnFail != "continue" {
 					// "" and "stop"
-					return e.fail(state, allResults, i, ""), nil
+					failMsg := ""
+					if denied {
+						failMsg = "approval denied"
+					}
+					return e.fail(state, allResults, i, failMsg), nil
 				}
 			}
 
@@ -631,10 +746,16 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 
 	state.Status = "completed"
 	state.UpdatedAt = time.Now().Unix()
+	result := buildResult(state, allResults, true)
+	// Persist the final WorkflowResult so tasks/get can serve the exact
+	// campaign/run output after the run finishes.
+	if data, err := json.Marshal(result); err == nil {
+		state.FinalResult = data
+	}
 	if err := e.state.Save(state); err != nil {
 		log.Printf("workflow: checkpoint save failed: %v", err)
 	}
-	return buildResult(state, allResults, true), nil
+	return result, nil
 }
 
 // jump moves execution to the step with the given ID, enforcing the goto budget.
@@ -665,6 +786,35 @@ func (e *EnhancedEngine) pause(ctx context.Context, state *State, allResults []S
 	}
 	state.NextIndex = i
 	state.Error = fmt.Sprintf("interrupted: %v", ctx.Err())
+	state.UpdatedAt = time.Now().Unix()
+	if err := e.state.Save(state); err != nil {
+		log.Printf("workflow: checkpoint save failed: %v", err)
+	}
+	return buildResult(state, allResults, false)
+}
+
+// pauseForApproval checkpoints a task-tracked campaign whose step tripped
+// the operator-approval gate (MRTR). The gated step re-runs on resume once
+// the operator answers via tasks/update; the pending-approval record holds
+// the elicitation identity so tasks/get can restate the request.
+func (e *EnhancedEngine) pauseForApproval(state *State, allResults []StepResult, i int, step EnhancedStep, stepID string, req *ApprovalRequiredError) *WorkflowResult {
+	message := req.Message
+	if message == "" {
+		message = fmt.Sprintf("Tool %q requires operator approval; approve or deny via tasks/update.", step.Tool)
+	}
+	requestID := req.RequestID
+	if requestID == "" {
+		requestID = GenerateID()
+	}
+	state.Status = "paused"
+	state.Error = fmt.Sprintf("step %s awaits operator approval for tool %q", stepID, step.Tool)
+	state.PendingApproval = &PendingApproval{
+		Tool:      step.Tool,
+		StepID:    stepID,
+		RequestID: requestID,
+		Message:   message,
+	}
+	state.NextIndex = i
 	state.UpdatedAt = time.Now().Unix()
 	if err := e.state.Save(state); err != nil {
 		log.Printf("workflow: checkpoint save failed: %v", err)
@@ -713,16 +863,11 @@ func buildResult(state *State, results []StepResult, success bool) *WorkflowResu
 
 // RunFromJSON is the JSON-RPC handler for campaign/run.
 func (e *EnhancedEngine) RunFromJSON(ctx context.Context, params json.RawMessage) (json.RawMessage, error) {
-	var req EnhancedWorkflowRequest
-	decoder := json.NewDecoder(bytes.NewReader(params))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&req); err != nil {
-		return nil, fmt.Errorf("invalid campaign params: %w", err)
+	req, err := parseCampaignRequest(params)
+	if err != nil {
+		return nil, err
 	}
-	if err := decoder.Decode(new(any)); err != io.EOF {
-		return nil, fmt.Errorf("campaign must contain exactly one JSON object")
-	}
-	result, err := e.RunEnhanced(ctx, &req)
+	result, err := e.RunEnhanced(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -731,6 +876,116 @@ func (e *EnhancedEngine) RunFromJSON(ctx context.Context, params json.RawMessage
 		return nil, fmt.Errorf("marshal campaign result: %w", err)
 	}
 	return data, nil
+}
+
+// parseCampaignRequest strictly decodes campaign/run-shaped params: one
+// JSON object, no unknown fields. The one exception is _meta: it is
+// per-request protocol metadata (e.g. the clientCapabilities that negotiate
+// the tasks extension), not campaign params, so it is stripped before the
+// strict decode.
+func parseCampaignRequest(params json.RawMessage) (*EnhancedWorkflowRequest, error) {
+	var req EnhancedWorkflowRequest
+	decoder := json.NewDecoder(bytes.NewReader(stripRequestMeta(params)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
+		return nil, fmt.Errorf("invalid campaign params: %w", err)
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return nil, fmt.Errorf("campaign must contain exactly one JSON object")
+	}
+	return &req, nil
+}
+
+// stripRequestMeta removes the _meta key from a JSON object. Params that
+// are not objects, or carry no _meta, are returned unchanged.
+func stripRequestMeta(params json.RawMessage) json.RawMessage {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(params, &obj); err != nil || obj == nil {
+		return params
+	}
+	if _, ok := obj["_meta"]; !ok {
+		return params
+	}
+	delete(obj, "_meta")
+	data, err := json.Marshal(obj)
+	if err != nil {
+		return params
+	}
+	return data
+}
+
+// StartAsyncFromJSON is the JSON-RPC handler for campaign/start's async
+// path: parse, durably persist the initial state, launch in the
+// background, and return the task id (= workflow id). See StartAsync.
+func (e *EnhancedEngine) StartAsyncFromJSON(ctx context.Context, params json.RawMessage) (string, bool, error) {
+	req, err := parseCampaignRequest(params)
+	if err != nil {
+		return "", false, err
+	}
+	return e.StartAsync(ctx, req)
+}
+
+// TaskUpdateFromJSON is the JSON-RPC handler for tasks/update: it records
+// the client's inputResponses on a paused campaign's pending approval
+// request. Per the tasks extension, unknown task ids are errors and
+// unknown or stale response keys are acknowledged and ignored.
+func (e *EnhancedEngine) TaskUpdateFromJSON(params json.RawMessage) (json.RawMessage, error) {
+	var req struct {
+		TaskID         string                     `json:"taskId"`
+		InputResponses map[string]json.RawMessage `json:"inputResponses"`
+	}
+	if err := json.Unmarshal(params, &req); err != nil {
+		return nil, fmt.Errorf("invalid tasks/update params: %w", err)
+	}
+	if req.TaskID == "" {
+		return nil, fmt.Errorf("taskId is required")
+	}
+	if err := ValidWorkflowID(req.TaskID); err != nil {
+		return nil, fmt.Errorf("unknown taskId %q", req.TaskID)
+	}
+
+	ack := json.RawMessage(`{"accepted":true}`)
+
+	response, ok := req.InputResponses[mcp.ApprovalInputKey]
+	if !ok {
+		// Unknown key: ack and ignore (spec).
+		return ack, nil
+	}
+	// A campaign holds a pending approval only while paused (the run
+	// goroutine has exited and released the run lock), so this
+	// read-modify-write cannot interleave with checkpoint writes.
+	state, err := e.state.Load(req.TaskID)
+	if err != nil {
+		return nil, fmt.Errorf("unknown taskId %q", req.TaskID)
+	}
+	pa := state.PendingApproval
+	if pa == nil {
+		// Stale: no approval is pending (running, terminal, or never
+		// gated). Ack and ignore.
+		return ack, nil
+	}
+	// When the response echoes a request id it must match the pending
+	// elicitation; a mismatch is a stale answer to an earlier gate.
+	var probe struct {
+		RequestID string `json:"requestId"`
+	}
+	if err := json.Unmarshal(response, &probe); err == nil && probe.RequestID != "" && probe.RequestID != pa.RequestID {
+		return ack, nil
+	}
+
+	pa.Response = response
+	if mcp.IsAffirmativeApproval(response) {
+		pa.Resolved = ApprovalDecisionApproved
+	} else {
+		// A response that is present but not affirmative is a denial
+		// (fail closed).
+		pa.Resolved = ApprovalDecisionDenied
+	}
+	state.UpdatedAt = time.Now().Unix()
+	if err := e.state.Save(state); err != nil {
+		return nil, fmt.Errorf("save task update: %w", err)
+	}
+	return ack, nil
 }
 
 // ResumeFromJSON is the JSON-RPC handler for campaign/resume.

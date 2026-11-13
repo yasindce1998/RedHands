@@ -18,7 +18,7 @@ import (
 // Engine is the subset of workflow.EnhancedEngine that the campaign tools
 // delegate to. It mirrors the campaign/* JSON-RPC handler signatures one to
 // one; *workflow.EnhancedEngine satisfies it. It is defined locally so the
-// tools do not depend on the protocol layer's types.
+// tools do not depend on the engine package.
 type Engine interface {
 	RunFromJSON(ctx context.Context, params json.RawMessage) (json.RawMessage, error)
 	StatusFromJSON(params json.RawMessage) (json.RawMessage, error)
@@ -28,6 +28,9 @@ type Engine interface {
 	TemplatesFromJSON(params json.RawMessage) (json.RawMessage, error)
 	GetTemplateFromJSON(params json.RawMessage) (json.RawMessage, error)
 	SaveTemplateFromJSON(params json.RawMessage) (json.RawMessage, error)
+	// StartAsyncFromJSON is the async campaign/start path used when the
+	// caller declared the tasks extension.
+	StartAsyncFromJSON(ctx context.Context, params json.RawMessage) (taskID string, alreadyRunning bool, err error)
 }
 
 // idPattern mirrors workflow.ValidWorkflowID and the template manager's

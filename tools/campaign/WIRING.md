@@ -4,7 +4,16 @@ This file is the hand-off note for the orchestrator: the exact lines needed
 to register `tools/campaign` with the server. The package itself is
 self-contained — it defines a local `Engine` interface that
 `*workflow.EnhancedEngine` already satisfies (compile-time checked in
-`campaign_test.go`), so nothing in `pkg/mcp` or `pkg/workflow` changes.
+`campaign_test.go`).
+
+> Note: the `Engine` interface gained `StartAsyncFromJSON` with the
+> io.modelcontextprotocol/tasks extension. When a `tools/call` request for
+> `campaign_start` declares the tasks extension (per-request
+> `params._meta.clientCapabilities.extensions`), the tool starts the
+> campaign in the background and returns a task form (`resultType: task`)
+> with the taskId surfaced in the first line and a `CreateTaskResult` in
+> `structuredContent`; poll with `campaign_status` or `tasks/get`.
+> Without the declaration it stays fully synchronous.
 
 Recommended shape: **constructors take the `campaign.Engine` interface, and
 `registry.Deps` gains one field for it.** `app.SetupCampaign` already

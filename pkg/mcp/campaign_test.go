@@ -9,17 +9,18 @@ import (
 
 // fakeCampaignEngine is a minimal CampaignEngine used to exercise dispatch.
 type fakeCampaignEngine struct {
-	runCalled      bool
-	statusCalled   bool
-	listCalled     bool
-	resumeCalled   bool
-	cancelCalled   bool
-	templatesCall  bool
-	getCalled      bool
-	saveCalled     bool
-	failRun        error
-	runResult      json.RawMessage
-	receivedParams json.RawMessage
+	runCalled        bool
+	startAsyncCalled bool
+	statusCalled     bool
+	listCalled       bool
+	resumeCalled     bool
+	cancelCalled     bool
+	templatesCall    bool
+	getCalled        bool
+	saveCalled       bool
+	failRun          error
+	runResult        json.RawMessage
+	receivedParams   json.RawMessage
 }
 
 func (f *fakeCampaignEngine) RunFromJSON(ctx context.Context, params json.RawMessage) (json.RawMessage, error) {
@@ -67,6 +68,19 @@ func (f *fakeCampaignEngine) GetTemplateFromJSON(params json.RawMessage) (json.R
 func (f *fakeCampaignEngine) SaveTemplateFromJSON(params json.RawMessage) (json.RawMessage, error) {
 	f.saveCalled = true
 	return json.RawMessage(`{"saved":true}`), nil
+}
+
+func (f *fakeCampaignEngine) StartAsyncFromJSON(ctx context.Context, params json.RawMessage) (string, bool, error) {
+	f.startAsyncCalled = true
+	f.receivedParams = params
+	if f.failRun != nil {
+		return "", false, f.failRun
+	}
+	return "wf_1", false, nil
+}
+
+func (f *fakeCampaignEngine) TaskUpdateFromJSON(params json.RawMessage) (json.RawMessage, error) {
+	return json.RawMessage(`{"accepted":true}`), nil
 }
 
 func newCampaignTestServer(t *testing.T) (*Server, *fakeCampaignEngine) {

@@ -31,6 +31,7 @@ const (
 	MethodWorkflowRun            = "workflow/run"
 	MethodReportGenerate         = "report/generate"
 	MethodCampaignRun            = "campaign/run"
+	MethodCampaignStart          = "campaign/start"
 	MethodCampaignStatus         = "campaign/status"
 	MethodCampaignList           = "campaign/list"
 	MethodCampaignResume         = "campaign/resume"
@@ -38,6 +39,21 @@ const (
 	MethodCampaignTemplates      = "campaign/templates"
 	MethodCampaignTemplateGet    = "campaign/template/get"
 	MethodCampaignTemplateSave   = "campaign/template/save"
+
+	// Tasks extension methods (io.modelcontextprotocol/tasks).
+	MethodTasksGet    = "tasks/get"
+	MethodTasksCancel = "tasks/cancel"
+	MethodTasksUpdate = "tasks/update"
+
+	// TasksExtension is the protocol extension name negotiated per-request
+	// via _meta.clientCapabilities.extensions and advertised in
+	// server/discover capabilities.extensions.
+	TasksExtension = "io.modelcontextprotocol/tasks"
+
+	// ErrCodeTaskFailed is attached to the error object of a tasks/get
+	// result for a campaign that failed. It sits in the server-error range
+	// (-32000), below the server's reserved custom codes.
+	ErrCodeTaskFailed = -32000
 
 	ErrCodeParse          = -32700
 	ErrCodeInvalidRequest = -32600
@@ -156,6 +172,11 @@ type ToolAnnotations struct {
 type ToolsCallParams struct {
 	Name      string          `json:"name"`
 	Arguments json.RawMessage `json:"arguments,omitempty"`
+	// InputResponses carries the client's answers to a previous
+	// input_required result for this same call (tasks extension / MRTR).
+	// It is threaded into the execution context, not the tool arguments:
+	// approval can never be granted by model-supplied tool arguments.
+	InputResponses map[string]json.RawMessage `json:"inputResponses,omitempty"`
 }
 
 type ToolResult struct {
@@ -164,6 +185,100 @@ type ToolResult struct {
 	// StructuredContent carries a machine-readable result object alongside
 	// the human-oriented content blocks (modern protocol revision).
 	StructuredContent json.RawMessage `json:"structuredContent,omitempty"`
+	// ResultType marks extended result shapes: "task" (a background task
+	// was created) and "input_required" (the call paused waiting for the
+	// client to answer inputRequests and re-issue the same call).
+	ResultType string `json:"resultType,omitempty"`
+	// InputRequests is populated when ResultType is "input_required". Each
+	// entry names one request the client must answer; the answer comes
+	// back as params.inputResponses with the same key.
+	InputRequests map[string]InputRequest `json:"inputRequests,omitempty"`
+}
+
+// Extended resultType values.
+const (
+	// ResultTypeTask is the resultType of a CreateTaskResult.
+	ResultTypeTask = "task"
+	// ResultTypeInputRequired is the resultType of a result that paused
+	// waiting for client input (MRTR approval gating).
+	ResultTypeInputRequired = "input_required"
+)
+
+// InputRequestTypeElicitation is the only request type this server issues.
+const InputRequestTypeElicitation = "elicitation/create"
+
+// IsInputRequired reports whether a tool result paused waiting for client
+// input (MRTR approval gating). The engine adapter uses it to translate an
+// input_required result into an approval-required pause.
+func IsInputRequired(r *ToolResult) bool {
+	return r != nil && r.ResultType == ResultTypeInputRequired
+}
+
+// InputRequest describes one piece of input a client must provide before
+// the paused call can proceed.
+type InputRequest struct {
+	// Type names the mechanism the client should use; this server only
+	// issues "elicitation/create".
+	Type string `json:"type"`
+	// Message is the human-readable prompt to surface to the operator.
+	Message string `json:"message"`
+	// RequestID uniquely identifies this request; responses may echo it so
+	// stale answers can be detected.
+	RequestID string `json:"requestId"`
+}
+
+// CreateTaskResult is returned by campaign/start (and the campaign_start
+// tool) when the request declared the tasks extension: the campaign runs
+// in the background and the client polls tasks/get.
+type CreateTaskResult struct {
+	ResultType string  `json:"resultType"`
+	Task       TaskRef `json:"task"`
+}
+
+// TaskRef identifies a background task.
+type TaskRef struct {
+	TaskID         string `json:"taskId"`
+	Status         string `json:"status"`
+	TTLMs          int    `json:"ttlMs"`
+	PollIntervalMs int    `json:"pollIntervalMs"`
+}
+
+// Task lifecycle constants (io.modelcontextprotocol/tasks).
+const (
+	TaskStatusWorking       = "working"
+	TaskStatusCompleted     = "completed"
+	TaskStatusFailed        = "failed"
+	TaskStatusCancelled     = "cancelled"
+	TaskStatusInputRequired = "input_required"
+
+	// TaskTTLMS is how long a finished task's state remains retrievable.
+	TaskTTLMS = 86400000
+	// TaskPollIntervalMS is the suggested polling interval for tasks/get.
+	TaskPollIntervalMS = 2000
+)
+
+// GetTaskResult is the tasks/get result: the current state of a task.
+type GetTaskResult struct {
+	Status        string                  `json:"status"`
+	StatusMessage string                  `json:"statusMessage,omitempty"`
+	Result        json.RawMessage         `json:"result,omitempty"`
+	Error         *JSONRPCError           `json:"error,omitempty"`
+	InputRequests map[string]InputRequest `json:"inputRequests,omitempty"`
+}
+
+// TasksGetParams, TasksCancelParams and TasksUpdateParams are the params
+// of the tasks/* methods.
+type TasksGetParams struct {
+	TaskID string `json:"taskId"`
+}
+
+type TasksCancelParams struct {
+	TaskID string `json:"taskId"`
+}
+
+type TasksUpdateParams struct {
+	TaskID         string                     `json:"taskId"`
+	InputResponses map[string]json.RawMessage `json:"inputResponses"`
 }
 
 type ContentBlock struct {

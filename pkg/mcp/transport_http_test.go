@@ -122,8 +122,10 @@ func TestServerDiscoverResult(t *testing.T) {
 	if resp.Result.Capabilities.Tools == nil {
 		t.Error("discover result must advertise the tools capability")
 	}
-	if len(resp.Result.Capabilities.Extensions) != 0 {
-		t.Errorf("extensions must be omitted when none exist: %v", resp.Result.Capabilities.Extensions)
+	// The tasks extension methods are always implemented, so the extension
+	// is always advertised.
+	if _, ok := resp.Result.Capabilities.Extensions[mcp.TasksExtension]; !ok {
+		t.Errorf("discover result must advertise the %s extension: %v", mcp.TasksExtension, resp.Result.Capabilities.Extensions)
 	}
 }
 

@@ -178,11 +178,13 @@ func resultField(r StepResult, field, path string) (any, bool) {
 	return lookupPath(raw, path)
 }
 
-// extractStructured returns machine-readable JSON from a step result. It
-// accepts pure JSON output as well as JSON fenced in a markdown code block,
-// the format RedHands tools emit.
-func extractStructured(r StepResult) (json.RawMessage, bool) {
-	s := strings.TrimSpace(r.Text)
+// StructuredFromText extracts machine-readable JSON from an arbitrary
+// string. It accepts pure JSON as well as JSON fenced in a markdown code
+// block, the format RedHands tools emit. It is exported so the application
+// layer can reuse the same extraction when migrating step results to
+// structured content channels.
+func StructuredFromText(text string) (json.RawMessage, bool) {
+	s := strings.TrimSpace(text)
 	if s == "" {
 		return nil, false
 	}
@@ -200,6 +202,11 @@ func extractStructured(r StepResult) (json.RawMessage, bool) {
 		}
 	}
 	return nil, false
+}
+
+// extractStructured returns machine-readable JSON from a step result.
+func extractStructured(r StepResult) (json.RawMessage, bool) {
+	return StructuredFromText(r.Text)
 }
 
 // lookupPath resolves a dot-separated path ("hosts.0.ip") against raw JSON.

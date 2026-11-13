@@ -21,6 +21,12 @@ func NewStateManager(dir string) *StateManager {
 	return &StateManager{dir: dir}
 }
 
+// Dir returns the state directory. The engine uses it to place per-campaign
+// run locks next to the checkpoint files they protect.
+func (sm *StateManager) Dir() string {
+	return sm.dir
+}
+
 // ValidWorkflowID rejects IDs that could escape the state directory.
 func ValidWorkflowID(id string) error {
 	if id == "" {

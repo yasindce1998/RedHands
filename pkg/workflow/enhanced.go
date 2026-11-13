@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +29,11 @@ var validConditionOps = map[string]bool{
 	"json_exists": true, "json_not_exists": true, "json_equals": true,
 	"json_not_equals": true, "json_contains": true, "json_gt": true, "json_lt": true,
 }
+
+// ErrAlreadyRunning is returned (wrapped) when a campaign cannot start or
+// resume because another process or goroutine holds its run lock. Idempotent
+// callers match on it with errors.Is to treat a duplicate start as a no-op.
+var ErrAlreadyRunning = errors.New("already running")
 
 // runningCampaign tracks an in-flight campaign for cancellation.
 type runningCampaign struct {
@@ -99,6 +106,16 @@ func (e *EnhancedEngine) RunEnhanced(ctx context.Context, req *EnhancedWorkflowR
 		return nil, err
 	}
 
+	// Single writer per campaign: a non-blocking exclusive lock on the
+	// campaign's lock file. A second start with the same ID — from this
+	// process or a replica sharing the state dir — fails fast instead of
+	// silently replacing the running entry and corrupting checkpoints.
+	lock, err := acquireRunLock(e.state.Dir(), workflowID)
+	if err != nil {
+		return nil, err
+	}
+	defer lock.release()
+
 	state := &State{
 		WorkflowID: workflowID,
 		Name:       req.Name,
@@ -110,8 +127,14 @@ func (e *EnhancedEngine) RunEnhanced(ctx context.Context, req *EnhancedWorkflowR
 		CreatedAt:  time.Now().Unix(),
 	}
 
-	// A workflow re-run with the same ID replaces any stale running entry.
-	e.unregisterRun(workflowID)
+	// Persist the running state up front. This clears any stale terminal
+	// marker (e.g. "cancelled" from a previous run of this ID) that the
+	// cross-replica cancel check would otherwise trip over, and makes the
+	// campaign visible to Cancel from other replicas before the first
+	// checkpoint.
+	if err := e.state.Save(state); err != nil {
+		return nil, fmt.Errorf("save initial state: %w", err)
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	e.registerRun(workflowID, cancel)
@@ -140,9 +163,23 @@ func (e *EnhancedEngine) Resume(ctx context.Context, workflowID string) (*Workfl
 		return nil, err
 	}
 
-	e.unregisterRun(workflowID)
+	// Single writer per campaign: resuming a campaign another process (or
+	// goroutine) is still executing fails fast. A stale "running" state left
+	// behind by a crashed process holds no lock and resumes normally.
+	lock, err := acquireRunLock(e.state.Dir(), workflowID)
+	if err != nil {
+		return nil, err
+	}
+	defer lock.release()
 
 	state.Status = "running"
+	// Clear the persisted terminal marker (paused/cancelled) before
+	// executing so the cross-replica cancel check does not trip over the
+	// very marker this resume is recovering from.
+	state.UpdatedAt = time.Now().Unix()
+	if err := e.state.Save(state); err != nil {
+		return nil, fmt.Errorf("save resumed state: %w", err)
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	e.registerRun(workflowID, cancel)
 	defer e.unregisterRun(workflowID)
@@ -247,6 +284,19 @@ func (e *EnhancedEngine) isCancelled(id string) bool {
 	return ok && entry.cancelled
 }
 
+// persistedCancelled reports whether the on-disk checkpoint for a campaign has
+// been marked cancelled. Cancel writes that marker when the run is not local
+// to the cancelling process, so the executing replica observes it at its next
+// checkpoint. Read errors (missing state, transient I/O) report not
+// cancelled: execution must not stall on a state file it cannot read.
+func (e *EnhancedEngine) persistedCancelled(workflowID string) bool {
+	state, err := e.state.Load(workflowID)
+	if err != nil {
+		return false
+	}
+	return state.Status == "cancelled"
+}
+
 // checkEngagement validates an optional engagement binding. An empty name
 // means the campaign is unbound. Every step still passes the scope
 // middleware; the binding makes the intended engagement an explicit
@@ -312,11 +362,6 @@ func validateSteps(steps []EnhancedStep) error {
 			if step.OnFail != "" && step.OnFail != "continue" && step.OnFail != "stop" && !strings.HasPrefix(step.OnFail, "goto:") {
 				return fmt.Errorf("step %d has invalid on_fail %q (allowed: stop, continue, goto:<step_id>)", i, step.OnFail)
 			}
-			if step.Condition != nil {
-				if !validConditionOps[step.Condition.Op] {
-					return fmt.Errorf("step %d has invalid condition op %q", i, step.Condition.Op)
-				}
-			}
 			for j, rule := range step.Record {
 				if err := validateRecordRule(rule); err != nil {
 					return fmt.Errorf("step %d record rule %d: %w", i, j, err)
@@ -330,7 +375,75 @@ func validateSteps(steps []EnhancedStep) error {
 		}
 		return nil
 	}
-	return walk(steps, 0)
+	if err := walk(steps, 0); err != nil {
+		return err
+	}
+	// Conditions are validated in a second pass, once every step ID
+	// (including parallel sub-step IDs) has been collected, so forward
+	// references resolve.
+	return validateConditions(steps, ids)
+}
+
+// validateConditions checks every condition in the plan once all step IDs are
+// known. The operator must be recognized, and the condition's Step reference
+// must resolve: a declared step ID (including parallel sub-step IDs),
+// "$prev"/"prev", or a decimal index within range of the campaign's indexed
+// results. A typo'd ID or out-of-range index would otherwise silently
+// evaluate false at runtime and skip the step, so it is rejected here.
+func validateConditions(steps []EnhancedStep, ids map[string]bool) error {
+	total := countIndexedResults(steps)
+	var visit func(steps []EnhancedStep) error
+	visit = func(steps []EnhancedStep) error {
+		for i, step := range steps {
+			if step.Condition != nil {
+				label := step.ID
+				if label == "" {
+					label = fmt.Sprintf("%d", i)
+				}
+				if !validConditionOps[step.Condition.Op] {
+					return fmt.Errorf("step %s has invalid condition op %q", label, step.Condition.Op)
+				}
+				if !validConditionRef(step.Condition.Step, ids, total) {
+					return fmt.Errorf("step %s condition references unknown step %q (allowed: a declared step id, $prev/prev, or an index 0..%d)", label, step.Condition.Step, total-1)
+				}
+			}
+			if len(step.Parallel) > 0 {
+				if err := visit(step.Parallel); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	return visit(steps)
+}
+
+// countIndexedResults returns the number of indexed step results a campaign
+// produces: one per plain step, one per parallel sub-step.
+func countIndexedResults(steps []EnhancedStep) int {
+	n := 0
+	for _, step := range steps {
+		if len(step.Parallel) > 0 {
+			n += len(step.Parallel)
+		} else {
+			n++
+		}
+	}
+	return n
+}
+
+// validConditionRef reports whether a condition's Step reference can resolve.
+func validConditionRef(ref string, ids map[string]bool, total int) bool {
+	if ref == "" || ref == "$prev" || ref == "prev" {
+		return true
+	}
+	if ids[ref] {
+		return true
+	}
+	if idx, err := strconv.Atoi(ref); err == nil && idx >= 0 && idx < total {
+		return true
+	}
+	return false
 }
 
 func validStepID(id string) bool {
@@ -493,6 +606,21 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 
 		state.NextIndex = i + 1
 		i++
+
+		// Cross-replica cancel: before overwriting the persisted state,
+		// re-read it. Another process sharing the state dir may have marked
+		// the campaign cancelled while this step ran (Cancel falls back to
+		// persisting that marker when the run is not local to it). Stop
+		// gracefully at this checkpoint instead of clobbering the marker.
+		if e.persistedCancelled(state.WorkflowID) {
+			state.Status = "cancelled"
+			state.Error = "cancelled by another process"
+			state.UpdatedAt = time.Now().Unix()
+			if err := e.state.Save(state); err != nil {
+				log.Printf("workflow: checkpoint save failed: %v", err)
+			}
+			return buildResult(state, allResults, false), nil
+		}
 
 		// Checkpoint every step.
 		state.UpdatedAt = time.Now().Unix()
@@ -741,27 +869,4 @@ func (e *EnhancedEngine) SaveTemplateFromJSON(params json.RawMessage) (json.RawM
 		return nil, err
 	}
 	return json.RawMessage(`{"saved":true}`), nil
-}
-
-// ScheduleFromJSON is the JSON-RPC handler for scheduling workflows.
-func (e *EnhancedEngine) ScheduleFromJSON(params json.RawMessage) (json.RawMessage, error) {
-	var entry ScheduleEntry
-	if err := json.Unmarshal(params, &entry); err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
-	}
-
-	scheduler := NewScheduler(e, "")
-	if err := scheduler.Add(&entry); err != nil {
-		return nil, err
-	}
-
-	resp := map[string]interface{}{
-		"id":       entry.ID,
-		"next_run": time.Unix(entry.NextRun, 0).Format(time.RFC3339),
-	}
-	data, err := json.Marshal(resp)
-	if err != nil {
-		return nil, fmt.Errorf("marshal response: %w", err)
-	}
-	return data, nil
 }

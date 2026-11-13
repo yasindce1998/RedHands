@@ -70,9 +70,19 @@ func (t *K8sDiscoverTool) Execute(ctx context.Context, params json.RawMessage) (
 	var sb strings.Builder
 	sb.WriteString("## KubeDagger K8s Discovery\n\n")
 	fmt.Fprintf(&sb, "Namespace: %s\n\n", namespace)
-	if output == "" {
+	switch {
+	case output == "":
 		sb.WriteString("No resources found.\n")
-	} else {
+	case json.Valid([]byte(output)):
+		// `k8s discover` prints a pretty-printed ClusterReport JSON object
+		// (cmd/kubedagger-client/run/k8s/discovery.go marshals the report
+		// with MarshalIndent). Fence it as JSON so campaign dataflow can
+		// reference ${step.json.nodes.0.ip} and record rules can select
+		// the nodes/pods arrays; see testdata/kubedagger/.
+		sb.WriteString("```json\n")
+		sb.WriteString(output)
+		sb.WriteString("\n```\n")
+	default:
 		sb.WriteString("```\n")
 		sb.WriteString(output)
 		sb.WriteString("\n```\n")

@@ -1,0 +1,46 @@
+{
+  "name": "blacklotus-chain",
+  "stages": [
+    {
+      "label": "secure-boot-bypass",
+      "payload": "blacklotus_mok",
+      "generated_file": "scenario-out/stage-01-secure-boot-bypass.bin",
+      "detected_by": [
+        "blacklotus",
+        "eventlog",
+        "mbr"
+      ],
+      "risk_score": 100,
+      "detected": true
+    },
+    {
+      "label": "boot-hook",
+      "payload": "boot_services_hook",
+      "generated_file": "scenario-out/stage-02-boot-hook.bin",
+      "detected_by": [
+        "eventlog",
+        "hook",
+        "live",
+        "mbr",
+        "s3_bootscript"
+      ],
+      "risk_score": 100,
+      "detected": true
+    },
+    {
+      "label": "runtime-persistence",
+      "payload": "runtime_services_hook",
+      "generated_file": "scenario-out/stage-03-runtime-persistence.bin",
+      "detected_by": [
+        "eventlog",
+        "mbr",
+        "runtime",
+        "s3_bootscript"
+      ],
+      "risk_score": 100,
+      "detected": true
+    }
+  ],
+  "chain_validated": true,
+  "chain_rendering": "┌─ blacklotus-chain ─────────────\n│  Secure Boot bypass via MOK abuse, boot services hooking and runtime persistence\n│  MITRE ATT&CK: T1542.001, T1542.003, T1553.002\n▼\n  [1/3] secure-boot-bypass → payload 'blacklotus_mok'\n  [2/3] boot-hook → payload 'boot_services_hook'  (after secure-boot-bypass)\n  [3/3] runtime-persistence → payload 'runtime_services_hook'  (after boot-hook)\n  ▼ end of chain\n"
+}

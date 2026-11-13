@@ -1,0 +1,6 @@
+{"timestamp":1763000000000000000,"alert_type":"Ghost Map Detected","severity":"HIGH","pid":1337,"context":4211,"details":"map_id=4211, map_name=/sys/fs/bpf/prog_array","anomaly_score":3.5,"correlated_types":[],"is_attack_chain":false}
+{"timestamp":1763000006000000000,"alert_type":"Syscall Latency Anomaly","severity":"MEDIUM","pid":1337,"context":322,"details":"syscall=322 (execve), latency_us
+{"timestamp":1763000012000000000,"alert_type":"Memory-Backed Execution","severity":"HIGH","pid":1337,"context":6442450944,"details":"memfd_create+exec on pid 1337, comm=loader","anomaly_score":5.7,"correlated_types":["Ghost Map Detected"],"is_attack_chain":true}
+{"severity":"HIGH"}
+not json at all
+{"timestamp":1763000018000000000,"alert_type":"BPF Map C2 Signature","severity":"CRITICAL","pid":1337,"context":7,"details":"map_id=7, update_rate_hz=140, key_entropy=7.9","anomaly_score":10.6,"correlated_types":["Ghost Map Detected","Memory-Backed Execution"],"is_attack_chain":true}

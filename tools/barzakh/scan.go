@@ -210,21 +210,31 @@ var severityOrder = []string{"critical", "high", "medium", "low", "info"}
 // --json stdout when it parses cleanly as findings JSON. It returns
 // ok=false when the output is not recognizable findings JSON, in which case
 // the raw output should be passed through unchanged.
+//
+// The real `barzakh-scanner scan --target X --json` stdout is a top-level
+// JSON array of finding objects (verified against barzakh-scanner 0.7.0
+// output, see testdata/barzakh/). An enveloped {"findings": [...]} object is
+// also accepted for compatibility.
 func summarizeFindings(output string) (string, bool) {
 	if output == "" {
 		return "", false
+	}
+	var findings []struct {
+		Severity string `json:"severity"`
 	}
 	var doc struct {
 		Findings []struct {
 			Severity string `json:"severity"`
 		} `json:"findings"`
 	}
-	if err := json.Unmarshal([]byte(output), &doc); err != nil || len(doc.Findings) == 0 {
+	if err := json.Unmarshal([]byte(output), &doc); err == nil && len(doc.Findings) > 0 {
+		findings = doc.Findings
+	} else if err := json.Unmarshal([]byte(output), &findings); err != nil || len(findings) == 0 {
 		return "", false
 	}
 
 	counts := make(map[string]int)
-	for _, f := range doc.Findings {
+	for _, f := range findings {
 		severity := f.Severity
 		if severity == "" {
 			severity = "unknown"
@@ -233,7 +243,7 @@ func summarizeFindings(output string) (string, bool) {
 	}
 
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "- **Findings:** %d\n", len(doc.Findings))
+	fmt.Fprintf(&sb, "- **Findings:** %d\n", len(findings))
 	for _, severity := range severityOrder {
 		if counts[severity] > 0 {
 			fmt.Fprintf(&sb, "  - %s: %d\n", severity, counts[severity])

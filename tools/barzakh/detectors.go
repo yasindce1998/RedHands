@@ -71,7 +71,9 @@ func (t *DetectorsTool) Execute(ctx context.Context, params json.RawMessage) (*m
 
 	args := []string{"detectors", input.Action}
 	if input.Action == "info" {
-		args = append(args, "--name", input.Name)
+		// `detectors info` takes the detector name as a positional argument
+		// in the pinned barzakh-scanner release (v0.7.0), not a --name flag.
+		args = append(args, input.Name)
 	}
 
 	result, err := t.exec.Run(ctx, "barzakh-scanner", args...)

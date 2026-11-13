@@ -1,0 +1,4 @@
+▶ Bundled scenarios:
+  • blacklotus-chain — 3 stages [T1542.001,T1542.003,T1553.002]: Secure Boot bypass via MOK abuse, boot services hooking and runtime persistence
+  • smm-persistence-chain — 3 stages [T1542.001,T1068]: DXE foothold followed by SMM persistence and runtime services hooking
+  • mobile-bootchain — 3 stages [T1542.001,T1627]: Android verified boot tampering with rollback and Trusty TEE implant

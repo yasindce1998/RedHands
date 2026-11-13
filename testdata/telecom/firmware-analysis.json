@@ -1,0 +1,227 @@
+{
+  "firmware_path": "synthetic-modem.bin",
+  "chipset": "Qualcomm",
+  "findings": [
+    {
+      "severity": "Medium",
+      "category": "MemoryCorruption",
+      "title": "Dangerous function usage: strcpy (1 instances)",
+      "description": "Use of strcpy (potential buffer overflow)",
+      "offset": 16384,
+      "size": 6,
+      "cve": null
+    },
+    {
+      "severity": "Medium",
+      "category": "MemoryCorruption",
+      "title": "Dangerous function usage: sprintf (1 instances)",
+      "description": "Use of sprintf (potential format string/overflow)",
+      "offset": 16391,
+      "size": 7,
+      "cve": null
+    },
+    {
+      "severity": "High",
+      "category": "CryptoWeakness",
+      "title": "Weak cipher support: A5/1 or GEA1",
+      "description": "Firmware supports broken GSM ciphers vulnerable to real-time decryption",
+      "offset": 16414,
+      "size": 0,
+      "cve": null
+    },
+    {
+      "severity": "High",
+      "category": "CryptoWeakness",
+      "title": "Null cipher accepted",
+      "description": "Firmware accepts null encryption, enabling passive interception",
+      "offset": 0,
+      "size": 0,
+      "cve": null
+    },
+    {
+      "severity": "Info",
+      "category": "DebugInterface",
+      "title": "Debug interface: QXDM debug port",
+      "description": "Found marker 'QXDM' at offset 0x405d",
+      "offset": 16477,
+      "size": 4,
+      "cve": null
+    },
+    {
+      "severity": "Info",
+      "category": "DebugInterface",
+      "title": "Debug interface: Debug AT command",
+      "description": "Found marker 'AT+DEBUG' at offset 0x4062",
+      "offset": 16482,
+      "size": 8,
+      "cve": null
+    },
+    {
+      "severity": "Info",
+      "category": "DebugInterface",
+      "title": "Debug interface: Factory reset AT command",
+      "description": "Found marker 'AT+FACTORYRESET' at offset 0x4075",
+      "offset": 16501,
+      "size": 15,
+      "cve": null
+    },
+    {
+      "severity": "Info",
+      "category": "DebugInterface",
+      "title": "Debug interface: Unlock AT command",
+      "description": "Found marker 'AT+UNLOCK' at offset 0x406b",
+      "offset": 16491,
+      "size": 9,
+      "cve": null
+    },
+    {
+      "severity": "Info",
+      "category": "DebugInterface",
+      "title": "Debug interface: JTAG debug interface reference",
+      "description": "Found marker 'JTAG' at offset 0x4085",
+      "offset": 16517,
+      "size": 4,
+      "cve": null
+    },
+    {
+      "severity": "High",
+      "category": "HardcodedCredential",
+      "title": "Password string reference",
+      "description": "Found at offset 0x403e",
+      "offset": 16446,
+      "size": 8,
+      "cve": null
+    },
+    {
+      "severity": "High",
+      "category": "HardcodedCredential",
+      "title": "Hardcoded admin credentials",
+      "description": "Found at offset 0x4047",
+      "offset": 16455,
+      "size": 11,
+      "cve": null
+    },
+    {
+      "severity": "High",
+      "category": "HardcodedCredential",
+      "title": "Hardcoded root credentials",
+      "description": "Found at offset 0x4053",
+      "offset": 16467,
+      "size": 9,
+      "cve": null
+    }
+  ],
+  "attack_surfaces": [
+    {
+      "interface": "AT command",
+      "protocol": "Hayes AT",
+      "description": "Modem control interface via serial/USB",
+      "reachable_from": [
+        "Application processor",
+        "USB host",
+        "Bluetooth tether"
+      ]
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "RRC",
+      "handler_offset": 16522,
+      "message_types": [
+        "ConnectionSetup",
+        "ConnectionRelease",
+        "Reconfiguration"
+      ],
+      "notes": "Handler reference at 0x408a"
+    },
+    {
+      "protocol": "NAS",
+      "handler_offset": 16543,
+      "message_types": [
+        "AttachRequest",
+        "AuthRequest",
+        "SecurityModeCmd"
+      ],
+      "notes": "Handler reference at 0x409f"
+    },
+    {
+      "protocol": "SIP",
+      "handler_offset": 16554,
+      "message_types": [
+        "INVITE",
+        "REGISTER",
+        "BYE",
+        "OPTIONS"
+      ],
+      "notes": "Handler reference at 0x40aa"
+    },
+    {
+      "protocol": "GTP-C",
+      "handler_offset": 16565,
+      "message_types": [
+        "CreateSession",
+        "DeleteSession",
+        "ModifyBearer"
+      ],
+      "notes": "Handler reference at 0x40b5"
+    }
+  ],
+  "nv_items_of_interest": [
+    {
+      "id": 10,
+      "name": "NV_SEC_CODE_I",
+      "value": [],
+      "description": "Security/lock code (6 digits)",
+      "security_relevant": true
+    },
+    {
+      "id": 65,
+      "name": "NV_OTKSL_I",
+      "value": [],
+      "description": "One-time keypad subsidy lock",
+      "security_relevant": true
+    },
+    {
+      "id": 85,
+      "name": "NV_LOCK_CODE_I",
+      "value": [],
+      "description": "Phone lock code",
+      "security_relevant": true
+    },
+    {
+      "id": 453,
+      "name": "NV_BAND_PREF_I",
+      "value": [],
+      "description": "Band preference (security: can lock to weak bands)",
+      "security_relevant": true
+    },
+    {
+      "id": 906,
+      "name": "NV_DS_MIP_SS_USER_PROF_I",
+      "value": [],
+      "description": "MIP shared secret",
+      "security_relevant": true
+    },
+    {
+      "id": 1192,
+      "name": "NV_HDRSCP_SESSION_STATUS_I",
+      "value": [],
+      "description": "HDR/EV-DO session status",
+      "security_relevant": true
+    },
+    {
+      "id": 6828,
+      "name": "NV_ROAMING_LIST_683_I",
+      "value": [],
+      "description": "PRL (Preferred Roaming List)",
+      "security_relevant": true
+    },
+    {
+      "id": 6853,
+      "name": "NV_WCDMA_RRC_VERSION_I",
+      "value": [],
+      "description": "RRC protocol version",
+      "security_relevant": true
+    }
+  ]
+}

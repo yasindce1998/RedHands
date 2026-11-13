@@ -1,0 +1,18 @@
+
+  Barzakh — UEFI Firmware Security Scanner
+  ═══════════════════════════════════════════
+
+  Version:       0.7.0
+  Detectors:     138
+  Architectures: x86_64, aarch64, riscv64
+  Report formats: JSON, HTML, Markdown
+
+  Detector Categories:
+    • TPM/PCR analysis (PCR, PCR Oracle, PCR Replay, Attestation)
+    • Memory forensics (Memory, Hook, Runtime Hook, SMM)
+    • Firmware structure (Firmware Volume, SPI Integrity, MBR)
+    • Secure Boot chain (SecureBoot, SecureBoot Chain, Differ)
+    • Behavioral analysis (Entropy, Self-Erasure, Time Travel)
+    • Intel ME/Ring -3 (HECI, ME SPI, AMT, fTPM, ME DMA)
+    • Ring -4/Microarch (Microcode, Spectre, Thermal, Voltage, Debug, Rowhammer)
+

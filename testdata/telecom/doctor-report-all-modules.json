@@ -1,0 +1,321 @@
+{
+  "checks": [
+    {
+      "name": "platform",
+      "status": "pass",
+      "detail": "Linux x86_64 (64-bit native openat only)"
+    },
+    {
+      "name": "kernel",
+      "status": "pass",
+      "detail": "7.2.15-arch1-1"
+    },
+    {
+      "name": "privileges",
+      "status": "fail",
+      "detail": "requires effective CAP_BPF + CAP_PERFMON (or CAP_SYS_ADMIN); run with sudo in an isolated VM; root alone in a restricted container may not suffice"
+    },
+    {
+      "name": "kernel_btf",
+      "status": "pass",
+      "detail": "vmlinux BTF is optional for the openat adapter; it does not use CO-RE relocations"
+    },
+    {
+      "name": "unprivileged_bpf_disabled",
+      "status": "warning",
+      "detail": "2 (informational; capabilities/LSM determine actual access)"
+    },
+    {
+      "name": "perf_event_paranoid",
+      "status": "warning",
+      "detail": "2 (informational; capabilities/LSM determine actual access)"
+    },
+    {
+      "name": "ebpf_object",
+      "status": "pass",
+      "detail": "embedded object (34904 bytes)"
+    }
+  ],
+  "modules": [
+    {
+      "module": 16,
+      "program": "detect_rogue_tower",
+      "description": "Rogue Tower Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 17,
+      "program": "detect_downgrade_attack",
+      "description": "Downgrade Attack Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 18,
+      "program": "detect_imsi_catcher",
+      "description": "IMSI Catcher Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 19,
+      "program": "detect_cell_param_anomaly",
+      "description": "Cell Parameter Anomaly",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 20,
+      "program": "detect_gtp_anomaly",
+      "description": "GTP Traffic Anomaly",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 21,
+      "program": "detect_ss7_anomaly",
+      "description": "SS7/SIGTRAN Anomaly",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 22,
+      "program": "detect_modem_tamper",
+      "description": "Modem openat Access Monitor (experimental)",
+      "status": "failed",
+      "detail": "openat tracepoint unavailable; mount tracefs and check CONFIG_FTRACE_SYSCALLS/permissions: /sys/kernel/tracing/events/syscalls/sys_enter_openat: Permission denied (os error 13); /sys/kernel/debug/tracing/events/syscalls/sys_enter_openat: Permission denied (os error 13)"
+    },
+    {
+      "module": 23,
+      "program": "detect_nas_replay",
+      "description": "NAS Replay/Injection Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 24,
+      "program": "detect_volte_fraud",
+      "description": "VoLTE Fraud Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 25,
+      "program": "detect_esim_tamper",
+      "description": "eSIM Provisioning Monitor",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 26,
+      "program": "detect_slice_violation",
+      "description": "Slice Isolation Verification",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 27,
+      "program": "detect_roaming_anomaly",
+      "description": "Roaming Anomaly Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 28,
+      "program": "detect_rf_fingerprint",
+      "description": "RF Fingerprint Analysis",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 29,
+      "program": "detect_sbi_anomaly",
+      "description": "SBI Anomaly Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 30,
+      "program": "detect_handover_integrity",
+      "description": "Handover Integrity Monitoring",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 31,
+      "program": "detect_ran_sharing_leak",
+      "description": "RAN Sharing Isolation",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 32,
+      "program": "detect_signaling_storm",
+      "description": "Signaling Storm Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 33,
+      "program": "detect_dvbs2_anomaly",
+      "description": "DVB-S2/S2X Anomaly Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 34,
+      "program": "detect_ntn_anomaly",
+      "description": "NTN Access Anomaly",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 35,
+      "program": "detect_leo_signaling",
+      "description": "LEO Constellation Monitor",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 36,
+      "program": "detect_vsat_integrity",
+      "description": "VSAT/SCPC Integrity Monitor",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 37,
+      "program": "detect_starlink_auth",
+      "description": "Starlink Auth Monitor",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 38,
+      "program": "detect_aviation_integrity",
+      "description": "Aviation Signal Integrity",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 39,
+      "program": "detect_gnss_spoofing",
+      "description": "GNSS Spoofing Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 40,
+      "program": "detect_tetra_encryption",
+      "description": "TETRA Encryption Monitor",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 41,
+      "program": "detect_p25_control",
+      "description": "P25 Control Channel Integrity",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 42,
+      "program": "detect_ble_pairing",
+      "description": "BLE Pairing/Scanning Defense",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 43,
+      "program": "detect_zigbee_key",
+      "description": "Zigbee/Z-Wave Key Provisioning Monitor",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 44,
+      "program": "detect_lorawan_join",
+      "description": "LoRaWAN Join Integrity",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 45,
+      "program": "detect_nbiot_rrc",
+      "description": "NB-IoT/LTE-M RRC Anomaly",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 46,
+      "program": "detect_wifi_deauth",
+      "description": "WiFi Deauth/Disassoc Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 47,
+      "program": "detect_wpa3_integrity",
+      "description": "WPA3/FT Integrity Monitor",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 48,
+      "program": "detect_rke_jamming",
+      "description": "RKE Jamming Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 49,
+      "program": "detect_uav_c2",
+      "description": "UAV C2 Integrity Monitor",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 50,
+      "program": "detect_pager_anomaly",
+      "description": "Pager Signal Anomaly",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 51,
+      "program": "detect_broadcast_injection",
+      "description": "Broadcast Injection Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 52,
+      "program": "detect_eas_spoofing",
+      "description": "Emergency Alert Spoofing Detection",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 53,
+      "program": "detect_oran_fronthaul",
+      "description": "O-RAN Fronthaul Integrity",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 54,
+      "program": "detect_oran_ric",
+      "description": "O-RAN RIC Security Monitor",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    },
+    {
+      "module": 55,
+      "program": "detect_ais_integrity",
+      "description": "AIS Signal Integrity",
+      "status": "unsupported",
+      "detail": "expects decoded protocol arguments; no validated kernel or userspace adapter"
+    }
+  ]
+}

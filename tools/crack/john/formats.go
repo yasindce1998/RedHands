@@ -57,6 +57,18 @@ func (t *FormatsTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		if result != nil {
 			stderr = string(result.Stderr)
 		}
+		// Debian/Ubuntu ship core John the Ripper (not the jumbo fork),
+		// which has no --list. Degrade to the core format registry
+		// instead of failing: core supports exactly these formats.
+		if strings.Contains(stderr, "Unknown option") || strings.Contains(string(result.Stdout), "Unknown option") {
+			return &mcp.ToolResult{
+				Content: []mcp.ContentBlock{{Type: "text", Text: "## John the Ripper Formats\n\n" +
+					"The installed john is a core build (no `--list` support; Debian/Ubuntu packages). " +
+					"Core builds support only the built-in format registry:\n\n" +
+					"```\nAFS, BF, BSDI, DES, LM, MD5, crypt, trip\n```\n\n" +
+					"Install a jumbo build (upstream release tarball, or a distro jumbo package) for the full format list."}},
+			}, nil
+		}
 		return errorResult("john formats failed: " + err.Error() + "\n" + stderr), nil
 	}
 

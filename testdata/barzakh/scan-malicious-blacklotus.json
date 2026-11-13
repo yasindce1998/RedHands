@@ -1,0 +1,1063 @@
+{
+  "status": "complete",
+  "detector_runs": [
+    {
+      "detector": "5g_ran_firmware",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.031038157
+    },
+    {
+      "detector": "acpi_integrity",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.016396093
+    },
+    {
+      "detector": "amd_psp",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.004383307
+    },
+    {
+      "detector": "amt",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.005145986
+    },
+    {
+      "detector": "android_avb",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002597236
+    },
+    {
+      "detector": "android_binary_transparency",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00705595
+    },
+    {
+      "detector": "android_bootconfig",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.011644445
+    },
+    {
+      "detector": "android_bootctrl",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007499724
+    },
+    {
+      "detector": "android_chain_validator",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.008252366
+    },
+    {
+      "detector": "android_dice",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006996668
+    },
+    {
+      "detector": "android_fastboot",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.004471881
+    },
+    {
+      "detector": "android_gki_boot",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.004700267
+    },
+    {
+      "detector": "android_init_verity",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.010003009
+    },
+    {
+      "detector": "android_keymint",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006539963
+    },
+    {
+      "detector": "android_pkvm",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007101948
+    },
+    {
+      "detector": "android_rkp",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.008956871
+    },
+    {
+      "detector": "android_trusty",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006964671
+    },
+    {
+      "detector": "android_vbmeta_chain",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003607365
+    },
+    {
+      "detector": "android_vendor_dlkm",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00678597
+    },
+    {
+      "detector": "apple_img4",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.004408811
+    },
+    {
+      "detector": "arm_tbbr",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007009941
+    },
+    {
+      "detector": "arm_trustzone",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007427175
+    },
+    {
+      "detector": "asus_nvram",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007554953
+    },
+    {
+      "detector": "attestation",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002237994
+    },
+    {
+      "detector": "auth_variable",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00519372
+    },
+    {
+      "detector": "automotive_ecu",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.008016425
+    },
+    {
+      "detector": "baseband_firmware",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.033975508
+    },
+    {
+      "detector": "baseband_rtos",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.02873899
+    },
+    {
+      "detector": "blacklotus",
+      "status": "findings",
+      "finding_count": 3,
+      "error": null,
+      "duration_seconds": 0.007504942
+    },
+    {
+      "detector": "bluetooth_firmware",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.008618718
+    },
+    {
+      "detector": "bmc_spi",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.005461461
+    },
+    {
+      "detector": "boot_guard",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00831608
+    },
+    {
+      "detector": "boot_guard_km",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.004509744
+    },
+    {
+      "detector": "can_injection",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006690905
+    },
+    {
+      "detector": "capsule_update",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00483807
+    },
+    {
+      "detector": "ccsds_telecommand",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.024733127
+    },
+    {
+      "detector": "confidential_vm",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.013341135
+    },
+    {
+      "detector": "csme_update",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002131528
+    },
+    {
+      "detector": "cxl_device",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003740774
+    },
+    {
+      "detector": "debug_interface",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.013771185
+    },
+    {
+      "detector": "dell_bios_connect",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.017904658
+    },
+    {
+      "detector": "dmar_enforcement",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003438828
+    },
+    {
+      "detector": "dxe_dispatcher",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006646221
+    },
+    {
+      "detector": "entropy",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002493424
+    },
+    {
+      "detector": "esp_integrity",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003264692
+    },
+    {
+      "detector": "eventlog",
+      "status": "findings",
+      "finding_count": 2,
+      "error": null,
+      "duration_seconds": 0.000017076
+    },
+    {
+      "detector": "firmware_differ",
+      "status": "not_applicable",
+      "finding_count": 0,
+      "error": "no baseline configured",
+      "duration_seconds": 3.606e-6
+    },
+    {
+      "detector": "firmware_volume",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002158542
+    },
+    {
+      "detector": "ftpm",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.013796386
+    },
+    {
+      "detector": "gnss_receiver",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.022105824
+    },
+    {
+      "detector": "heci",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003291391
+    },
+    {
+      "detector": "hook",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002068807
+    },
+    {
+      "detector": "hpc_monitor",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.005164079
+    },
+    {
+      "detector": "http_boot",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00854048
+    },
+    {
+      "detector": "ibm_opal",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.013880731
+    },
+    {
+      "detector": "idrac_spi",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.029402714
+    },
+    {
+      "detector": "ims_firmware",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.01795524
+    },
+    {
+      "detector": "inmarsat_terminal",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.037682909
+    },
+    {
+      "detector": "insyde_smm",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.008903397
+    },
+    {
+      "detector": "iommu_dmar",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003312452
+    },
+    {
+      "detector": "ios_amfi",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.01143804
+    },
+    {
+      "detector": "ios_ane_boot",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003107005
+    },
+    {
+      "detector": "ios_iboot",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003774732
+    },
+    {
+      "detector": "ios_ktrr",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.01098821
+    },
+    {
+      "detector": "ios_local_policy",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003182143
+    },
+    {
+      "detector": "ios_ppl",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002724388
+    },
+    {
+      "detector": "ios_secure_enclave",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002480516
+    },
+    {
+      "detector": "ios_sep_downgrade",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006548146
+    },
+    {
+      "detector": "ios_trustcache",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007159116
+    },
+    {
+      "detector": "iot_rtos",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006718944
+    },
+    {
+      "detector": "iot_zephyr",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.009011293
+    },
+    {
+      "detector": "ivrs_table",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002480345
+    },
+    {
+      "detector": "linux_bootchain",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.011535513
+    },
+    {
+      "detector": "live",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.000130769
+    },
+    {
+      "detector": "logofail",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002269104
+    },
+    {
+      "detector": "lvfs_integrity",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.017394187
+    },
+    {
+      "detector": "mbr",
+      "status": "findings",
+      "finding_count": 1,
+      "error": null,
+      "duration_seconds": 0.000075314
+    },
+    {
+      "detector": "me_dma",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.015772379
+    },
+    {
+      "detector": "me_manufacturing_mode",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.004426391
+    },
+    {
+      "detector": "me_spi",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.000215381
+    },
+    {
+      "detector": "me_version_chain",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002381584
+    },
+    {
+      "detector": "memory",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.011373529
+    },
+    {
+      "detector": "microcode_injection",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00299143
+    },
+    {
+      "detector": "msi_key_reuse",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.009245876
+    },
+    {
+      "detector": "network_boot",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002264918
+    },
+    {
+      "detector": "nlp_strings",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.02656126
+    },
+    {
+      "detector": "nsp_command",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00889988
+    },
+    {
+      "detector": "nvidia_tegra",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.008867538
+    },
+    {
+      "detector": "nvram_entropy",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007334033
+    },
+    {
+      "detector": "nvram_verifier",
+      "status": "not_applicable",
+      "finding_count": 0,
+      "error": "no authenticated Secure Boot variables",
+      "duration_seconds": 0.006497158
+    },
+    {
+      "detector": "open_ran",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.036991229
+    },
+    {
+      "detector": "opensbi",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007294495
+    },
+    {
+      "detector": "optionrom",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006722727
+    },
+    {
+      "detector": "pcr",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 8.55e-7
+    },
+    {
+      "detector": "pcr_oracle",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.014856319
+    },
+    {
+      "detector": "pe_loader_bypass",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002052568
+    },
+    {
+      "detector": "pei_implant",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002276221
+    },
+    {
+      "detector": "pixiefail",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007483216
+    },
+    {
+      "detector": "pluton",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.009109105
+    },
+    {
+      "detector": "pmp_bypass",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.010911348
+    },
+    {
+      "detector": "psp_secure_debug",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003401367
+    },
+    {
+      "detector": "psp_trustlets",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.003681833
+    },
+    {
+      "detector": "psp_version_chain",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00354951
+    },
+    {
+      "detector": "pxe_icmp_overflow",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.001484988
+    },
+    {
+      "detector": "reloader",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007646331
+    },
+    {
+      "detector": "riscv_bootrom",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007125921
+    },
+    {
+      "detector": "riscv_debug",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.011546771
+    },
+    {
+      "detector": "rowhammer",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.054137368
+    },
+    {
+      "detector": "runtime",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002124819
+    },
+    {
+      "detector": "rust_uefi_module",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.0060913
+    },
+    {
+      "detector": "s3_bootscript",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.02439695
+    },
+    {
+      "detector": "satellite_bus",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.04423343
+    },
+    {
+      "detector": "satellite_ground_station",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.029325894
+    },
+    {
+      "detector": "satellite_modem",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.027077092
+    },
+    {
+      "detector": "satellite_transponder",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.085306661
+    },
+    {
+      "detector": "sbat",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.009965889
+    },
+    {
+      "detector": "secureboot",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006313855
+    },
+    {
+      "detector": "secureboot_chain",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006406472
+    },
+    {
+      "detector": "secureboot_dbx",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002405849
+    },
+    {
+      "detector": "self_erasure",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.002005997
+    },
+    {
+      "detector": "sim_applet",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.017009153
+    },
+    {
+      "detector": "small_cell",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.03651302
+    },
+    {
+      "detector": "smm",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.00473954
+    },
+    {
+      "detector": "smm_timing",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.012674027
+    },
+    {
+      "detector": "smu_firmware",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.001785241
+    },
+    {
+      "detector": "spectre_gadgets",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007087984
+    },
+    {
+      "detector": "spi_integrity",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 2.496e-6
+    },
+    {
+      "detector": "spi_region",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.010687643
+    },
+    {
+      "detector": "starlink_terminal",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.024642632
+    },
+    {
+      "detector": "symexec",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.020616555
+    },
+    {
+      "detector": "thermal_covert",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.006314643
+    },
+    {
+      "detector": "timetravel",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 2.846e-6
+    },
+    {
+      "detector": "tpm_command",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007064885
+    },
+    {
+      "detector": "voltage_glitch",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.004681942
+    },
+    {
+      "detector": "volte_firmware",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.022343158
+    },
+    {
+      "detector": "wifi_dxe",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.012641009
+    },
+    {
+      "detector": "wifi_firmware",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.010704766
+    },
+    {
+      "detector": "windows_bootchain",
+      "status": "passed",
+      "finding_count": 0,
+      "error": null,
+      "duration_seconds": 0.007119156
+    }
+  ],
+  "errors": [],
+  "input_sha256": "fd1c3c5566d4d758b5b0d11afd41817ce2cac2fbe6fcebc7c4483f2c5b2c1f41",
+  "event_log_sha256": null,
+  "summary": {
+    "total_findings": 6,
+    "critical_count": 2,
+    "high_count": 1,
+    "medium_count": 3,
+    "low_count": 0,
+    "info_count": 0,
+    "bootkit_detected": true
+  },
+  "findings": [
+    {
+      "detector": "blacklotus",
+      "severity": "critical",
+      "title": "BlackLotus: Baton Drop policy with integrity checks disabled",
+      "description": "BCD policy at offset 0x00000420 contains integrity disable flag (0x10000007). This is the CVE-2022-21894 'Baton Drop' exploit used by BlackLotus to bypass Secure Boot.",
+      "confidence": 0.88,
+      "details": {
+        "bcd_offset": "0x00000400",
+        "cve": "CVE-2022-21894",
+        "flag_offset": "0x00000420"
+      },
+      "recommendation": "Apply KB5025885 Windows update and rotate Secure Boot keys",
+      "evidence_kind": "heuristic"
+    },
+    {
+      "detector": "blacklotus",
+      "severity": "high",
+      "title": "BlackLotus: Multiple shimx64.efi references (persistence indicator)",
+      "description": "Found 4 references to shimx64.efi in firmware image. BlackLotus installs multiple copies of shim in non-standard paths for persistence.",
+      "confidence": 0.7,
+      "details": {
+        "grub_references": 0,
+        "shim_references": 4
+      },
+      "evidence_kind": "heuristic"
+    },
+    {
+      "detector": "blacklotus",
+      "severity": "critical",
+      "title": "BlackLotus: Revoked MOK key enrolled in firmware",
+      "description": "MokList at offset 0x00000020 contains a hash matching known-revoked BlackLotus bootkit signer. This allows loading arbitrary code bypassing Secure Boot.",
+      "confidence": 0.92,
+      "details": {
+        "cve": "CVE-2022-21894",
+        "hash_prefix": "80B4D96B",
+        "moklist_offset": "0x00000020"
+      },
+      "recommendation": "Clear MOK database and apply latest UEFI dbx revocations",
+      "evidence_kind": "heuristic"
+    },
+    {
+      "detector": "eventlog",
+      "severity": "medium",
+      "title": "No Secure Boot variable measurement in PCR[7]",
+      "description": "Expected EV_EFI_VARIABLE_DRIVER_CONFIG events in PCR[7] for Secure Boot policy. Absence may indicate the event log was tampered with to hide policy changes.",
+      "confidence": 0.5,
+      "evidence_kind": "heuristic"
+    },
+    {
+      "detector": "eventlog",
+      "severity": "medium",
+      "title": "No boot application measurement in event log",
+      "description": "Expected at least one EV_EFI_BOOT_SERVICES_APPLICATION event. Its absence may indicate the event log is incomplete or truncated.",
+      "confidence": 0.5,
+      "evidence_kind": "heuristic"
+    },
+    {
+      "detector": "mbr",
+      "severity": "medium",
+      "title": "Invalid MBR signature",
+      "description": "MBR does not end with 0x55AA boot signature. May be corrupted or tampered.",
+      "confidence": 0.5,
+      "evidence_kind": "heuristic"
+    }
+  ],
+  "scan_info": {
+    "target": "t2fix/barzakh-corpus/malicious_blacklotus_mok.bin",
+    "start_time": "2026-11-13T09:13:24.915573738+00:00",
+    "end_time": "2026-11-13T09:13:25.125118118+00:00",
+    "duration_seconds": 0.209601946
+  },
+  "risk": {
+    "score": 100,
+    "level": "critical",
+    "vector": "BARZKH:1.0/AV:L/AC:L/PR:N/UI:N/S:F/VC:H/VI:H/VA:L/SC:100/CF:0.67",
+    "weighted_sum": 40.8,
+    "mean_confidence": 0.6666666666666666,
+    "detector_count": 3
+  }
+}

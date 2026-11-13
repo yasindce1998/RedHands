@@ -93,3 +93,52 @@ jobs:
         run: docker build -t redhands:ci .
       - name: Isolated real-binary smoke test
         run: docker run --rm --network none -i --entrypoint python3 redhands:ci - < scripts/smoke.py
+
+  # Verifies the wrapper argv fragments against the real binaries' CLIs
+  # (help-text and dry-parse assertions; see tools/livecheck). Binaries come
+  # from apt and from the checksum-verified pinned releases in
+  # scripts/dependencies.json, mirroring the Docker image's tool set.
+  live-binaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Install apt binaries
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            nmap masscan dnsutils tshark whatweb nikto john \
+            python3-impacket sqlmap
+
+      - name: Install pinned release binaries
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          for tool in chisel ligolo-proxy feroxbuster \
+                      kubedagger-client kubedagger-operator kubedagger-server \
+                      barzakh-scanner barzakh-adversary barzakh-server \
+                      staticzero-defense staticzero-offense modem-firmware sdr-bridge \
+                      aegis-shadow-defense aegis-shadow-offense aegis-c2; do
+            python3 scripts/dependencies.py install "$tool" --output "$HOME/.local/bin"
+          done
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install pinned Python tools
+        run: |
+          python3 -m pip install --user \
+            "$(python3 scripts/dependencies.py python certipy)" \
+            "$(python3 scripts/dependencies.py python arjun)"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install pinned Go tools
+        run: |
+          for tool in subfinder httpx nuclei ffuf katana gobuster gau waybackurls; do
+            GOBIN="$HOME/.local/bin" CGO_ENABLED=0 go install "$(python3 scripts/dependencies.py go "$tool")"
+          done
+
+      - name: Live binary flag-surface tests
+        run: go test -tags=livebin ./tools/livecheck/... -run TestLiveFlagSurface -v

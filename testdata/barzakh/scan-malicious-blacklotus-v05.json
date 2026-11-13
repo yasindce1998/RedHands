@@ -1,0 +1,579 @@
+[
+  {
+    "detector": "voltage_glitch",
+    "severity": "high",
+    "title": "ARM PMIC I2C voltage/frequency register write (CLKscrew pattern)",
+    "description": "PMIC I2C address 0x60 at offset 0x00000003 followed by register 0x77 write with value 0xF8. This matches the CLKscrew ARM DVFS attack pattern where voltage or frequency is manipulated via I2C to the PMIC to induce transient faults.",
+    "confidence": 0.7,
+    "details": {
+      "offset": "0x00000003",
+      "pmic_i2c_address": "0x60",
+      "register": "0x77",
+      "technique": "CLKscrew ARM DVFS / PMIC I2C manipulation",
+      "value": "0xF8"
+    },
+    "recommendation": "Audit PMIC I2C access control. Restrict kernel drivers from performing arbitrary PMIC register writes. Validate DVFS operating points against SoC safety margins."
+  },
+  {
+    "detector": "voltage_glitch",
+    "severity": "high",
+    "title": "ARM PMIC I2C voltage/frequency register write (CLKscrew pattern)",
+    "description": "PMIC I2C address 0x62 at offset 0x00000A06 followed by register 0x75 write with value 0x6E. This matches the CLKscrew ARM DVFS attack pattern where voltage or frequency is manipulated via I2C to the PMIC to induce transient faults.",
+    "confidence": 0.7,
+    "details": {
+      "offset": "0x00000A06",
+      "pmic_i2c_address": "0x62",
+      "register": "0x75",
+      "technique": "CLKscrew ARM DVFS / PMIC I2C manipulation",
+      "value": "0x6E"
+    },
+    "recommendation": "Audit PMIC I2C access control. Restrict kernel drivers from performing arbitrary PMIC register writes. Validate DVFS operating points against SoC safety margins."
+  },
+  {
+    "detector": "me_spi",
+    "severity": "high",
+    "title": "Flash descriptor signature anomaly",
+    "description": "Intel flash descriptor signature (0x0FF0A55A) not found at expected offsets or within first 4KB. Descriptor may be missing or corrupted.",
+    "confidence": 0.6,
+    "details": {
+      "expected_offsets": [
+        "0x10",
+        "0x14",
+        "0x20"
+      ],
+      "scanned_range": "0x0000-0x1000"
+    },
+    "recommendation": "Verify flash image integrity and check for descriptor corruption."
+  },
+  {
+    "detector": "mbr",
+    "severity": "medium",
+    "title": "Invalid MBR signature",
+    "description": "MBR does not end with 0x55AA boot signature. May be corrupted or tampered.",
+    "confidence": 0.5
+  },
+  {
+    "detector": "mbr",
+    "severity": "critical",
+    "title": "INT 13h IVT hook detected",
+    "description": "INT 13h vector points to ABA4:9D96 which is outside BIOS ROM range. This is a strong indicator of a bootkit.",
+    "confidence": 0.9,
+    "details": {
+      "interrupt": "13h",
+      "linear_address": "0x000B57D6",
+      "offset": "0x9D96",
+      "segment": "0xABA4"
+    },
+    "recommendation": "MBR bootkit detected. Restore MBR from clean backup."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x00000019 has anomalous equivalence table: table_size 0x4D000000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x00000019",
+      "suspicious_size": true,
+      "table_size": "0x4D000000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x0000001A has anomalous equivalence table: table_size 0x4D0000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x0000001A",
+      "suspicious_size": true,
+      "table_size": "0x4D0000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x0000001B has anomalous equivalence table: table_size 0x6F004D00 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x0000001B",
+      "suspicious_size": true,
+      "table_size": "0x6F004D00"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x0000001C has anomalous equivalence table: table_size 0x6F004D exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x0000001C",
+      "suspicious_size": true,
+      "table_size": "0x6F004D"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x00000039 has anomalous equivalence table: table_size 0x80000000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x00000039",
+      "suspicious_size": true,
+      "table_size": "0x80000000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x0000003A has anomalous equivalence table: table_size 0xB4800000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x0000003A",
+      "suspicious_size": true,
+      "table_size": "0xB4800000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x0000003B has anomalous equivalence table: table_size 0xD9B48000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x0000003B",
+      "suspicious_size": true,
+      "table_size": "0xD9B48000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x0000003C has anomalous equivalence table: table_size 0x6BD9B480 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x0000003C",
+      "suspicious_size": true,
+      "table_size": "0x6BD9B480"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000003F9 has anomalous equivalence table: table_size 0x42000000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000003F9",
+      "suspicious_size": true,
+      "table_size": "0x42000000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000003FA has anomalous equivalence table: table_size 0x63420000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000003FA",
+      "suspicious_size": true,
+      "table_size": "0x63420000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000003FB has anomalous equivalence table: table_size 0x64634200 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000003FB",
+      "suspicious_size": true,
+      "table_size": "0x64634200"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000003FC has anomalous equivalence table: table_size 0x53646342 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000003FC",
+      "suspicious_size": true,
+      "table_size": "0x53646342"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x00000419 has anomalous equivalence table: table_size 0x7000000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x00000419",
+      "suspicious_size": true,
+      "table_size": "0x7000000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x0000041A has anomalous equivalence table: table_size 0x70000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x0000041A",
+      "suspicious_size": true,
+      "table_size": "0x70000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x0000041B has anomalous equivalence table: entry has processor_id=0 with non-zero equiv_id. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x0000041B",
+      "suspicious_size": false,
+      "table_size": "0x700"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x0000041C has anomalous equivalence table: table_size 0x10000007 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x0000041C",
+      "suspicious_size": true,
+      "table_size": "0x10000007"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000007F9 has anomalous equivalence table: table_size 0x5C000000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000007F9",
+      "suspicious_size": true,
+      "table_size": "0x5C000000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000007FA has anomalous equivalence table: table_size 0x455C0000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000007FA",
+      "suspicious_size": true,
+      "table_size": "0x455C0000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000007FB has anomalous equivalence table: table_size 0x46455C00 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000007FB",
+      "suspicious_size": true,
+      "table_size": "0x46455C00"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000007FC has anomalous equivalence table: table_size 0x4946455C exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000007FC",
+      "suspicious_size": true,
+      "table_size": "0x4946455C"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000008F9 has anomalous equivalence table: table_size 0x5C000000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000008F9",
+      "suspicious_size": true,
+      "table_size": "0x5C000000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000008FA has anomalous equivalence table: table_size 0x455C0000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000008FA",
+      "suspicious_size": true,
+      "table_size": "0x455C0000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000008FB has anomalous equivalence table: table_size 0x46455C00 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000008FB",
+      "suspicious_size": true,
+      "table_size": "0x46455C00"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000008FC has anomalous equivalence table: table_size 0x4946455C exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000008FC",
+      "suspicious_size": true,
+      "table_size": "0x4946455C"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000009F9 has anomalous equivalence table: table_size 0x5C000000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000009F9",
+      "suspicious_size": true,
+      "table_size": "0x5C000000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000009FA has anomalous equivalence table: table_size 0x455C0000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": true,
+      "offset": "0x000009FA",
+      "suspicious_size": true,
+      "table_size": "0x455C0000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000009FB has anomalous equivalence table: table_size 0x46455C00 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": false,
+      "offset": "0x000009FB",
+      "suspicious_size": true,
+      "table_size": "0x46455C00"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x000009FC has anomalous equivalence table: table_size 0x4946455C exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": false,
+      "offset": "0x000009FC",
+      "suspicious_size": true,
+      "table_size": "0x4946455C"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x00000AF9 has anomalous equivalence table: table_size 0x5C000000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": false,
+      "offset": "0x00000AF9",
+      "suspicious_size": true,
+      "table_size": "0x5C000000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x00000AFA has anomalous equivalence table: table_size 0x455C0000 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": false,
+      "offset": "0x00000AFA",
+      "suspicious_size": true,
+      "table_size": "0x455C0000"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x00000AFB has anomalous equivalence table: table_size 0x46455C00 exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": false,
+      "offset": "0x00000AFB",
+      "suspicious_size": true,
+      "table_size": "0x46455C00"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "microcode_injection",
+    "severity": "high",
+    "title": "Suspicious AMD microcode equivalence table",
+    "description": "AMD microcode container at offset 0x00000AFC has anomalous equivalence table: table_size 0x4946455C exceeds 0x2000. This may indicate a tampered or injected AMD CPU microcode update.",
+    "confidence": 0.8,
+    "details": {
+      "null_proc_nonzero_equiv": false,
+      "offset": "0x00000AFC",
+      "suspicious_size": true,
+      "table_size": "0x4946455C"
+    },
+    "recommendation": "Validate AMD microcode containers against AMD vendor signatures. Check PSP-signed update capsule integrity."
+  },
+  {
+    "detector": "eventlog",
+    "severity": "medium",
+    "title": "No boot application measurement in event log",
+    "description": "Expected at least one EV_EFI_BOOT_SERVICES_APPLICATION event. Its absence may indicate the event log is incomplete or truncated.",
+    "confidence": 0.5
+  },
+  {
+    "detector": "eventlog",
+    "severity": "medium",
+    "title": "No Secure Boot variable measurement in PCR[7]",
+    "description": "Expected EV_EFI_VARIABLE_DRIVER_CONFIG events in PCR[7] for Secure Boot policy. Absence may indicate the event log was tampered with to hide policy changes.",
+    "confidence": 0.5
+  },
+  {
+    "detector": "blacklotus",
+    "severity": "critical",
+    "title": "BlackLotus: Revoked MOK key enrolled in firmware",
+    "description": "MokList at offset 0x00000020 contains a hash matching known-revoked BlackLotus bootkit signer. This allows loading arbitrary code bypassing Secure Boot.",
+    "confidence": 0.92,
+    "details": {
+      "cve": "CVE-2022-21894",
+      "hash_prefix": "80B4D96B",
+      "moklist_offset": "0x00000020"
+    },
+    "recommendation": "Clear MOK database and apply latest UEFI dbx revocations"
+  },
+  {
+    "detector": "blacklotus",
+    "severity": "critical",
+    "title": "BlackLotus: Baton Drop policy with integrity checks disabled",
+    "description": "BCD policy at offset 0x00000420 contains integrity disable flag (0x10000007). This is the CVE-2022-21894 'Baton Drop' exploit used by BlackLotus to bypass Secure Boot.",
+    "confidence": 0.88,
+    "details": {
+      "bcd_offset": "0x00000400",
+      "cve": "CVE-2022-21894",
+      "flag_offset": "0x00000420"
+    },
+    "recommendation": "Apply KB5025885 Windows update and rotate Secure Boot keys"
+  },
+  {
+    "detector": "blacklotus",
+    "severity": "high",
+    "title": "BlackLotus: Multiple shimx64.efi references (persistence indicator)",
+    "description": "Found 4 references to shimx64.efi in firmware image. BlackLotus installs multiple copies of shim in non-standard paths for persistence.",
+    "confidence": 0.7,
+    "details": {
+      "grub_references": 0,
+      "shim_references": 4
+    }
+  },
+  {
+    "detector": "spi_integrity",
+    "severity": "high",
+    "title": "Invalid SPI flash descriptor signature",
+    "description": "Expected descriptor signature 0x0FF0A55A, found 0x00000000. SPI flash descriptor may be corrupted or modified.",
+    "confidence": 0.9,
+    "details": {
+      "expected": "0x0FF0A55A",
+      "found": "0x00000000"
+    }
+  }
+]

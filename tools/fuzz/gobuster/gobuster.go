@@ -147,6 +147,11 @@ func (t *DirBustTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		mode = input.Mode
 	}
 
+	// Per-mode flag sets of the pinned gobuster release (v3.8.2): each
+	// subcommand accepts only its own options, so HTTP-only flags are
+	// rejected by dns/s3, -x exists only in dir, status-code filters only in
+	// dir, and s3 takes no URL at all. Reject unsupported combinations
+	// instead of passing flags the binary would abort on.
 	var args []string
 
 	switch mode {
@@ -157,7 +162,7 @@ func (t *DirBustTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		if err := validateDomain(input.Domain); err != nil {
 			return errorResult(err.Error()), nil
 		}
-		args = []string{mode, "-d", input.Domain, "-w", input.Wordlist, "-q", "--no-color"}
+		args = []string{mode, "--domain", input.Domain, "-w", input.Wordlist, "-q", "--no-color"}
 		if input.WildcardForce {
 			args = append(args, "--wildcard")
 		}
@@ -175,6 +180,9 @@ func (t *DirBustTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		if input.AppendDomain {
 			args = append(args, "--append-domain")
 		}
+	case "s3":
+		// s3 enumerates bucket names from the wordlist; it takes no URL.
+		args = []string{mode, "-w", input.Wordlist, "-q", "--no-color"}
 	default:
 		if input.URL == "" {
 			return errorResult("url is required for " + mode + " mode"), nil
@@ -185,19 +193,40 @@ func (t *DirBustTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		args = []string{mode, "-u", input.URL, "-w", input.Wordlist, "-q", "--no-color"}
 	}
 
-	if input.Extensions != "" && (mode == "dir" || mode == "fuzz") {
+	// -x (extensions) exists only in dir mode.
+	if input.Extensions != "" {
+		if mode != "dir" {
+			return errorResult("extensions are only supported in dir mode"), nil
+		}
 		args = append(args, "-x", input.Extensions)
 	}
+	// Status-code filters exist only in dir mode.
 	if input.StatusHide != "" {
+		if mode != "dir" {
+			return errorResult("status code filters are only supported in dir mode"), nil
+		}
 		args = append(args, "-b", input.StatusHide)
 	}
 	if input.StatusShow != "" {
+		if mode != "dir" {
+			return errorResult("status code filters are only supported in dir mode"), nil
+		}
 		args = append(args, "-s", input.StatusShow)
 	}
 	if input.Threads > 0 {
 		args = append(args, "-t", fmt.Sprintf("%d", input.Threads))
 	}
+	if input.Delay != "" {
+		args = append(args, "--delay", input.Delay)
+	}
+	// HTTP request shaping: valid for the URL-based modes only
+	// (dir/vhost/fuzz), not for dns (no HTTP) or s3 (no request options
+	// beyond proxy/TLS/user-agent).
+	httpMode := mode == "dir" || mode == "vhost" || mode == "fuzz"
 	if input.FollowRedir {
+		if !httpMode {
+			return errorResult("follow_redirect is not supported in " + mode + " mode"), nil
+		}
 		args = append(args, "-r")
 	}
 	if input.NoTLSValid {
@@ -207,9 +236,15 @@ func (t *DirBustTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		args = append(args, "--proxy", input.Proxy)
 	}
 	if input.Cookies != "" {
+		if !httpMode {
+			return errorResult("cookies are not supported in " + mode + " mode"), nil
+		}
 		args = append(args, "-c", input.Cookies)
 	}
 	if input.Headers != "" {
+		if !httpMode {
+			return errorResult("headers are not supported in " + mode + " mode"), nil
+		}
 		for h := range strings.SplitSeq(input.Headers, ";") {
 			h = strings.TrimSpace(h)
 			if h != "" {
@@ -221,13 +256,16 @@ func (t *DirBustTool) Execute(ctx context.Context, params json.RawMessage) (*mcp
 		args = append(args, "-a", input.UserAgent)
 	}
 	if input.Username != "" {
+		if !httpMode {
+			return errorResult("basic auth is not supported in " + mode + " mode"), nil
+		}
 		args = append(args, "-U", input.Username)
 	}
 	if input.Password != "" {
+		if !httpMode {
+			return errorResult("basic auth is not supported in " + mode + " mode"), nil
+		}
 		args = append(args, "-P", input.Password)
-	}
-	if input.Delay != "" {
-		args = append(args, "--delay", input.Delay)
 	}
 
 	result, err := t.exec.Run(ctx, "gobuster", args...)

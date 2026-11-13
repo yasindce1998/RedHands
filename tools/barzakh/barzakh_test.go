@@ -724,7 +724,7 @@ func TestDetectors_Args(t *testing.T) {
 		{
 			name:   "info",
 			params: map[string]any{"action": "info", "name": "spi_flash_hook"},
-			want:   []string{"detectors", "info", "--name", "spi_flash_hook"},
+			want:   []string{"detectors", "info", "spi_flash_hook"},
 		},
 	}
 

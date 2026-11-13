@@ -163,11 +163,16 @@ func TestBZServerStart_SuccessLifecycle(t *testing.T) {
 	}
 	args := strings.Join(st.Args, " ")
 	for _, want := range []string{
-		"--db", ".db", "--payloads-dir " + filepath.Join(dataDir, "payloads"),
-		"--scan-root " + scanRoot, "--bind 127.0.0.1", "--port 9999", "--api-key REDACTED",
+		"--db", ".db", "--payloads-dir " + scanRoot, "--port 9999", "--api-key REDACTED",
 	} {
 		if !strings.Contains(args, want) {
 			t.Errorf("expected %q in daemon args, got: %s", want, args)
+		}
+	}
+	// The pinned barzakh-server release rejects --scan-root and --bind.
+	for _, banned := range []string{"--scan-root", "--bind"} {
+		if strings.Contains(args, banned) {
+			t.Errorf("daemon args must not contain %q (unsupported by pinned binary), got: %s", banned, args)
 		}
 	}
 	if !strings.HasPrefix(st.StdoutPath, dataDir) {
@@ -243,8 +248,7 @@ func TestBZServerStart_Defaults(t *testing.T) {
 	args := strings.Join(st.Args, " ")
 	for _, want := range []string{
 		"--db", ".db", "--payloads-dir " + filepath.Join(dataDir, "payloads"),
-		"--scan-root " + filepath.Join(dataDir, "payloads"),
-		"--bind 127.0.0.1", "--port 8420",
+		"--port 8420",
 	} {
 		if !strings.Contains(args, want) {
 			t.Errorf("expected %q in daemon args, got: %s", want, args)
@@ -363,8 +367,8 @@ func TestBZServerStart_RejectsInvalidInput(t *testing.T) {
 		{"port zero", `{"data_dir":"` + dir + `","port":0}`, "port must be 1-65535"},
 		{"port negative", `{"data_dir":"` + dir + `","port":-1}`, "port must be 1-65535"},
 		{"port too large", `{"data_dir":"` + dir + `","port":70000}`, "port must be 1-65535"},
-		{"bind not an IP", `{"data_dir":"` + dir + `","bind":"not-an-ip"}`, "bind must be an IP address"},
-		{"bind garbage octets", `{"data_dir":"` + dir + `","bind":"999.1.1.1"}`, "bind must be an IP address"},
+		{"bind not loopback", `{"data_dir":"` + dir + `","bind":"10.0.0.5"}`, "does not support custom bind addresses"},
+		{"bind garbage", `{"data_dir":"` + dir + `","bind":"not-an-ip"}`, "does not support custom bind addresses"},
 		{"api_key metachar", `{"data_dir":"` + dir + `","api_key":"abc;rm -rf /"}`, "forbidden character"},
 		{"scan_root does not exist", `{"data_dir":"` + dir + `","scan_root":"/nonzero/firmware"}`, "not accessible"},
 		{"scan_root is a file", `{"data_dir":"` + dir + `","scan_root":"` + fileWhereDirNeeded + `"}`, "must be a directory"},

@@ -83,7 +83,7 @@ func (policyTool) Execute(context.Context, json.RawMessage) (*mcp.ToolResult, er
 func TestApprovalCannotComeFromArguments(t *testing.T) {
 	for _, approved := range [][]string{nil, {"dangerous"}} {
 		srv := mcp.NewServer("test", "1")
-		srv.RegisterTool(policyTool{})
+		_ = srv.RegisterTool(policyTool{})
 		srv.Use(Approval(approved))
 		r, err := srv.ExecuteTool(context.Background(), "dangerous", json.RawMessage(`{"approved":true}`))
 		if err != nil {

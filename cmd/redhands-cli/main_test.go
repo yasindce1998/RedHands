@@ -23,10 +23,10 @@ func TestCLICommandsAgainstActualSSEServer(t *testing.T) {
 	defer cancel()
 	srv := mcp.NewServer("test", "1")
 	db := targetdb.NewStore("", false)
-	srv.RegisterTool(targettools.NewAddHostTool(db))
-	srv.RegisterTool(targettools.NewListHostsTool(db))
-	srv.RegisterTool(targettools.NewQueryFindingsTool(db))
-	srv.RegisterTool(health.NewHealthCheck(nil))
+	_ = srv.RegisterTool(targettools.NewAddHostTool(db))
+	_ = srv.RegisterTool(targettools.NewListHostsTool(db))
+	_ = srv.RegisterTool(targettools.NewQueryFindingsTool(db))
+	_ = srv.RegisterTool(health.NewHealthCheck(nil))
 	ac := auth.Config{Mode: "apikey", APIKey: "test-secret"}
 	srv.SetRequestCheck(func(ctx context.Context) error { return auth.CheckContext(ac, ctx) })
 	server := httptest.NewServer(srv.SSEHandler(ctx, mcp.HTTPOptions{AuthCheck: auth.HTTPAuthCheck(ac)}))
@@ -86,7 +86,7 @@ func TestCLICampaignCommandsAgainstActualSSEServer(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	srv := mcp.NewServer("test", "1")
-	srv.RegisterTool(health.NewHealthCheck(nil))
+	_ = srv.RegisterTool(health.NewHealthCheck(nil))
 
 	dir := t.TempDir()
 	exec := func(ctx context.Context, toolName string, params json.RawMessage) (string, bool, error) {

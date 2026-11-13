@@ -122,7 +122,7 @@ func TestCampaignRecorderMapsItemsToTargetDB(t *testing.T) {
 
 func TestCampaignEndToEndRecordsIntoTargetDB(t *testing.T) {
 	srv := mcp.NewServer("test", "1")
-	srv.RegisterTool(&jsonTool{name: "fake_scan", text: "```json\n{\"hosts\":[{\"ip\":\"192.0.2.10\"},{\"ip\":\"192.0.2.11\"}]}\n```"})
+	_ = srv.RegisterTool(&jsonTool{name: "fake_scan", text: "```json\n{\"hosts\":[{\"ip\":\"192.0.2.10\"},{\"ip\":\"192.0.2.11\"}]}\n```"})
 	db := targetdb.NewStore("", false)
 	cfg := &config.Config{WorkflowStateDir: t.TempDir(), WorkflowTemplateDir: t.TempDir(), WorkflowMaxParallel: 2}
 	SetupCampaign(srv, cfg, db, nil)

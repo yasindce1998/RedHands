@@ -183,7 +183,7 @@ func TestConcurrentRegistryReload(t *testing.T) {
 	for range 4 {
 		wg.Go(func() {
 			for range 100 {
-				srv.RegisterTool(concurrentTool{})
+				_ = srv.RegisterTool(concurrentTool{})
 				srv.HandleRaw(json.RawMessage(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
 				_, _ = srv.ExecuteTool(context.Background(), "test", json.RawMessage(`{}`))
 				srv.UnregisterTool("test")

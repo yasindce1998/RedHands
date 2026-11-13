@@ -48,7 +48,7 @@ func TestRegistryPoliciesAndSafeDefaults(t *testing.T) {
 	}
 	// Replacing a tool, including a previously pure one, clears trusted policy.
 	tool, _ := srv.GetTool("mitre_lookup")
-	srv.RegisterTool(tool)
+	_ = srv.RegisterTool(tool)
 	if srv.ToolPolicy("mitre_lookup").Cacheable || !srv.ToolPolicy("mitre_lookup").RequiresApproval {
 		t.Fatal("replacement inherited privileged policy")
 	}

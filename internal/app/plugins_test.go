@@ -25,7 +25,7 @@ func TestPluginReloadPreservesBuiltinsAndRemovesDeletedTools(t *testing.T) {
 	}
 	srv := mcp.NewServer("test", "1")
 	builtin := intelligence.NewMitreLookupTool()
-	srv.RegisterTool(builtin)
+	_ = srv.RegisterTool(builtin)
 	write("mitre_lookup")
 	cfg := config.Load()
 	cfg.PluginsDir, cfg.PluginPollInterval = dir, 5*time.Millisecond

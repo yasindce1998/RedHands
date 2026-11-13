@@ -138,6 +138,13 @@ func (e *EnhancedEngine) prepareRun(req *EnhancedWorkflowRequest) (*preparedRun,
 	// campaign's lock file. A second start with the same ID — from this
 	// process or a replica sharing the state dir — fails fast instead of
 	// silently replacing the running entry and corrupting checkpoints.
+	// The in-process running map is checked first: on platforms where the
+	// advisory lock is a no-op (non-unix) it is the only same-process
+	// guard, and on unix it makes duplicate starts fail before touching
+	// the lock file at all.
+	if e.isRunningLocally(workflowID) {
+		return nil, fmt.Errorf("campaign %s is %w", workflowID, ErrAlreadyRunning)
+	}
 	lock, err := acquireRunLock(e.state.Dir(), workflowID)
 	if err != nil {
 		return nil, err
@@ -340,6 +347,15 @@ func (e *EnhancedEngine) unregisterRun(id string) {
 			close(entry.done)
 		}
 	}
+}
+
+// isRunningLocally reports whether a run with this workflow ID is currently
+// executing in this process.
+func (e *EnhancedEngine) isRunningLocally(workflowID string) bool {
+	e.runMu.Lock()
+	defer e.runMu.Unlock()
+	_, ok := e.running[workflowID]
+	return ok
 }
 
 func (e *EnhancedEngine) isCancelled(id string) bool {

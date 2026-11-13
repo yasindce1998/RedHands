@@ -22,6 +22,8 @@ type Config struct {
 	SSEAddr         string
 	WSAddr          string
 	TCPAddr         string
+	HTTPAddr        string
+	HTTPPath        string
 	PluginsDir      string
 	MaxConcurrent   int
 	MaxQueued       int
@@ -85,6 +87,8 @@ func Load() Config {
 		Transport:       "stdio",
 		SSEAddr:         "127.0.0.1:8080",
 		WSAddr:          "127.0.0.1:8081",
+		HTTPAddr:        "127.0.0.1:8082",
+		HTTPPath:        "/mcp",
 		PluginsDir:      "./plugins",
 		MaxConcurrent:   4,
 		MaxQueued:       16,
@@ -156,6 +160,14 @@ func Load() Config {
 
 	if v := os.Getenv("REDHANDS_TCP_ADDR"); v != "" {
 		cfg.TCPAddr = v
+	}
+
+	if v := os.Getenv("REDHANDS_HTTP_ADDR"); v != "" {
+		cfg.HTTPAddr = v
+	}
+
+	if v := os.Getenv("REDHANDS_HTTP_PATH"); v != "" {
+		cfg.HTTPPath = v
 	}
 
 	// Target database
@@ -246,8 +258,11 @@ func Load() Config {
 }
 
 func (c Config) Validate() error {
-	if c.Transport != "stdio" && c.Transport != "sse" && c.Transport != "ws" {
+	if c.Transport != "stdio" && c.Transport != "sse" && c.Transport != "ws" && c.Transport != "http" {
 		return fmt.Errorf("unsupported transport %q", c.Transport)
+	}
+	if c.Transport == "http" && c.HTTPPath != "" && !strings.HasPrefix(c.HTTPPath, "/") {
+		return fmt.Errorf("REDHANDS_HTTP_PATH must start with '/'")
 	}
 	if c.Timeout < time.Second || c.MaxOutputBytes <= 0 || c.RateLimit <= 0 || c.RateBurst <= 0 {
 		return fmt.Errorf("timeout must be at least 1s; output and rate limits must be positive")

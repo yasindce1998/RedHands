@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"slices"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -45,7 +46,6 @@ type Server struct {
 	policies        map[string]ToolPolicy
 	toolOrder       []string
 	middlewares     []Middleware
-	initialized     bool
 	mu              sync.RWMutex
 	workflow        WorkflowRunner
 	reporter        ReportGenerator
@@ -64,7 +64,16 @@ func NewServer(name, version string) *Server {
 	}
 }
 
-func (s *Server) RegisterTool(t Tool) {
+// RegisterTool registers t and returns an error when the tool's input
+// schema is malformed or declares an unsupported JSON Schema dialect.
+// Schemas without a $schema keyword are accepted for backwards
+// compatibility; when present, the keyword must name the 2020-12 draft.
+// Callers that ignore the error skip registration of the rejected tool.
+func (s *Server) RegisterTool(t Tool) error {
+	if err := validateToolInputSchema(t.Name(), t.InputSchema()); err != nil {
+		log.Printf("mcp: rejecting tool %q: %v", t.Name(), err)
+		return err
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, exists := s.tools[t.Name()]; !exists {
@@ -72,6 +81,30 @@ func (s *Server) RegisterTool(t Tool) {
 	}
 	s.tools[t.Name()] = t
 	s.policies[t.Name()] = ConservativePolicy()
+	return nil
+}
+
+// validateToolInputSchema enforces schema hygiene at registration time:
+// InputSchema must be absent/null or a JSON object, and a declared
+// $schema must be the JSON Schema 2020-12 dialect URI.
+func validateToolInputSchema(tool string, schema json.RawMessage) error {
+	trimmed := []byte(strings.TrimSpace(string(schema)))
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		return nil
+	}
+	var probe struct {
+		Schema string `json:"$schema"`
+	}
+	if err := json.Unmarshal(trimmed, &probe); err != nil {
+		return fmt.Errorf("inputSchema must be a JSON object")
+	}
+	if probe.Schema == "" {
+		return nil
+	}
+	if probe.Schema != JSONSchemaDialect202012 {
+		return fmt.Errorf("inputSchema $schema must be %q, got %q", JSONSchemaDialect202012, probe.Schema)
+	}
+	return nil
 }
 
 func (s *Server) Use(m Middleware) {

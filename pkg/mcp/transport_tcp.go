@@ -1,3 +1,11 @@
+// TCP transport: a spec-compliant custom MCP transport. The modern MCP
+// specification ("2026-07-28") allows custom transports with their own
+// framing as long as they carry the same JSON-RPC message semantics;
+// this transport's length-prefixed JSON-RPC frames (with optional TLS
+// and mTLS authentication) satisfy those rules, so no protocol change
+// is required here. Compare transport_http.go, which implements the
+// streamable HTTP transport with its mandated header rules.
+
 package mcp
 
 import (

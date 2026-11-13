@@ -203,15 +203,7 @@ var flagSurfaceTable = []binaryChecks{
 			{name: "history list", argv: []string{"history", "list"}},
 			{name: "ml evaluate", argv: []string{"ml", "evaluate", "--corpus", "/dev/null", "--model", "/dev/null"}},
 			{name: "range up", argv: []string{"range", "up", "--suite", "smoke", "--range-dir", "/tmp", "--dry-run"}},
-			// manifest_validate.go passes --manifest/--strict/--split,
-			// which the pinned barzakh-scanner v0.7.0 does not accept
-			// (its validate only has --corpus/--baseline/--json). Tracked
-			// as known drift until the wrapper or the release pin moves.
-			{
-				name:       "manifest validate",
-				argv:       []string{"validate", "--corpus", "/dev/null", "--manifest", "/dev/null", "--strict", "--split", "train"},
-				knownDrift: "tools/barzakh/manifest_validate.go wraps a scanner CLI newer than the pinned v0.7.0 release; fix the wrapper or bump the dependency pin",
-			},
+			{name: "manifest validate", argv: []string{"validate", "--corpus", "/dev/null", "--manifest", "/dev/null", "--strict", "--split", "train"}},
 		},
 	},
 	{

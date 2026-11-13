@@ -92,5 +92,14 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 	}
 	// Barzakh report generation always writes a report file.
 	policies["barzakh_report"] = mcp.ToolPolicy{}
+	// Campaign lifecycle tools: status/list/templates are read-only;
+	// start/resume execute tool steps; cancel is a replayable stop.
+	for _, name := range []string{"campaign_status", "campaign_list", "campaign_templates", "campaign_template_get"} {
+		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true}
+	}
+	for _, name := range []string{"campaign_start", "campaign_resume"} {
+		policies[name] = mcp.ToolPolicy{NetworkAccess: true}
+	}
+	policies["campaign_cancel"] = mcp.ToolPolicy{RetrySafe: true}
 	return policies
 }

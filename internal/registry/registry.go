@@ -21,6 +21,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/analysis/tshark"
 	"github.com/yasindce1998/redhands/tools/barzakh"
 	"github.com/yasindce1998/redhands/tools/c2/sliver"
+	"github.com/yasindce1998/redhands/tools/campaign"
 	"github.com/yasindce1998/redhands/tools/cloud"
 	"github.com/yasindce1998/redhands/tools/crack/hashcat"
 	"github.com/yasindce1998/redhands/tools/crack/john"
@@ -62,15 +63,16 @@ import (
 )
 
 type Deps struct {
-	Exec      executor.Executor
-	Cfg       *config.Config
-	TargetDB  *targetdb.Store
-	Graph     *attackgraph.Graph
-	EngMgr    *engagement.Manager
-	Loot      *loot.Store
-	CredStore *credstore.Store
-	Evidence  *evidence.Store
-	ProcMgr   *executor.BackgroundManager
+	Exec        executor.Executor
+	Cfg         *config.Config
+	TargetDB    *targetdb.Store
+	Graph       *attackgraph.Graph
+	EngMgr      *engagement.Manager
+	Loot        *loot.Store
+	CredStore   *credstore.Store
+	Evidence    *evidence.Store
+	ProcMgr     *executor.BackgroundManager
+	CampaignEng campaign.Engine
 }
 
 func RegisterAll(srv *mcp.Server, d *Deps) {
@@ -450,6 +452,17 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			srv.RegisterTool(reporting.NewEvidenceListTool(d.Evidence))
 			srv.RegisterTool(reporting.NewEvidenceScreenshotTool(d.Evidence, d.Exec))
 		}
+	}
+
+	if d.Cfg.ToolsetEnabled("campaign") && d.CampaignEng != nil {
+		srv.RegisterTool(campaign.NewStart(d.CampaignEng))
+		srv.RegisterTool(campaign.NewStatus(d.CampaignEng))
+		srv.RegisterTool(campaign.NewList(d.CampaignEng))
+		srv.RegisterTool(campaign.NewResume(d.CampaignEng))
+		srv.RegisterTool(campaign.NewCancel(d.CampaignEng))
+		srv.RegisterTool(campaign.NewTemplates(d.CampaignEng))
+		srv.RegisterTool(campaign.NewTemplateGet(d.CampaignEng))
+		srv.RegisterTool(campaign.NewTemplateSave(d.CampaignEng))
 	}
 
 	srv.RegisterTool(health.NewHealthCheck(binaries.All))

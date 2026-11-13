@@ -35,6 +35,21 @@ type taskPendingApproval struct {
 	Message   string          `json:"message,omitempty"`
 	Response  json.RawMessage `json:"response,omitempty"`
 	Resolved  string          `json:"resolved,omitempty"` // approved|denied once answered
+	// Group marks a parallel-group pause; Requests holds one entry per
+	// gated sub-step.
+	Group    bool                          `json:"group,omitempty"`
+	Requests []*taskPendingApprovalRequest `json:"requests,omitempty"`
+}
+
+// taskPendingApprovalRequest mirrors the engine's PendingApprovalRequest:
+// one gated sub-step's elicitation inside a paused parallel group.
+type taskPendingApprovalRequest struct {
+	Tool      string          `json:"tool"`
+	StepID    string          `json:"step_id"`
+	RequestID string          `json:"request_id"`
+	Message   string          `json:"message,omitempty"`
+	Response  json.RawMessage `json:"response,omitempty"`
+	Resolved  string          `json:"resolved,omitempty"` // approved|denied once answered
 }
 
 // handleCampaignStart implements campaign/start. Without the tasks
@@ -116,6 +131,41 @@ func taskResultFromState(state *taskState) GetTaskResult {
 			// A pending approval gate holds the task in input_required
 			// until the operator answers via tasks/update and the
 			// campaign is resumed.
+			if pa.Group && len(pa.Requests) > 0 {
+				// A parallel group paused on approval gates: one
+				// inputRequest per gated sub-step, keyed
+				// "approval-<subStepID>" so the client can answer each
+				// individually.
+				inputRequests := make(map[string]InputRequest, len(pa.Requests))
+				answered := 0
+				for _, r := range pa.Requests {
+					if r == nil {
+						continue
+					}
+					message := r.Message
+					if message == "" {
+						message = approvalPromptMessage(r.Tool)
+					}
+					inputRequests[GroupApprovalInputKey(r.StepID)] = InputRequest{
+						Type:      InputRequestTypeElicitation,
+						Message:   message,
+						RequestID: r.RequestID,
+					}
+					if r.Resolved != "" {
+						answered++
+					}
+				}
+				result := GetTaskResult{
+					Status:        TaskStatusInputRequired,
+					InputRequests: inputRequests,
+				}
+				if answered > 0 {
+					result.StatusMessage = fmt.Sprintf("approval response recorded for %d/%d gated sub-step(s); resume with campaign/resume", answered, len(pa.Requests))
+				} else {
+					result.StatusMessage = fmt.Sprintf("parallel group %s: %d sub-step(s) await operator approval", pa.StepID, len(pa.Requests))
+				}
+				return result
+			}
 			result := GetTaskResult{
 				Status: TaskStatusInputRequired,
 				InputRequests: map[string]InputRequest{

@@ -1144,7 +1144,12 @@ deny) and the bypass applies to that single call (audited as
 `approval/bypass`). Approval can never come from tool arguments. Inside a
 task-tracked campaign, a gated step pauses the task as `input_required`; the
 operator answers via `tasks/update` and resumes with `campaign/resume`.
-Without the declared capability the server fails closed exactly as before.
+Inside a parallel group, gated sub-steps pause the campaign once with one
+request per sub-step (keyed `approval-<sub_step_id>` in `tasks/get`);
+resume replays only the gated sub-steps — completed sub-steps are skipped,
+approved ones re-run with their own one-call bypass, and denied ones fail
+through the group's `on_fail`. Without the declared capability the server
+fails closed exactly as before.
 
 ### Point-and-Shoot: Playbooks
 

@@ -40,6 +40,15 @@ type inputResponsesKey struct{}
 // operator approval is requested and answered.
 const ApprovalInputKey = "approval"
 
+// GroupApprovalInputKey returns the inputRequests/inputResponses key for
+// one gated sub-step of a parallel group paused on approval gates:
+// "approval-<subStepID>". tasks/get issues one such key per gated
+// sub-step and tasks/update answers each individually; the engine maps
+// each answer back to its own sub-step's gate on resume.
+func GroupApprovalInputKey(subStepID string) string {
+	return ApprovalInputKey + "-" + subStepID
+}
+
 // WithInputResponses attaches inputResponses to ctx. Values are read-only
 // from this point on.
 func WithInputResponses(ctx context.Context, responses map[string]json.RawMessage) context.Context {

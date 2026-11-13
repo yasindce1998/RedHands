@@ -592,7 +592,7 @@ to end, including a final detection-rule generation step.
 | `campaign/template/save` | template JSON | Validate and persist a playbook |
 | `tasks/get` | `taskId` | Poll a task: `working`/`input_required`/`completed`/`failed`/`cancelled`; terminal states carry the result or error |
 | `tasks/cancel` | `taskId` | Cooperatively cancel a task (acks immediately) |
-| `tasks/update` | `taskId`, `inputResponses` | Submit approval responses for a paused task (unknown keys are acked and ignored) |
+| `tasks/update` | `taskId`, `inputResponses` | Submit approval responses for a paused task (`approval` for a sequential gate, `approval-<sub_step_id>` per gated sub-step inside a parallel group; unknown keys are acked and ignored) |
 
 Campaigns interrupted mid-step (cancellation or timeout) checkpoint as
 `paused` and re-run the interrupted step on resume. Every campaign is
@@ -612,6 +612,22 @@ task (`input_required` via `tasks/get`), the response arrives through
 `tasks/update`, and `campaign/resume` re-runs the step. Requests without the
 capability fail closed with the classic message. Responses never ride in
 tool arguments — only in the dedicated `inputResponses` field.
+
+Parallel groups use the same machinery per sub-step instead of failing the
+gated sub-step outright: when one or more sub-steps of a group trip approval
+gates, the campaign pauses ONCE and `tasks/get` shows one inputRequest per
+gated sub-step, keyed `approval-<sub_step_id>`. Answer each individually
+(`tasks/update` with `inputResponses: {"approval-<sub_step_id>":
+{"approved": true}}`; unknown or stale keys are acked and ignored). On
+`campaign/resume` the group replays partially: sub-steps that already
+completed are not re-executed, sub-steps that failed for other reasons keep
+their recorded failure, approved sub-steps re-run once with their own
+one-call bypass, denied sub-steps fail with `approval denied` and flow
+through the group's `on_fail` (stop/continue/goto), and unanswered gates
+re-trip with fresh request ids. A `goto` that re-enters a group is a fresh
+execution — the per-run completion set resets and every sub-step re-runs.
+Capability-less requests keep the classic fail-closed behavior for group
+sub-steps too.
 
 ### Playbooks
 

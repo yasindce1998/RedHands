@@ -71,6 +71,18 @@ type helpCheck struct {
 	// Empty means [0]; tools that print usage as an error (masscan, john,
 	// nikto) list their own conventions.
 	acceptExit []int
+	// skipOn lists output substrings that mean this binary cannot produce
+	// usable help for reasons outside RedHands' control: distro packaging
+	// bugs (Ubuntu's whatweb launcher dies with a Ruby LoadError) or distro
+	// builds that lack an option entirely (Debian/Ubuntu's core john has no
+	// jumbo-only --list). When one of them appears in the output the check
+	// skips with skipReason instead of failing, keeping the issue visible
+	// in every run. Evaluated before acceptExit because such invocations
+	// usually also exit non-zero.
+	skipOn []string
+	// skipReason explains every skipOn entry; it is printed in the skip
+	// message so the debt stays visible.
+	skipReason string
 	// want lists substrings that must appear in the normalized help output:
 	// flags the wrappers pass, and enum values where help documents them.
 	want []string
@@ -148,6 +160,12 @@ func checkHelp(t T, path string, hc helpCheck, timeout time.Duration) {
 	out, exit, err := run(path, hc.helpArgs, timeout)
 	if err != nil {
 		t.Fatalf("check %q: `%s %s` failed to run: %v", hc.name, path, strings.Join(hc.helpArgs, " "), err)
+	}
+	for _, s := range hc.skipOn {
+		if strings.Contains(out, s) {
+			t.Skipf("SKIPPED (distro quirk): flag drift check %q: `%s %s` cannot produce help (%q in output) — %s",
+				hc.name, path, strings.Join(hc.helpArgs, " "), s, hc.skipReason)
+		}
 	}
 	accept := hc.acceptExit
 	if len(accept) == 0 {

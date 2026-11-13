@@ -855,6 +855,12 @@ Notes:
 - Binaries are discovered via `PATH`; a binary that is not installed is
   reported as `SKIP ... binary not on PATH`, never as a failure. The suite is
   safe to run on any machine.
+- A check can also skip with a `KNOWN CLI DRIFT` / `SKIPPED (distro quirk)`
+  message when the pinned or distro binary genuinely rejects the wrapper's
+  argv (e.g. Ubuntu ships core john without the jumbo-only `--list`, and a
+  broken whatweb package). Those skips are deliberate, printed in every run,
+  and must lead to a wrapper fix or a dependency bump — never to deleting the
+  check.
 - In the Docker image (which ships ~25 pinned binaries but no Go toolchain),
   compile the suite on the host and run it inside the container, where the
   binaries live:

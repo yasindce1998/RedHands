@@ -1,0 +1,72 @@
+Usage:
+  kubedagger-client [command]
+
+Available Commands:
+  arp-spoof         ARP cache poisoning
+  audit-filter      Audit log filtering
+  bpf-ipc           BPF map IPC
+  cert-sabotage     Certificate rotation sabotage
+  cgroup-manip      Cgroup resource manipulation
+  cloud             cloud provider attack tools
+  completion        Generate the autocompletion script for the specified shell
+  container-log-c2  Container log C2
+  coredump-suppress Core dump suppression
+  covert-channel    Covert channels
+  crd-backdoor      CRD-based backdoor controller
+  cri-tamper        CRI-level image tampering
+  daemonset         DaemonSet dropper
+  dashboard         real-time TUI dashboard
+  detection         detection rule generation for executed techniques
+  dns_exfil         DNS-based data exfiltration
+  docker            Docker image override configuration
+  doh-c2            DNS-over-HTTPS C2
+  election-disrupt  Leader election disruption
+  escape            container escape
+  etcd-steal        Etcd credential theft
+  evasion           runtime security evasion
+  fault-inject      Syscall fault injection
+  fileless-exec     Fileless execution
+  fs_watch          file system watches
+  gitops-poison     GitOps repository poisoning
+  help              Help about any command
+  honeypot-detect   Honeypot/deception detection
+  k8s               Kubernetes cluster discovery
+  k8s-event-c2      K8s Event C2
+  keyring           Kernel keyring theft
+  keyring-mitm      Kernel keyring MITM
+  kubelet           Kubelet API abuse
+  log-tamper        Log tampering
+  meshbypass        service mesh bypass
+  mitre             MITRE ATT&CK mapping
+  netbypass         network policy bypass
+  network_discovery network discovery configuration
+  obs-poison        observability poisoning
+  pcap-blind        Pcap blinding
+  pipe_prog         piped programs configuration
+  pod-identity      Pod identity theft
+  polymorph         BPF polymorphism
+  postgres          postgresql authentication control
+  proctree          process tree visualization
+  report            engagement report generation
+  sa-token          Service account token minting/theft
+  sched-starve      Scheduler starvation attack
+  secrets           secret harvesting
+  sidecar-inject    Sidecar container injection
+  sig-bypass        Image signature verification bypass
+  supply-chain      Supply chain injection
+  syscall-bypass    Syscall-level hiding
+  tcp-stego         TCP window steganography
+  timeskew          Timestamp manipulation
+  tls-intercept     TLS traffic interception
+  vap_backdoor      ValidatingAdmissionPolicy backdoor
+  veth-hijack       Veth pair hijacking
+  webhook           admission webhook backdoor
+  xdp-shell         XDP reverse shell
+
+Flags:
+  -h, --help               help for kubedagger-client
+  -l, --log-level string   log level, options: panic, fatal, error, warn, info, debug or trace (default "info")
+  -t, --target string      target application URL (default "http://localhost:8000")
+  -v, --version            version for kubedagger-client
+
+Use "kubedagger-client [command] --help" for more information about a command.

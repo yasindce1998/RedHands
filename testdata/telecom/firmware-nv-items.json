@@ -1,0 +1,58 @@
+[
+  {
+    "id": 10,
+    "name": "NV_SEC_CODE_I",
+    "value": [],
+    "description": "Security/lock code (6 digits)",
+    "security_relevant": true
+  },
+  {
+    "id": 65,
+    "name": "NV_OTKSL_I",
+    "value": [],
+    "description": "One-time keypad subsidy lock",
+    "security_relevant": true
+  },
+  {
+    "id": 85,
+    "name": "NV_LOCK_CODE_I",
+    "value": [],
+    "description": "Phone lock code",
+    "security_relevant": true
+  },
+  {
+    "id": 453,
+    "name": "NV_BAND_PREF_I",
+    "value": [],
+    "description": "Band preference (security: can lock to weak bands)",
+    "security_relevant": true
+  },
+  {
+    "id": 906,
+    "name": "NV_DS_MIP_SS_USER_PROF_I",
+    "value": [],
+    "description": "MIP shared secret",
+    "security_relevant": true
+  },
+  {
+    "id": 1192,
+    "name": "NV_HDRSCP_SESSION_STATUS_I",
+    "value": [],
+    "description": "HDR/EV-DO session status",
+    "security_relevant": true
+  },
+  {
+    "id": 6828,
+    "name": "NV_ROAMING_LIST_683_I",
+    "value": [],
+    "description": "PRL (Preferred Roaming List)",
+    "security_relevant": true
+  },
+  {
+    "id": 6853,
+    "name": "NV_WCDMA_RRC_VERSION_I",
+    "value": [],
+    "description": "RRC protocol version",
+    "security_relevant": true
+  }
+]

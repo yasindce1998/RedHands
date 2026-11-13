@@ -1,0 +1,939 @@
+{
+  "results": [
+    {
+      "scan_status": "complete",
+      "payload_name": "trampoline",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "boot_services_hook",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 32
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "pe_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "fv_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "signature_plant",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "heci_traffic",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 23
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "me_spi_region",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "amt_sol",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ftpm_forge",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "me_dma_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "spi_region_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 5
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "smm_timing_anomaly",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "nvram_capsule",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "s3_bootscript_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 6
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "secureboot_bypass",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 10
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "optionrom_inject",
+      "detected": false,
+      "expected_findings": 1,
+      "matched_findings": 0,
+      "extra_findings": 1
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "acpi_backdoor",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 1
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "logofail_image",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 2
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "pixiefail_dhcp",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 2
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "blacklotus_mok",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "psp_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 1
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "boot_guard_bypass",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "auth_var_rollback",
+      "detected": false,
+      "expected_findings": 1,
+      "matched_findings": 0,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "dxe_depex_hijack",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 6
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "pei_core_patch",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "capsule_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "cxl_dma_attack",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "arm_trustzone",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "arm_iboot",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "arm_scm",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "riscv_opensbi",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "riscv_uefi_boot",
+      "detected": true,
+      "expected_findings": 2,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "riscv_pmp_bypass",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "bootkitty_grub_patch",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "secureboot_reloader",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "sbat_rollback",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "esp_persistence",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 2
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "runtime_services_hook",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "tdx_ovmf_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "bmc_spi_lateral",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "gpu_vbios_implant",
+      "detected": false,
+      "expected_findings": 1,
+      "matched_findings": 0,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "http_boot_mitm",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 1
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "tpm_ref_overflow",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 1
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "arm_tbbr_bypass",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "wifi_dxe_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "pluton_intercept",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 6
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "sev_snp_vmpl_escape",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "microcode_malicious",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "spectre_btb_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "meltdown_pte_leak",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "thermal_rapl_exfil",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "plundervolt_sgx",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "clkscrew_voltage",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "jtag_dci_unlock",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 2014
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "rowhammer_trr_bypass",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "dell_bios_connect",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "asus_nvram_redirect",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "msi_key_leak",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 6
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "insyde_smm_capsule",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "idrac_spi_lateral",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "lvfs_capsule_spoof",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 1
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_pkvm_escape",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 5
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_dice_forge",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_gki_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 8
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_rkp_spoof",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_bt_forge",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_trusty_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 5
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_bootctrl_poison",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_dlkm_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_bootconfig_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 1
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "dmar_neuter",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 1
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "dbx_rollback",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "apple_img4_downgrade",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "windows_bcd_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_avb_rollback",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_fastboot_unlock",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_keymint_downgrade",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "wifi_firmware_implant",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "network_boot_redirect",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "bt_firmware_implant",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "trustcache_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "amfi_bypass",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ktrr_disable",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "sep_downgrade",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "me_manufacturing_mode",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 1924
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "me_version_rollback",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "boot_guard_km_forge",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "csme_update_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "psp_version_rollback",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "psp_trustlet_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "smu_firmware_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "psp_debug_unlock",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_vbmeta_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_verity_disable",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "android_chain_break",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 5
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ios_iboot_patch",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ios_ppl_bypass",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ios_sep_forge",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ios_policy_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ios_ane_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "baseband_implant",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "5g_ran_backdoor",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 6
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "sim_applet_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ims_firmware_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "baseband_rtos_hook",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "open_ran_du_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "small_cell_implant",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "volte_modem_patch",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "satellite_modem_implant",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "gnss_firmware_spoof",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ground_station_backdoor",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "starlink_terminal_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "transponder_firmware_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "satcom_terminal_implant",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "satellite_bus_tamper",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 3
+    },
+    {
+      "scan_status": "complete",
+      "payload_name": "ccsds_telecommand_inject",
+      "detected": true,
+      "expected_findings": 1,
+      "matched_findings": 1,
+      "extra_findings": 4
+    }
+  ],
+  "total_payloads": 116,
+  "detected_count": 113,
+  "missed_count": 3,
+  "true_positive_rate": 0.9741379310344828,
+  "false_positives": 0,
+  "true_negatives": 116,
+  "false_positive_rate": 0.0
+}

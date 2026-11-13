@@ -1,0 +1,33 @@
+[
+  {
+    "ip": "192.0.2.50",
+    "timestamp": "1763000100",
+    "ports": [
+      { "port": 22, "proto": "tcp", "status": "open", "reason": "syn-ack", "ttl": 61 },
+      { "port": 8080, "proto": "tcp", "status": "open", "reason": "syn-ack", "ttl": 61 },
+      { "port": 8443, "proto": "tcp", "status": "open", "reason": "syn-ack", "ttl": 61 }
+    ]
+  },
+  {
+    "ip": "192.0.2.50",
+    "timestamp": "1763000101",
+    "ports": [
+      { "port": 8080, "proto": "tcp", "status": "open", "reason": "syn-ack", "ttl": 61 }
+    ]
+  },
+  {
+    "ip": "198.51.100.24",
+    "timestamp": "1763000102",
+    "ports": [
+      { "port": 53, "proto": "udp", "status": "open", "reason": "udp-response", "ttl": 128 },
+      { "port": 443, "proto": "tcp", "status": "open", "reason": "syn-ack", "ttl": 128 }
+    ]
+  },
+  {
+    "ip": "203.0.113.7",
+    "timestamp": "1763000103",
+    "ports": [
+      { "port": 3389, "proto": "tcp", "status": "open", "reason": "syn-ack", "ttl": 115 }
+    ]
+  }
+]

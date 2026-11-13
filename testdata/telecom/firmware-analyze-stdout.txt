@@ -1,0 +1,7 @@
+[2m2026-11-13T09:15:26.966987Z[0m [32m INFO[0m StaticZero Modem Firmware Analysis Tool
+[2m2026-11-13T09:15:26.967051Z[0m [32m INFO[0m Analyzing synthetic-modem.bin (32996 bytes)...
+[2m2026-11-13T09:15:26.972073Z[0m [32m INFO[0m Analysis complete:
+[2m2026-11-13T09:15:26.972084Z[0m [32m INFO[0m   12 findings
+[2m2026-11-13T09:15:26.972087Z[0m [32m INFO[0m   1 attack surfaces
+[2m2026-11-13T09:15:26.972091Z[0m [32m INFO[0m   4 protocol handlers
+[2m2026-11-13T09:15:26.972159Z[0m [32m INFO[0m Report written to: fw_analysis.json

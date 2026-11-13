@@ -1,0 +1,93 @@
+{
+  "nodes": [
+    {
+      "name": "lab-control-plane-0",
+      "ip": "192.0.2.10",
+      "os": "Ubuntu 22.04.3 LTS",
+      "kernel": "5.15.0-91-generic",
+      "kubelet": "v1.28.4",
+      "conditions": "Ready=True,MemoryPressure=False,DiskPressure=False"
+    },
+    {
+      "name": "lab-worker-0",
+      "ip": "192.0.2.11",
+      "os": "Ubuntu 22.04.3 LTS",
+      "kernel": "5.15.0-91-generic",
+      "kubelet": "v1.28.4",
+      "conditions": "Ready=True,MemoryPressure=False,DiskPressure=False"
+    },
+    {
+      "name": "lab-worker-1",
+      "ip": "192.0.2.12",
+      "os": "Flatcar Container Linux 3602.0.0",
+      "kernel": "6.1.45-flatcar",
+      "kubelet": "v1.28.4",
+      "conditions": "Ready=True,MemoryPressure=False,DiskPressure=True"
+    }
+  ],
+  "pods": [
+    {
+      "name": "coredns-5d78c9869d-abcde",
+      "namespace": "kube-system",
+      "node_name": "lab-control-plane-0",
+      "pod_ip": "10.244.0.10",
+      "image": "registry.k8s.io/coredns/coredns:v1.10.1",
+      "privileged": false,
+      "host_pid": false,
+      "host_network": false
+    },
+    {
+      "name": "debug-toolbox-7f9c8d6e5-x1y2z",
+      "namespace": "default",
+      "node_name": "lab-worker-0",
+      "pod_ip": "10.244.1.23",
+      "image": "docker.io/nicolaka/netshoot:v0.12",
+      "privileged": true,
+      "host_pid": true,
+      "host_network": true
+    },
+    {
+      "name": "ingress-nginx-controller-84b6f9d7c6-qrs45",
+      "namespace": "ingress-nginx",
+      "node_name": "lab-worker-1",
+      "pod_ip": "10.244.2.31",
+      "image": "registry.k8s.io/ingress-nginx/controller:v1.9.4",
+      "privileged": false,
+      "host_pid": false,
+      "host_network": true
+    }
+  ],
+  "services": [
+    {
+      "name": "kubernetes",
+      "namespace": "default",
+      "type": "ClusterIP",
+      "cluster_ip": "10.96.0.1",
+      "ports": "443/TCP"
+    },
+    {
+      "name": "kube-dns",
+      "namespace": "kube-system",
+      "type": "ClusterIP",
+      "cluster_ip": "10.96.0.10",
+      "ports": "53/UDP,53/TCP,9153/TCP"
+    }
+  ],
+  "namespaces": [
+    "default",
+    "ingress-nginx",
+    "kube-system"
+  ],
+  "targets": [
+    {
+      "name": "debug-toolbox-7f9c8d6e5-x1y2z",
+      "type": "pod",
+      "reason": "privileged pod with hostPID and hostNetwork"
+    },
+    {
+      "name": "lab-worker-1",
+      "type": "node",
+      "reason": "node with DiskPressure condition"
+    }
+  ]
+}

@@ -77,10 +77,9 @@ func (e *EnhancedEngine) RunParallel(ctx context.Context, parentID string, steps
 	// needed): decide per sub-step whether it runs, replays a recorded
 	// result, replays a recorded failure, or is denied.
 	type subPlan struct {
-		run     bool
-		reuseOK bool // replay a recorded success
-		denied  bool
-		bypass  json.RawMessage // per-gate approval response for the re-run
+		run    bool
+		denied bool
+		bypass json.RawMessage // per-gate approval response for the re-run
 	}
 	plans := make([]subPlan, len(steps))
 	for i := range steps {

@@ -92,9 +92,19 @@ type State struct {
 	// task-tracked campaign (MRTR). The gated step re-runs on resume once
 	// the operator's tasks/update response is recorded here.
 	PendingApproval *PendingApproval `json:"pending_approval,omitempty"`
-	Techniques      []string         `json:"techniques,omitempty"`
-	CreatedAt       int64            `json:"created_at,omitempty"`
-	UpdatedAt       int64            `json:"updated_at,omitempty"`
+	// GroupCompleted records run-scoped, per-sub-step completion for a
+	// parallel group paused on approval gates (MRTR): the canonical
+	// sub-step IDs that already succeeded during the paused group's
+	// partial execution. It is the source of truth for replay skipping on
+	// resume and must never be confused with Results, which persists
+	// campaign-wide: the completion set is cleared when the group
+	// completes or re-runs (including via goto, which is a fresh
+	// execution, not a resume). Sub-steps that failed for non-approval
+	// reasons keep their recorded failure in Results instead.
+	GroupCompleted map[string]bool `json:"group_completed,omitempty"`
+	Techniques     []string        `json:"techniques,omitempty"`
+	CreatedAt      int64           `json:"created_at,omitempty"`
+	UpdatedAt      int64           `json:"updated_at,omitempty"`
 }
 
 // PendingApproval is the checkpoint record of an approval gate that paused
@@ -116,6 +126,49 @@ type PendingApproval struct {
 	// "approved" or "denied". Consumed (cleared) when the gated step
 	// re-runs on resume.
 	Resolved string `json:"resolved,omitempty"`
+	// Group marks a pause inside a parallel group: one or more sub-steps
+	// of the StepID group tripped approval gates. The per-gate
+	// elicitation records (and, once answered, per-gate responses) live
+	// in Requests; tasks/get surfaces them as inputRequests keyed
+	// "approval-<subStepID>" so the client can answer each sub-step
+	// individually. The flat fields above stay empty for group pauses.
+	Group bool `json:"group,omitempty"`
+	// Requests lists the pending approval requests of a paused parallel
+	// group, one entry per gated sub-step. Empty for sequential pauses,
+	// which use the flat fields above.
+	Requests []*PendingApprovalRequest `json:"requests,omitempty"`
+}
+
+// PendingApprovalRequest is one gated sub-step's elicitation inside a
+// parallel group paused on approval gates (PendingApproval.Group). It
+// mirrors the flat PendingApproval fields per sub-step.
+type PendingApprovalRequest struct {
+	// Tool is the gated sub-step's tool name.
+	Tool string `json:"tool"`
+	// StepID is the gated sub-step's canonical id.
+	StepID string `json:"step_id"`
+	// RequestID identifies the elicitation request shown to the operator.
+	RequestID string `json:"request_id"`
+	// Message is the elicitation prompt.
+	Message string `json:"message,omitempty"`
+	// Response is the operator's inputResponses["approval-<subStepID>"]
+	// payload.
+	Response json.RawMessage `json:"response,omitempty"`
+	// Resolved records the interpreted decision once answered:
+	// "approved" or "denied".
+	Resolved string `json:"resolved,omitempty"`
+}
+
+// Decision interprets the recorded response, mirroring
+// PendingApproval.Decision: responded reports whether an operator answer
+// exists at all; when it does, approved reports whether it grants
+// approval. A response that is present but not affirmative is a denial
+// (fail closed).
+func (r *PendingApprovalRequest) Decision() (approved, responded bool) {
+	if r == nil || len(r.Response) == 0 {
+		return false, false
+	}
+	return mcp.IsAffirmativeApproval(r.Response), true
 }
 
 // Approval decisions recorded on a PendingApproval.

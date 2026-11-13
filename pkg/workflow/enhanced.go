@@ -606,17 +606,52 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 		}
 
 		if len(step.Parallel) > 0 {
-			results, failed := e.RunParallel(ctx, step.Parallel, state.Results, allResults)
-			for idx, r := range results {
-				r.ID = parallelStepID(step.Parallel, idx, stepID)
-				if r.Success {
-					e.recordStep(state, step.Parallel[idx], r.ID, &r)
-					state.aggregateMITRE(step.Parallel[idx])
-					state.Results[r.ID] = r
+			// MRTR approval-gate resolution for groups: when this
+			// campaign paused inside this group on approval gates,
+			// consume the operator's per-sub-step tasks/update decisions
+			// before (re)running the gated sub-steps. RunParallel then
+			// replays only the gated (and unanswered) sub-steps:
+			// completed sub-steps keep their recorded result, approved
+			// sub-steps re-run with a one-call bypass carrying their own
+			// gate's response, and denied sub-steps fail ("approval
+			// denied") through the group's on_fail policy below. A stale
+			// or unanswered gate falls through and re-trips, pausing
+			// again with fresh request ids.
+			replay := &groupReplay{decisions: make(map[string]*PendingApprovalRequest)}
+			if pa := state.PendingApproval; pa != nil {
+				state.PendingApproval = nil
+				if pa.Group && pa.StepID == stepID {
+					replay.active = true
+					for _, r := range pa.Requests {
+						replay.decisions[r.StepID] = r
+					}
 				}
-				allResults = append(allResults, r)
-				outputBytes += len(r.Text)
+				// A gate record for a different step id is stale (e.g.
+				// the checkpoint moved); drop it and fail closed by
+				// letting the gates re-trip if the tools still require
+				// approval.
 			}
+			if !replay.active {
+				// Fresh execution of the group (first run, or a goto
+				// re-run): a completion set left over from an earlier
+				// partial run of this group is stale — every sub-step
+				// executes.
+				state.GroupCompleted = nil
+			}
+
+			outcome := e.RunParallel(ctx, stepID, step.Parallel, state, allResults, replay)
+
+			// MRTR: one or more sub-steps tripped approval gates — pause
+			// the campaign ONCE with a pending request per gated
+			// sub-step. Completed and failed sub-steps checkpoint first,
+			// so the resume replays only the gated ones.
+			if len(outcome.gates) > 0 {
+				allResults, _ = e.mergeGroupResults(state, step, stepID, outcome, allResults)
+				return e.pauseForGroupApproval(state, allResults, i, stepID, outcome.gates), nil
+			}
+
+			allResults, groupBytes := e.mergeGroupResults(state, step, stepID, outcome, allResults)
+			outputBytes += groupBytes
 			if outputBytes > maxCampaignOutputBytes {
 				return e.fail(state, allResults, i, fmt.Sprintf("campaign output exceeds %d MiB", maxCampaignOutputBytes/(1024*1024))), nil
 			}
@@ -625,7 +660,12 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 			if ctx.Err() != nil {
 				return e.pause(ctx, state, allResults, i), ctx.Err()
 			}
-			if failed > 0 {
+			// The group finished executing: the run-scoped completion
+			// set is no longer meaningful. (A later goto that re-enters
+			// this group is a fresh execution, not a resume — jump()
+			// resets the set explicitly too.)
+			state.GroupCompleted = nil
+			if outcome.failed > 0 {
 				if target, ok := parseGoto(step.OnFail); ok {
 					if err := e.jump(state, allResults, target, &i); err != nil {
 						return e.fail(state, allResults, i, err.Error()), nil
@@ -633,7 +673,7 @@ func (e *EnhancedEngine) executeSteps(ctx context.Context, state *State) (*Workf
 					continue
 				}
 				if step.OnFail != "continue" {
-					return e.fail(state, allResults, i, fmt.Sprintf("%d parallel step(s) failed", failed)), nil
+					return e.fail(state, allResults, i, fmt.Sprintf("%d parallel step(s) failed", outcome.failed)), nil
 				}
 			}
 		} else {
@@ -790,6 +830,13 @@ func (e *EnhancedEngine) jump(state *State, allResults []StepResult, target stri
 	}
 	state.JumpsUsed++
 	state.NextIndex = idx
+	// A goto re-run of a parallel group is a fresh execution, not a
+	// resume of an approval-paused partial run: drop any run-scoped
+	// completion set the target group left behind so every sub-step
+	// re-executes.
+	if len(state.Steps[idx].Parallel) > 0 {
+		state.GroupCompleted = nil
+	}
 	state.UpdatedAt = time.Now().Unix()
 	if err := e.state.Save(state); err != nil {
 		log.Printf("workflow: checkpoint save failed: %v", err)
@@ -834,6 +881,49 @@ func (e *EnhancedEngine) pauseForApproval(state *State, allResults []StepResult,
 		StepID:    stepID,
 		RequestID: requestID,
 		Message:   message,
+	}
+	state.NextIndex = i
+	state.UpdatedAt = time.Now().Unix()
+	if err := e.state.Save(state); err != nil {
+		log.Printf("workflow: checkpoint save failed: %v", err)
+	}
+	return buildResult(state, allResults, false)
+}
+
+// pauseForGroupApproval checkpoints a task-tracked campaign whose parallel
+// group paused on operator-approval gates (MRTR): one or more sub-steps
+// tripped gates, and the campaign pauses ONCE carrying one pending request
+// per gated sub-step. Completed and failed sub-steps have already been
+// checkpointed (Results plus the run-scoped GroupCompleted set), so a
+// resume re-runs only the gated sub-steps. The pause mirrors the
+// sequential approval pause's lock/run lifecycle: the run goroutine exits
+// (releasing the single-writer lock and unregistering from the running
+// map) with this checkpoint on disk, so tasks/update's read-modify-write
+// cannot interleave with checkpoint writes.
+func (e *EnhancedEngine) pauseForGroupApproval(state *State, allResults []StepResult, i int, stepID string, gates []*parallelGate) *WorkflowResult {
+	requests := make([]*PendingApprovalRequest, 0, len(gates))
+	for _, g := range gates {
+		message := g.req.Message
+		if message == "" {
+			message = fmt.Sprintf("Tool %q requires operator approval; approve or deny via tasks/update.", g.step.Tool)
+		}
+		requestID := g.req.RequestID
+		if requestID == "" {
+			requestID = GenerateID()
+		}
+		requests = append(requests, &PendingApprovalRequest{
+			Tool:      g.step.Tool,
+			StepID:    g.id,
+			RequestID: requestID,
+			Message:   message,
+		})
+	}
+	state.Status = "paused"
+	state.Error = fmt.Sprintf("parallel group %s awaits operator approval for %d sub-step(s)", stepID, len(requests))
+	state.PendingApproval = &PendingApproval{
+		Group:    true,
+		StepID:   stepID,
+		Requests: requests,
 	}
 	state.NextIndex = i
 	state.UpdatedAt = time.Now().Unix()
@@ -948,8 +1038,11 @@ func (e *EnhancedEngine) StartAsyncFromJSON(ctx context.Context, params json.Raw
 
 // TaskUpdateFromJSON is the JSON-RPC handler for tasks/update: it records
 // the client's inputResponses on a paused campaign's pending approval
-// request. Per the tasks extension, unknown task ids are errors and
-// unknown or stale response keys are acknowledged and ignored.
+// request. For a sequential gate the response rides
+// inputResponses["approval"]; for a parallel-group pause each gated
+// sub-step is answered individually under the key tasks/get issued
+// ("approval-<subStepID>"). Per the tasks extension, unknown task ids are
+// errors and unknown or stale response keys are acknowledged and ignored.
 func (e *EnhancedEngine) TaskUpdateFromJSON(params json.RawMessage) (json.RawMessage, error) {
 	var req struct {
 		TaskID         string                     `json:"taskId"`
@@ -967,9 +1060,23 @@ func (e *EnhancedEngine) TaskUpdateFromJSON(params json.RawMessage) (json.RawMes
 
 	ack := json.RawMessage(`{"accepted":true}`)
 
-	response, ok := req.InputResponses[mcp.ApprovalInputKey]
-	if !ok {
-		// Unknown key: ack and ignore (spec).
+	// Cheap pre-check: skip the state load when no key could address a
+	// pending gate (neither "approval" nor an "approval-<subStepID>"
+	// group key), preserving the ack-without-load for unknown keys.
+	if len(req.InputResponses) > 0 {
+		meaningful := false
+		for key := range req.InputResponses {
+			if key == mcp.ApprovalInputKey || strings.HasPrefix(key, mcp.ApprovalInputKey+"-") {
+				meaningful = true
+				break
+			}
+		}
+		if !meaningful {
+			// Unknown key: ack and ignore (spec).
+			return ack, nil
+		}
+	} else {
+		// No responses at all: ack and ignore.
 		return ack, nil
 	}
 	// A campaign holds a pending approval only while paused (the run
@@ -983,6 +1090,52 @@ func (e *EnhancedEngine) TaskUpdateFromJSON(params json.RawMessage) (json.RawMes
 	if pa == nil {
 		// Stale: no approval is pending (running, terminal, or never
 		// gated). Ack and ignore.
+		return ack, nil
+	}
+
+	// Parallel-group pause: one pending request per gated sub-step, each
+	// answered under its own "approval-<subStepID>" key.
+	if pa.Group {
+		updated := false
+		for key, response := range req.InputResponses {
+			for _, r := range pa.Requests {
+				if r == nil || key != mcp.GroupApprovalInputKey(r.StepID) {
+					continue
+				}
+				// When the response echoes a request id it must match
+				// this sub-step's pending elicitation; a mismatch is a
+				// stale answer to an earlier gate.
+				var probe struct {
+					RequestID string `json:"requestId"`
+				}
+				if err := json.Unmarshal(response, &probe); err == nil && probe.RequestID != "" && probe.RequestID != r.RequestID {
+					continue
+				}
+				r.Response = response
+				if mcp.IsAffirmativeApproval(response) {
+					r.Resolved = ApprovalDecisionApproved
+				} else {
+					// A response that is present but not affirmative is
+					// a denial (fail closed).
+					r.Resolved = ApprovalDecisionDenied
+				}
+				updated = true
+			}
+		}
+		if !updated {
+			// Unknown or stale keys only: ack and ignore.
+			return ack, nil
+		}
+		state.UpdatedAt = time.Now().Unix()
+		if err := e.state.Save(state); err != nil {
+			return nil, fmt.Errorf("save task update: %w", err)
+		}
+		return ack, nil
+	}
+
+	response, ok := req.InputResponses[mcp.ApprovalInputKey]
+	if !ok {
+		// Unknown key: ack and ignore (spec).
 		return ack, nil
 	}
 	// When the response echoes a request id it must match the pending

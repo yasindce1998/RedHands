@@ -94,13 +94,3 @@ type TemplateVar struct {
 	Default     string `json:"default,omitempty"`
 	Required    bool   `json:"required"`
 }
-
-// ScheduleEntry represents a scheduled workflow execution.
-type ScheduleEntry struct {
-	ID       string                  `json:"id"`
-	Cron     string                  `json:"cron"`
-	Workflow EnhancedWorkflowRequest `json:"workflow"`
-	Enabled  bool                    `json:"enabled"`
-	LastRun  int64                   `json:"last_run,omitempty"`
-	NextRun  int64                   `json:"next_run,omitempty"`
-}

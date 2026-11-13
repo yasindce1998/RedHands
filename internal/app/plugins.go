@@ -18,7 +18,10 @@ func SetupPlugins(srv *mcp.Server, cfg *config.Config, execr executor.Executor) 
 				log.Printf("plugin %q conflicts with a built-in tool; skipped", tool.Name())
 				continue
 			}
-			srv.RegisterTool(tool)
+			if err := srv.RegisterTool(tool); err != nil {
+				log.Printf("plugin %q rejected: %v", tool.Name(), err)
+				continue
+			}
 			next[tool.Name()] = true
 		}
 		for name := range managed {

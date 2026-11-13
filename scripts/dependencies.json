@@ -58,25 +58,25 @@
       "windows-amd64": ["https://github.com/yasindce1998/KubeDagger/releases/download/v0.5.0/kubedagger-server-windows-amd64.exe", "241a16e7066bd27b420d23783311cb1ce8f6e6d95a1b0faef30f54825f8b1a84"]
     },
     "barzakh-adversary": {
-      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-x86_64-unknown-linux-gnu", "19d6582f8d18db7263080d2b3e084a08dc81ced8bdbcda078ac61a6effd78b37"],
-      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-aarch64-unknown-linux-gnu", "34201ed5929b8882d7ae3c865426af09b1216945060414bfc4dea2a1b0c5203f"],
-      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-x86_64-apple-darwin", "a711c9be5975185974f4dabf610507965e7a6e92b7b80f057cfcd496141ec93a"],
-      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-aarch64-apple-darwin", "9e92b3eb8520dfd90ae38273a6c6b74c2ebda8d331c1c1dc6c4edf87684049e5"],
-      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-adversary-x86_64-pc-windows-msvc.exe", "ca032b6990814315c82c8ee15c41d59158cc0a2264f4b97f86a207feb2217599"]
+      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-adversary-x86_64-unknown-linux-gnu", "f130d146a6d1948529650873d35ae11a2d79d8697d3ffb497f863e2bd44d1c82"],
+      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-adversary-aarch64-unknown-linux-gnu", "4157b5ed85897dd18d4c3a2f37ec12780db828a59fe702627e52197d3ce59b29"],
+      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-adversary-x86_64-apple-darwin", "dd90f519edf99301d42427dbdb5068084676c428178f201cec01722f3f6b675c"],
+      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-adversary-aarch64-apple-darwin", "f1e7cb305dd40f63ed1979376e8daa338611150d245cdd72012fbb57de9a96de"],
+      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-adversary-x86_64-pc-windows-msvc.exe", "f9eb7f45998f634196a87e89258653f4e1bb790bb0465b4d27fd5cde5901e6c4"]
     },
     "barzakh-scanner": {
-      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-x86_64-unknown-linux-gnu", "fddd77c12c74da6dc71944483a4506897f1d0b1c8c8b045d64eae0d390d6c84a"],
-      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-aarch64-unknown-linux-gnu", "38598e9cf7e1f9cf077515cb20c2aa4e82ed6a7b0656ad9885014da1e98e6413"],
-      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-x86_64-apple-darwin", "35bcc80115b7c34b4445b20b3bbee6e0092b1c30dbe777ce93d3cab4e2c11512"],
-      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-aarch64-apple-darwin", "527f1f6a53d44a6b7059a6df9240cb3f722a23b65c56b8ee2f9c67b9d05a202e"],
-      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-scanner-x86_64-pc-windows-msvc.exe", "5e954bed167fd71c16628a7f73a74671a2664fa716987115e69345d4660395fd"]
+      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-scanner-x86_64-unknown-linux-gnu", "5124f1efdcb6378e48a27c6e5ac6f437aed991fc2119c4df428403e2acc566af"],
+      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-scanner-aarch64-unknown-linux-gnu", "4863a1cb459862fcd5e5804bd46f79fbc42a5ddcf951104d3a9b89c996c2ac34"],
+      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-scanner-x86_64-apple-darwin", "dee7a2949d952c4ec4f7499eb2b8182088c8fe95e983ec998631190f1550a3ae"],
+      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-scanner-aarch64-apple-darwin", "ec0c99efe95d11144229e2f7f33cd9abdec36d8711643c51fbdb9f17c3d4d5ca"],
+      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-scanner-x86_64-pc-windows-msvc.exe", "a58dae955ea7941343ec4008a084e5c5aab534c389bcc79f49cabcc6ffd720df"]
     },
     "barzakh-server": {
-      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-server-x86_64-unknown-linux-gnu", "4ce75af62bf7330cfae31353c29ec67671fee6f092f452f29155d5e4376b0107"],
-      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-server-aarch64-unknown-linux-gnu", "383d3db10df80fd120a1f230409280c325ff0ab429a9d7cf90cd2177f22da010"],
-      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-server-x86_64-apple-darwin", "ca0a214014e5bb25755a36abeeaad601e047d8791aa52342ff60a07b64798783"],
-      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-server-aarch64-apple-darwin", "159fece02c311cb468d140109251b4abdace61d1f458448258479eb40a5f4767"],
-      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.0/barzakh-server-x86_64-pc-windows-msvc.exe", "840800777c9e28cfcc1ecd6166b6c74005b77369b66e6567f983b7e3830f6cb4"]
+      "linux-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-server-x86_64-unknown-linux-gnu", "5dbc0f1b2692c87974e86e7c5ab4c2384037685a2a1cc6c979a725d3d37746f9"],
+      "linux-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-server-aarch64-unknown-linux-gnu", "4d30c2dae4432f9290bbc3a0d4a1488e76ae018c9aab67fe238469445bfa428f"],
+      "darwin-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-server-x86_64-apple-darwin", "1ea810126812e8654b71c9350af09863e6690286f138e3572bad923a50a22f1a"],
+      "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-server-aarch64-apple-darwin", "452e354fdaa1adf47a630fbdf4f3f75e3403af7e6e23c0eba3240e7ad2ff8531"],
+      "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-server-x86_64-pc-windows-msvc.exe", "dc3e6842b81ab04af3b435c633ff16c500a488c5fd7ff596088379d9c9fed18d"]
     },
     "staticzero-defense": {
       "linux-amd64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.5.0/staticzero-defense-linux-amd64", "521cd61a48b07e08972f5a2643352510108661c44c36d934c45448214ac29413"],

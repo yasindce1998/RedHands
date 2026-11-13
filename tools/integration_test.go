@@ -698,7 +698,8 @@ func TestGobuster_DNSMode(t *testing.T) {
 
 	assertBinary(t, mock, "gobuster")
 	assertContainsArg(t, mock, "dns")
-	assertContainsArgPair(t, mock, "-d", "example.com")
+	// gobuster v3.8.2: -d is the DNS delay; the domain flag is --domain.
+	assertContainsArgPair(t, mock, "--domain", "example.com")
 }
 
 // --- FFUF ---

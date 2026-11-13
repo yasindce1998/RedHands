@@ -13,7 +13,6 @@ import (
 type SubdomainEnumInput struct {
 	Domain     string `json:"domain"`
 	Recursive  bool   `json:"recursive,omitempty"`
-	MaxDepth   int    `json:"max_depth,omitempty"`
 	Sources    string `json:"sources,omitempty"`
 	ExcludeSrc string `json:"exclude_sources,omitempty"`
 	All        bool   `json:"all,omitempty"`
@@ -49,10 +48,6 @@ func (t *SubdomainEnumTool) InputSchema() json.RawMessage {
 			"recursive": {
 				"type": "boolean",
 				"description": "Enable recursive subdomain enumeration"
-			},
-			"max_depth": {
-				"type": "integer",
-				"description": "Maximum recursion depth (default: 5)"
 			},
 			"sources": {
 				"type": "string",
@@ -106,9 +101,6 @@ func (t *SubdomainEnumTool) Execute(ctx context.Context, params json.RawMessage)
 	if input.Recursive {
 		args = append(args, "-recursive")
 	}
-	if input.MaxDepth > 0 {
-		args = append(args, "-max-depth", fmt.Sprintf("%d", input.MaxDepth))
-	}
 	if input.Sources != "" {
 		args = append(args, "-sources", input.Sources)
 	}
@@ -119,7 +111,7 @@ func (t *SubdomainEnumTool) Execute(ctx context.Context, params json.RawMessage)
 		args = append(args, "-all")
 	}
 	if input.RateLimit > 0 {
-		args = append(args, "-rL", fmt.Sprintf("%d", input.RateLimit))
+		args = append(args, "-rl", fmt.Sprintf("%d", input.RateLimit))
 	}
 	if input.Resolvers != "" {
 		args = append(args, "-r", input.Resolvers)

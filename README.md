@@ -834,6 +834,43 @@ python3 -m unittest discover -s scripts -p 'test_*.py'
 go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 ```
 
+### Live binary tests
+
+The wrapper unit tests build argv strings but verify them only against a
+`MockExecutor`. When an upstream binary changes its CLI, nothing catches it —
+the `tools/livecheck` suite does. It runs the **real** binaries and asserts
+that the flags, subcommands and enum values the wrappers emit are still
+accepted (help-text assertions plus safe dry-parses terminated by
+`--help`/`--echo`; nothing scans a target or mutates state).
+
+```sh
+make test-live
+# equivalent: go test -tags=livebin ./tools/livecheck/... -run TestLiveFlagSurface
+```
+
+Notes:
+
+- The suite is gated behind the `livebin` build tag, so `go test ./...` and
+  the normal CI jobs are unaffected.
+- Binaries are discovered via `PATH`; a binary that is not installed is
+  reported as `SKIP ... binary not on PATH`, never as a failure. The suite is
+  safe to run on any machine.
+- In the Docker image (which ships ~25 pinned binaries but no Go toolchain),
+  compile the suite on the host and run it inside the container, where the
+  binaries live:
+
+  ```sh
+  CGO_ENABLED=0 go test -tags=livebin -c -o livecheck.test ./tools/livecheck/
+  docker run --rm --network none -v "$PWD/livecheck.test:/usr/local/bin/livecheck.test:ro" \
+    --entrypoint /usr/local/bin/livecheck.test redhands
+  ```
+
+  The `live-binaries` CI job instead installs a minimal binary set on
+  ubuntu-latest (apt plus the checksum-verified pinned releases via
+  `scripts/dependencies.py`) and runs `go test -tags=livebin` directly.
+- When you change a wrapper's argv, update the matching entry in
+  `tools/livecheck/table.go` so drift detection stays meaningful.
+
 ## Docker
 
 ```bash

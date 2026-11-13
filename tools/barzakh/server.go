@@ -36,7 +36,7 @@ func NewServerStart(mgr *executor.BackgroundManager) *ServerStartTool {
 func (t *ServerStartTool) Name() string { return "barzakh_server_start" }
 
 func (t *ServerStartTool) Description() string {
-	return "Start the Barzakh scanner server (barzakh-server) as a managed background process: a REST API and web dashboard (default http://127.0.0.1:8420) backed by a SQLite scan-history database under data_dir, with X-API-Key authentication on every /api endpoint. The api_key param is passed via --api-key; when omitted the binary reads the BARZAKH_API_KEY environment variable instead, and without either the server refuses to start (this tool never passes --insecure-dev). API file reads are constrained to the scan root (--scan-root, default <data_dir>/payloads). Wraps Barzakh (firmware security scanning); authorized lab use only. The daemon runs until barzakh_server_stop is called; startup failures (missing API key, unwritable database) are written to the stderr log, so use barzakh_server_status to check whether it survived startup."
+	return "Start the Barzakh scanner server (barzakh-server) as a managed background process: a REST API and web dashboard (default http://127.0.0.1:8420) backed by a SQLite scan-history database under data_dir, with X-API-Key authentication on every /api endpoint. The api_key param is passed via --api-key; when omitted the binary reads the BARZAKH_API_KEY environment variable instead, and without either the server refuses to start (this tool never passes --insecure-dev). API file reads are constrained to the payloads directory (--payloads-dir; scan_root overrides it, default <data_dir>/payloads). Wraps Barzakh (firmware security scanning); authorized lab use only. The daemon runs until barzakh_server_stop is called; startup failures (missing API key, unwritable database) are written to the stderr log, so use barzakh_server_status to check whether it survived startup."
 }
 
 func (t *ServerStartTool) InputSchema() json.RawMessage {
@@ -49,7 +49,7 @@ func (t *ServerStartTool) InputSchema() json.RawMessage {
 			},
 			"bind": {
 				"type": "string",
-				"description": "IP address for the --bind flag (default: 127.0.0.1). The dashboard and REST API listen here"
+				"description": "Deprecated: the pinned barzakh-server release always serves on 127.0.0.1; only 127.0.0.1 and empty are accepted"
 			},
 			"port": {
 				"type": "integer",
@@ -63,7 +63,7 @@ func (t *ServerStartTool) InputSchema() json.RawMessage {
 			},
 			"scan_root": {
 				"type": "string",
-				"description": "Path to an existing directory of firmware images the API may scan (--scan-root; default: <data_dir>/payloads). API file reads are rejected outside the scan root"
+				"description": "Path to an existing directory of firmware images the API may scan; passed as --payloads-dir (default: <data_dir>/payloads). API file reads are rejected outside it"
 			}
 		},
 		"required": ["data_dir"]
@@ -85,12 +85,10 @@ func (t *ServerStartTool) Execute(ctx context.Context, params json.RawMessage) (
 	if err := validateServerDir(input.DataDir, "data_dir"); err != nil {
 		return errorResult(err.Error()), nil
 	}
-	bind := "127.0.0.1"
-	if input.Bind != "" {
-		if net.ParseIP(input.Bind) == nil {
-			return errorResult(fmt.Sprintf("bind must be an IP address (e.g. 127.0.0.1), got: %s", input.Bind)), nil
-		}
-		bind = input.Bind
+	// The pinned barzakh-server release has no --bind flag and always serves
+	// on 127.0.0.1; reject anything else instead of silently ignoring it.
+	if input.Bind != "" && input.Bind != "127.0.0.1" {
+		return errorResult("the pinned barzakh-server release does not support custom bind addresses (it always serves on 127.0.0.1)"), nil
 	}
 	port := 8420
 	if input.Port != nil {
@@ -116,23 +114,22 @@ func (t *ServerStartTool) Execute(ctx context.Context, params json.RawMessage) (
 	stdoutPath := filepath.Join(input.DataDir, "barzakh-server-"+suffix+".log")
 	stderrPath := filepath.Join(input.DataDir, "barzakh-server-"+suffix+".err")
 
-	// barzakh-server canonicalizes its scan roots and refuses to start when
-	// they are missing, and its default is a CWD-relative "payloads". Always
-	// pass an explicit scan root: the caller's, or the payloads directory
-	// this tool manages under data_dir.
-	scanRoot := input.ScanRoot
-	if scanRoot == "" {
-		scanRoot = payloadsDir
-		if err := os.MkdirAll(payloadsDir, 0o700); err != nil {
-			return errorResult(fmt.Sprintf("cannot create payloads directory %s: %v", payloadsDir, err)), nil
-		}
+	// The pinned barzakh-server release (v0.7.0) accepts only --db,
+	// --payloads-dir, --port and --api-key; API file reads are constrained to
+	// the payloads directory, so the caller's scan_root maps onto
+	// --payloads-dir. Always pass it explicitly: the binary default is a
+	// CWD-relative "payloads".
+	scanRoot := payloadsDir
+	if input.ScanRoot != "" {
+		scanRoot = input.ScanRoot
+	}
+	if err := os.MkdirAll(scanRoot, 0o700); err != nil {
+		return errorResult(fmt.Sprintf("cannot create payloads directory %s: %v", scanRoot, err)), nil
 	}
 
 	args := []string{
 		"--db", dbPath,
-		"--payloads-dir", payloadsDir,
-		"--scan-root", scanRoot,
-		"--bind", bind,
+		"--payloads-dir", scanRoot,
 		"--port", strconv.Itoa(port),
 	}
 	if input.APIKey != "" {
@@ -155,7 +152,7 @@ func (t *ServerStartTool) Execute(ctx context.Context, params json.RawMessage) (
 		"stdout_path": stdoutPath,
 		"stderr_path": stderrPath,
 		"db_path":     dbPath,
-		"url":         "http://" + net.JoinHostPort(bind, strconv.Itoa(port)),
+		"url":         "http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(port)),
 	})
 	fmt.Fprintf(&sb, "```json\n%s\n```\n\n", serverJSON)
 	fmt.Fprintf(&sb, "- **Process ID:** %s\n", proc.ID)
@@ -168,7 +165,7 @@ func (t *ServerStartTool) Execute(ctx context.Context, params json.RawMessage) (
 		}
 	}
 	fmt.Fprintf(&sb, "- **Command:** %s %s\n", serverBinary, strings.Join(echoArgs, " "))
-	fmt.Fprintf(&sb, "- **Dashboard / REST API:** http://%s\n", net.JoinHostPort(bind, strconv.Itoa(port)))
+	fmt.Fprintf(&sb, "- **Dashboard / REST API:** http://%s\n", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
 	fmt.Fprintf(&sb, "- **SQLite database:** %s\n", dbPath)
 	fmt.Fprintf(&sb, "- **Payloads / scan root:** %s\n", scanRoot)
 	fmt.Fprintf(&sb, "- **Server log (stdout):** %s\n", stdoutPath)

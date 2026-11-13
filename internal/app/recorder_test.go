@@ -62,8 +62,8 @@ func TestCampaignRecorderMapsItemsToTargetDB(t *testing.T) {
 	}
 
 	err = recorder.RecordStep("wf1", "cred", "test_scanner", workflow.RecordRule{
-		Type: "credential",
-		Path: "creds",
+		Type:   "credential",
+		Path:   "creds",
 		Fields: map[string]string{"username": "user", "secret": "pass", "type": "kind"},
 	}, []any{
 		map[string]any{"user": "admin", "pass": "hunter2", "kind": "password"},

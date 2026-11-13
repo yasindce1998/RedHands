@@ -419,7 +419,7 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 - **New toolsets**: `telecom` (StaticZero — doctor, firmware analysis, SDR scan, defense API; 12 tools) and `aegis` (Aegis-Shadow analysis; 9 tools)
 - **Managed daemon lifecycle with secret redaction**: `kubedagger_server_{start,stop,status}` and `barzakh_server_{start,stop,status}` via the background process manager, which redacts secret-bearing flag values in all recorded argv
 - **Docker image**: `kubedagger-server` and `barzakh-server` installed via the checksum-verified dependency lock
-- **277 registered tools** across 31 toolsets
+- **277 registered tools** across 32 toolsets
 
 ### v0.4.0 — Offensive Security Platform Expansion
 

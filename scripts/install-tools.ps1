@@ -6,7 +6,7 @@
     Installs security tool dependencies for RedHands MCP server.
     Supports: Chocolatey, Scoop, and direct downloads.
 .PARAMETER Profile
-    Installation profile: all, web, network, ad, k8s, uefi, telecom, aegis, recon, minimal
+    Installation profile: all, web, network, ad, k8s, uefi, telecom, aegis, sbom, recon, minimal
 .PARAMETER Check
     Only check which tools are installed (no installation)
 .PARAMETER List
@@ -75,6 +75,8 @@ if ($List) {
     Write-Host "  ad         Active Directory attacks" -ForegroundColor Green
     Write-Host "  k8s        Kubernetes offensive (eBPF-powered)" -ForegroundColor Green
     Write-Host "  uefi       UEFI bootkit adversary simulation" -ForegroundColor Green
+    Write-Host "  aegis      Linux eBPF security research" -ForegroundColor Green
+    Write-Host "  sbom       SBOM generation and vulnerability scanning" -ForegroundColor Green
     Write-Host "  recon      Reconnaissance tools" -ForegroundColor Green
     Write-Host "  minimal    Just the essentials" -ForegroundColor Green
     Write-Host ""

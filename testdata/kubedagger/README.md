@@ -26,10 +26,10 @@ fixture → wrapper → campaign extraction → record rules → targetdb flow).
   Note the quirk verified against the real binary: on this failure the
   process **exits 0**, stdout is **empty**, and the `Error: k8s client init
   failed: ...` text plus usage goes to **stderr**. The `kubedagger_k8s_discover`
-  wrapper keys failure off a non-zero exit code, so against a broken
-  environment it reports a successful "No resources found." result rather
-  than the stderr error — pinned by the golden test in
-  `tools/kubedagger/k8s_discover_golden_test.go`.
+  wrapper therefore treats empty stdout + non-empty stderr as a failure and
+  surfaces the stderr text as an error result (empty stdout + empty stderr
+  remains a successful "No resources found." result) — asserted by the golden
+  test in `tools/kubedagger/k8s_discover_golden_test.go`.
 
 - `cluster-report.json` — **struct-derived** (documented): `k8s discover`
   needs a live daemon plus a Kubernetes client, so this file was hand-crafted

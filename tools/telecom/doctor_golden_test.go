@@ -234,14 +234,28 @@ func TestFirmwareGolden_AnalysisReportIsFencedAndExtractable(t *testing.T) {
 	}
 
 	// The real analyzer emits capitalized severities ("High", "Medium",
-	// "Info"); anything mapping them into the targetdb must lowercase.
-	sev, ok := workflow.LookupPathValue(value, "findings.0.severity")
+	// "Info"); the wrapper normalizes them to lowercase when embedding the
+	// report, so consumers (campaign record rules, targetdb findings via
+	// the recorder, direct readers of the tool result) get consistent
+	// lowercase values.
+	findingList, ok := workflow.LookupPathValue(value, "findings")
 	if !ok {
-		t.Fatal("findings.0.severity missing")
+		t.Fatal("findings missing")
 	}
-	if s := workflow.ValueToString(sev); s != strings.ToLower(s) {
-		// Expected today: severities arrive capitalized. Pin the fact so a
-		// change in the binary or a normalization in the wrapper is noticed.
-		t.Logf("real analyzer severities are capitalized (findings.0.severity=%q); consumers must lowercase", s)
+	findings, ok := findingList.([]any)
+	if !ok {
+		t.Fatalf("\"findings\" is not an array: %T", findingList)
+	}
+	if len(findings) == 0 {
+		t.Fatal("real modem-firmware capture unexpectedly has no findings")
+	}
+	for i, finding := range findings {
+		sev, ok := workflow.LookupPathValue(finding, "severity")
+		if !ok {
+			t.Fatalf("findings.%d.severity missing", i)
+		}
+		if s := workflow.ValueToString(sev); s != strings.ToLower(s) {
+			t.Errorf("findings.%d severity %q must be normalized to lowercase by the wrapper", i, s)
+		}
 	}
 }

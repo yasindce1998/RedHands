@@ -77,6 +77,64 @@ type firmwareAnalyzeInput struct {
 	Report  string `json:"report,omitempty"`
 }
 
+// normalizeAnalysisSeverities lowercases the "severity" string fields of a
+// modem-firmware analysis report before the wrapper emits it. The real
+// analyzer emits capitalized severities ("High", "Medium", "Info"), while
+// consumers expect lowercase (internal/app's CampaignRecorder lowercases
+// severity for recorded findings; campaign record rules and direct readers
+// of the tool result get consistent values for free once the wrapper
+// normalizes at this boundary). Reports that are not JSON, or that contain
+// nothing to fix, are returned unchanged (whitespace-trimmed).
+func normalizeAnalysisSeverities(report string) string {
+	trimmed := strings.TrimSpace(report)
+	var value any
+	dec := json.NewDecoder(strings.NewReader(trimmed))
+	dec.UseNumber()
+	if err := dec.Decode(&value); err != nil {
+		return trimmed
+	}
+	if !lowercaseSeverityFields(value) {
+		return trimmed
+	}
+	normalized, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return trimmed
+	}
+	return string(normalized)
+}
+
+// lowercaseSeverityFields lowercases every "severity" string under value,
+// recursing into objects and arrays, and reports whether anything changed.
+func lowercaseSeverityFields(value any) bool {
+	switch typed := value.(type) {
+	case map[string]any:
+		changed := false
+		for key, item := range typed {
+			if key == "severity" {
+				if str, ok := item.(string); ok && str != strings.ToLower(str) {
+					typed[key] = strings.ToLower(str)
+					changed = true
+				}
+				continue
+			}
+			if lowercaseSeverityFields(item) {
+				changed = true
+			}
+		}
+		return changed
+	case []any:
+		changed := false
+		for _, item := range typed {
+			if lowercaseSeverityFields(item) {
+				changed = true
+			}
+		}
+		return changed
+	default:
+		return false
+	}
+}
+
 func (t *FirmwareAnalyzeTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.ToolResult, error) {
 	var input firmwareAnalyzeInput
 	if err := json.Unmarshal(params, &input); err != nil {
@@ -113,7 +171,7 @@ func (t *FirmwareAnalyzeTool) Execute(ctx context.Context, params json.RawMessag
 	sb.WriteString("\n")
 	if report, ok := readArtifactIfPresent(input.Report); ok {
 		sb.WriteString("### Vulnerability report\n\n```json\n")
-		sb.WriteString(strings.TrimSpace(report))
+		sb.WriteString(normalizeAnalysisSeverities(report))
 		sb.WriteString("\n```\n")
 	} else {
 		sb.WriteString("No report file was readable; analyzer log output below.\n\n```\n")

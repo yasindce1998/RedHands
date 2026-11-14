@@ -47,6 +47,8 @@ var All = []string{
 	"certipy",
 	"tshark",
 	"barzakh-adversary", "barzakh-scanner", "barzakh-server",
+	"binwalk",
+	"syft", "grype",
 	"staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge",
 	"protocol-correlator",
 	"aegis-shadow-defense", "aegis-shadow-offense",

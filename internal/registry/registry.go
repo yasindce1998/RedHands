@@ -47,6 +47,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/recon/subfinder"
 	"github.com/yasindce1998/redhands/tools/recon/wayback"
 	"github.com/yasindce1998/redhands/tools/reporting"
+	"github.com/yasindce1998/redhands/tools/sbom"
 	"github.com/yasindce1998/redhands/tools/scan/masscan"
 	nmaptools "github.com/yasindce1998/redhands/tools/scan/nmap"
 	"github.com/yasindce1998/redhands/tools/scan/rustscan"
@@ -54,6 +55,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/social/phishing"
 	"github.com/yasindce1998/redhands/tools/system/health"
 	targetdbtools "github.com/yasindce1998/redhands/tools/targetdb"
+	"github.com/yasindce1998/redhands/tools/firmware"
 	"github.com/yasindce1998/redhands/tools/telecom"
 	"github.com/yasindce1998/redhands/tools/tunnel/chisel"
 	"github.com/yasindce1998/redhands/tools/tunnel/ligolo"
@@ -298,6 +300,18 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			register(barzakh.NewServerStop(d.ProcMgr))
 			register(barzakh.NewServerStatus(d.ProcMgr))
 		}
+	}
+
+	if d.Cfg.ToolsetEnabled("firmware") {
+		register(firmware.NewFirmwareScan(d.Exec))
+		register(firmware.NewFirmwareExtract(d.Exec))
+		register(firmware.NewFirmwareEntropy(d.Exec))
+	}
+
+	if d.Cfg.ToolsetEnabled("sbom") {
+		register(sbom.NewSbomGenerate(d.Exec))
+		register(sbom.NewVulnScanImage(d.Exec))
+		register(sbom.NewVulnScanSbom(d.Exec))
 	}
 
 	if d.Cfg.ToolsetEnabled("telecom") {

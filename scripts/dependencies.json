@@ -106,6 +106,21 @@
       "linux-amd64": ["https://github.com/yasindce1998/Aegis-Shadow/releases/download/v0.2.0/c2_x86_64", "7ed85d5368b7274b1b0cf8e73a74e2f872a7ae04fdbf7486a291a4bf3f2fae70"],
       "linux-arm64": ["https://github.com/yasindce1998/Aegis-Shadow/releases/download/v0.2.0/c2_aarch64", "06e1ae1ab3c235c439926063c897c2969130699b7fdc4d81ca84a2f6a6d8cdbd"]
     },
+    "syft": {
+      "linux-amd64": ["https://github.com/anchore/syft/releases/download/v1.57.1/syft_1.57.1_linux_amd64.tar.gz", "bf52519eb57f675d47c07d43213cb6dff6449f3d6d1147ff6701ed91f44eef0c"],
+      "linux-arm64": ["https://github.com/anchore/syft/releases/download/v1.57.1/syft_1.57.1_linux_arm64.tar.gz", "aa3d3e07344f590bcce8d31043b752daa76c8a56c2aa34ceeee63c6168152582"],
+      "darwin-amd64": ["https://github.com/anchore/syft/releases/download/v1.57.1/syft_1.57.1_darwin_amd64.tar.gz", "2355758c1142982a67b309604c5d75effdbe638a57c771979ea8fd1a16656abc"],
+      "darwin-arm64": ["https://github.com/anchore/syft/releases/download/v1.57.1/syft_1.57.1_darwin_arm64.tar.gz", "e0a74a5d2688d1254b4e17b71f068a83215e3625f846265bf6614c7ba06f3a96"],
+      "windows-amd64": ["https://github.com/anchore/syft/releases/download/v1.57.1/syft_1.57.1_windows_amd64.zip", "3a01fe865076bb548352195b77e88fa4649277861ea458efe165c3a810b6dcc7"],
+      "windows-arm64": ["https://github.com/anchore/syft/releases/download/v1.57.1/syft_1.57.1_windows_arm64.zip", "8cdd580b5f7160d12b66c7c5191100a6cf792e130d8a28deeae5ea45e0030e00"]
+    },
+    "grype": {
+      "linux-amd64": ["https://github.com/anchore/grype/releases/download/v0.121.3/grype_0.121.3_linux_amd64.tar.gz", "e9da18cc1429e786722e32161288103600efffd8e483c90761f90485bd1bec85"],
+      "linux-arm64": ["https://github.com/anchore/grype/releases/download/v0.121.3/grype_0.121.3_linux_arm64.tar.gz", "b7815598d48da78bfd16f5b98ef28e1bb09c03d34fc8c3e350f99b6ccb3c7cba"],
+      "darwin-amd64": ["https://github.com/anchore/grype/releases/download/v0.121.3/grype_0.121.3_darwin_amd64.tar.gz", "65bfb1b3b30d32e9dab156a60003c7146e619f649992be227bf09c9ccbf44f7e"],
+      "darwin-arm64": ["https://github.com/anchore/grype/releases/download/v0.121.3/grype_0.121.3_darwin_arm64.tar.gz", "54336f2cd8cdee8b3d8ea83462561ff7fa9293498054c7c53a193db44bfea4c8"],
+      "windows-amd64": ["https://github.com/anchore/grype/releases/download/v0.121.3/grype_0.121.3_windows_amd64.zip", "3007a5afea25c60030a49d6c24d4e5abb6c94c0dbeed7ea303eb26df8e900c18"]
+    },
     "feroxbuster": {
       "linux-amd64": ["https://github.com/epi052/feroxbuster/releases/download/v2.13.1/x86_64-linux-feroxbuster.zip", "0978619a10049ccaad290b2d1241bc4d8a6aac18da07d6231186fb9d343f99de"],
       "linux-arm64": ["https://github.com/epi052/feroxbuster/releases/download/v2.13.1/aarch64-linux-feroxbuster.zip", "1e5244e1f52e55a647b65e0c76ae7afe0b9983c1fbea30ed7c67e477175eb381"],

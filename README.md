@@ -13,7 +13,7 @@
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.26.11+-00ADD8?style=flat-square&logo=go&logoColor=white" alt="Go 1.26.11+"></a>
   <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Compatible-ff2d2d?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIzIi8+PC9zdmc+" alt="MCP Compatible"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-bf5fff?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-277-00fff2?style=flat-square" alt="277 Tools"></a>
+  <a href="https://github.com/yasindce1998/redhands"><img src="https://img.shields.io/badge/Tools-294-00fff2?style=flat-square" alt="294 Tools"></a>
 </p>
 
 <p align="center">
@@ -58,6 +58,7 @@ sudo make install-tools PROFILE=k8s       # Kubernetes offensive tools
 sudo make install-tools PROFILE=uefi      # UEFI bootkit simulation
 sudo make install-tools PROFILE=telecom   # StaticZero telecom research (Linux only)
 sudo make install-tools PROFILE=aegis     # Aegis-Shadow eBPF research (Linux only)
+sudo make install-tools PROFILE=sbom     # SBOM + vulnerability scanning (syft, grype)
 sudo make install-tools PROFILE=recon     # deep reconnaissance tools
 sudo make install-tools PROFILE=all       # everything
 
@@ -119,7 +120,8 @@ docker compose run --rm -i redhands
 | `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offensive (eBPF) |
 | `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI bootkit adversary simulation |
 | `telecom` | staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge | Telecom security research (eBPF, Linux only) |
-| `aegis` | aegis-shadow-defense, aegis-shadow-offense | Linux eBPF security research (Aegis-Shadow) |
+| `aegis` | aegis-shadow-defense, aegis-shadow-offense, aegis-c2 | Linux eBPF security research (Aegis-Shadow) |
+| `sbom` | syft, grype | SBOM generation and vulnerability scanning |
 | `recon` | recon set (subfinder, amass, dig, waybackurls, gau, arjun) + web set (httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
 | `all` | Everything | Full offensive toolkit |
 
@@ -155,7 +157,7 @@ Tool failures return a nonzero exit status; calls are never retried automaticall
 
 ## Available Tools
 
-277 tools are registered across 32 toolsets. A default startup serves 270 of
+294 tools are registered across 36 toolsets. A default startup serves 287 of
 them: the two credstore tools additionally require `REDHANDS_CREDSTORE_KEY`,
 and the five GoPhish phishing tools additionally require `REDHANDS_GOPHISH_*`
 environment variables.
@@ -217,6 +219,22 @@ environment variables.
 |------|-------------|
 | `nuclei_scan` | Template-based vulnerability scanning |
 
+### Rubeus (toolset: `rubeus`)
+
+Kerberos interaction toolkit — for Windows engagement hosts running RedHands
+with an operator-compiled `Rubeus.exe` allowlisted as `rubeus` (GhostPack
+ships no compiled releases by design; Linux execution is not possible — the
+tool P/Invokes Windows LSA APIs).
+
+| Tool | Description |
+|------|-------------|
+| `rubeus_kerberoast` | ⚠️ Roast Kerberos service tickets (rc4/aes/rc4opsec; approval-gated) |
+| `rubeus_asktgt` | ⚠️ Request a TGT (password / rc4 / aes256 credential forms) |
+| `rubeus_asreproast` | ⚠️ Roast AS-REP accounts (john/hashcat output formats) |
+| `rubeus_harvest` | ⚠️ Harvest/monitor tickets in memory |
+| `rubeus_dump` | ⚠️ Dump Kerberos tickets (by LUID or filter) |
+| `rubeus_describe` | Decode and describe a base64 ticket |
+
 ### Impacket (toolset: `impacket`)
 
 | Tool | Description |
@@ -263,7 +281,8 @@ environment variables.
 | `hashcat_show` | Show cracked from potfile |
 | `john_crack` | Crack passwords with John the Ripper |
 | `john_show` | Show cracked passwords |
-| `john_formats` | List supported hash formats |
+| `john_formats` | List supported hash formats (graceful degradation on core john builds) |
+| `hydra_attack` | ⚠️ Online password attacks against 17 services (SSH, FTP, HTTP forms, SMB, RDP, databases...; approval-gated; authorized targets only) |
 
 ### CrackMapExec (toolset: `crackmapexec`)
 
@@ -408,6 +427,44 @@ offense rootkit loader can each be started as a managed background daemon
 | `aegis_offense_stop` | Stop a managed offense loader daemon |
 | `aegis_offense_status` | Status of managed offense loader daemons |
 | `aegis_c2_send` | ☠️ Send a command to a running rootkit over its encrypted C2 channel (hide/unhide pid, obfuscate file, exfil, kill-switch; fire-and-forget; requires the `aegis-c2` CLI from Aegis-Shadow ≥ v0.2.0) |
+
+### Searchsploit (toolset: `searchsploit`)
+
+ExploitDB search and CVE enrichment — the connective tissue from scanner findings
+to Metasploit: nuclei finding → CVE → public exploits → `msf_module_run`.
+Requires the `searchsploit` binary + on-disk database (distro `exploitdb`
+package — manual install, not checksum-pinnable).
+
+| Tool | Description |
+|------|-------------|
+| `searchsploit_search` | Search ExploitDB by keyword (JSON results) |
+| `searchsploit_cve` | Map a CVE ID to public exploits (EDB-IDs, paths) |
+| `searchsploit_edb` | Look up an EDB-ID (exploit file path + copy hint) |
+| `cve_enrich` | Extract CVEs from scanner output text, map to exploits, and suggest Metasploit modules (EDB `.rb` paths → `msf_module_run` candidates) |
+
+### Firmware / binwalk (toolset: `firmware`)
+
+Generic embedded firmware analysis with binwalk v2 — completes the firmware
+story alongside UEFI (Barzakh) and baseband (modem-firmware). Requires
+`binwalk` (v2, Python — distro/pip manual install; do **not** use the v3 Rust
+rewrite, different CLI).
+
+| Tool | Description |
+|------|-------------|
+| `firmware_scan` | Signature scan with a structured JSON summary (signatures → record rules) |
+| `firmware_extract` | ⚠️ Extract embedded filesystems/images into an output directory (runs external extractors on untrusted data; approval-gated) |
+| `firmware_entropy` | Entropy analysis (encrypted/compressed region detection) |
+
+### SBOM (toolset: `sbom`)
+
+SBOM generation and vulnerability scanning with Anchore syft + grype —
+checksum-pinned releases, installed by the `sbom` profile.
+
+| Tool | Description |
+|------|-------------|
+| `sbom_generate` | Generate an SBOM (syft-json, CycloneDX, SPDX) from an image, directory, or file |
+| `vuln_scan_image` | Vulnerability-scan an image or SBOM with grype (exit-2-on-findings surfaced as a result with a severity summary) |
+| `vuln_scan_sbom` | Scan an existing SBOM file with grype |
 
 ### Metasploit (toolset: `msf`)
 
@@ -838,7 +895,7 @@ make test           # Run tests with race detector
 make lint           # Run golangci-lint
 make docker         # Build Docker image
 make install        # Install binary to /usr/local/bin
-make install-tools  # Install security tools (PROFILE=minimal|web|network|ad|k8s|uefi|telecom|aegis|recon|all)
+make install-tools  # Install security tools (PROFILE=minimal|web|network|ad|k8s|uefi|telecom|aegis|sbom|recon|all)
 make check-deps     # Check which tools are available
 ```
 

@@ -142,3 +142,40 @@ jobs:
 
       - name: Live binary flag-surface tests
         run: go test -tags=livebin ./tools/livecheck/... -run TestLiveFlagSurface -v
+
+  # Tier 3 live end-to-end tests: REAL tool execution through the full
+  # server stack (JSON-RPC → middleware → wrapper → BinaryExecutor →
+  # binary) against safe, test-owned local targets only; see tools/e2e.
+  # Installs just the binaries the scenarios need (nmap via apt, nuclei
+  # via the pinned go install, the rest via the checksum-verified pinned
+  # releases in scripts/dependencies.json).
+  live-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Install apt binaries
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nmap
+
+      - name: Install pinned release binaries
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          for tool in barzakh-scanner barzakh-adversary \
+                      staticzero-defense modem-firmware kubedagger-client; do
+            python3 scripts/dependencies.py install "$tool" --output "$HOME/.local/bin"
+          done
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install pinned Go tools
+        run: |
+          GOBIN="$HOME/.local/bin" CGO_ENABLED=0 go install "$(python3 scripts/dependencies.py go nuclei)"
+
+      - name: Live end-to-end tests
+        run: go test -tags=livee2e ./tools/e2e/... -v

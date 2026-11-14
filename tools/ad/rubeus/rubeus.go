@@ -122,9 +122,10 @@ func (t *KerberoastTool) Execute(ctx context.Context, params json.RawMessage) (*
 	}
 
 	args := []string{"kerberoast"}
-	if input.Op == "aes" {
+	switch input.Op {
+	case "aes":
 		args = append(args, "/aes")
-	} else if input.Op == "rc4opsec" {
+	case "rc4opsec":
 		args = append(args, "/rc4opsec")
 	}
 	if input.User != "" {

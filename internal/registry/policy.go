@@ -85,6 +85,23 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 	for _, name := range []string{"msf_payload_list", "msf_module_info"} {
 		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true}
 	}
+	// Searchsploit/CVE enrichment: read-only queries against the local
+	// exploitdb database.
+	for _, name := range []string{"searchsploit_search", "searchsploit_cve", "searchsploit_edb", "cve_enrich"} {
+		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true}
+	}
+	// Firmware signature scanning and entropy analysis are read-only;
+	// extraction runs external extractors on untrusted carved data and
+	// stays approval-gated.
+	for _, name := range []string{"firmware_scan", "firmware_entropy"} {
+		policies[name] = mcp.ToolPolicy{ReadOnly: true}
+	}
+	// SBOM generation reads the source and writes at most one report
+	// file; vulnerability scans sync the grype DB (network).
+	policies["sbom_generate"] = mcp.ToolPolicy{ReadOnly: true}
+	for _, name := range []string{"vuln_scan_image", "vuln_scan_sbom"} {
+		policies[name] = mcp.ToolPolicy{NetworkAccess: true}
+	}
 	// Metasploit module execution and operator resource files launch
 	// exploits against targets; approval-gated, never auto-approved.
 	for _, name := range []string{"msf_module_run", "msf_resource_run"} {

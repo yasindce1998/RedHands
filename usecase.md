@@ -35,10 +35,10 @@ A comprehensive reference for all scenarios, workflows, and configurations suppo
 
 ## Overview
 
-RedHands is an MCP (Model Context Protocol) server that exposes 277 registered offensive security tools across 32 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
+RedHands is an MCP (Model Context Protocol) server that exposes 294 registered offensive security tools across 36 toolsets to AI assistants via JSON-RPC 2.0. It enables AI-driven penetration testing, red team operations, and security assessments through a standardized protocol.
 
 **Key Features:**
-- 277 registered tools across 32 specialized toolsets (270 on a default startup; credstore and GoPhish tools are env-gated)
+- 294 registered tools across 36 specialized toolsets (287 on a default startup; credstore and GoPhish tools are env-gated)
 - Zero external Go dependencies (stdlib only)
 - Three transport modes: stdio, SSE, WebSocket
 - Built-in authentication (API key, mTLS)
@@ -116,7 +116,8 @@ The Docker image includes a subset of supported security tools (see docs/depende
 | `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offense |
 | `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI firmware security |
 | `telecom` | staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge | Telecom security research (eBPF, Linux only) |
-| `aegis` | aegis-shadow-defense, aegis-shadow-offense | Linux eBPF research (Aegis-Shadow) |
+| `aegis` | aegis-shadow-defense, aegis-shadow-offense, aegis-c2 | Linux eBPF research (Aegis-Shadow) |
+| `sbom` | syft, grype | SBOM generation and vulnerability scanning |
 | `recon` | recon+web toolsets (subfinder, amass, dig, waybackurls, gau, arjun, httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
 | `all` | Everything above combined | Full offensive toolkit |
 
@@ -259,13 +260,17 @@ REDHANDS_TOOLSETS=nmap,recon,web ./redhands
 | `barzakh` | 24 | UEFI Firmware Security |
 | `telecom` | 24 | Telecom/Baseband Security (StaticZero) |
 | `aegis` | 13 | Linux eBPF Research (Aegis-Shadow) |
+| `searchsploit` | 4 | ExploitDB / CVE Enrichment |
+| `firmware` | 3 | Embedded Firmware (binwalk) |
+| `sbom` | 3 | SBOM / Vulnerability Scanning (syft + grype) |
+| `rubeus` | 6 | Kerberos Abuse (Windows hosts) |
 | `msf` | 5 | Metasploit Framework |
 | `campaign` | 8 | Campaign lifecycle operations |
 
 The table shows the core assessment toolsets; the registry also gates
 `bloodhound`, `responder`, `evilwinrm`, `coercion`, `phishing`, `wireless`,
 `mobile`, `cloud`, `targetdb`, `intelligence`, `operations`, and `reporting`
-(32 toolsets total).
+(36 toolsets total).
 
 ---
 

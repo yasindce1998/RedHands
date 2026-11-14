@@ -20,7 +20,7 @@
 #>
 
 param(
-    [ValidateSet("all", "web", "network", "ad", "k8s", "uefi", "telecom", "aegis", "recon", "minimal")]
+    [ValidateSet("all", "web", "network", "ad", "k8s", "uefi", "telecom", "aegis", "sbom", "recon", "minimal")]
     [string]$Profile = "all",
     [switch]$Check,
     [switch]$List,
@@ -60,6 +60,7 @@ $ToolProfiles = @{
     uefi    = @("barzakh-adversary", "barzakh-scanner", "barzakh-server")
     telecom = @("staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge")
     aegis   = @("aegis-shadow-defense", "aegis-shadow-offense", "aegis-c2")
+    sbom    = @("syft", "grype")
     recon   = @("subfinder", "httpx", "katana", "whatweb", "arjun", "gau", "waybackurls", "amass")
     minimal = @("nmap", "nuclei", "httpx", "subfinder")
 }
@@ -264,7 +265,7 @@ function Install-BinaryReleases {
     $python = if (Test-Tool "python") { "python" } elseif (Test-Tool "python3") { "python3" } else { $null }
     if (-not $python) { throw "Python 3 is required for verified binary installation" }
     $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } elseif ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "386" }
-    foreach ($name in @("chisel", "ligolo-proxy", "kubedagger-client", "kubedagger-operator", "kubedagger-server", "barzakh-adversary", "barzakh-scanner", "barzakh-server", "staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge", "aegis-shadow-defense", "aegis-shadow-offense", "aegis-c2", "feroxbuster")) {
+    foreach ($name in @("chisel", "ligolo-proxy", "kubedagger-client", "kubedagger-operator", "kubedagger-server", "barzakh-adversary", "barzakh-scanner", "barzakh-server", "staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge", "aegis-shadow-defense", "aegis-shadow-offense", "aegis-c2", "syft", "grype", "feroxbuster")) {
         if (($tools -contains $name) -and -not (Test-Tool $name)) {
             $variants = $DependencyLock.artifacts.$name
             if (-not $variants."windows-$arch") {

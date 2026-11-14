@@ -4,7 +4,7 @@
 
 RedHands is an MCP (Model Context Protocol) server that exposes offensive security tools to AI agents. It follows the same architecture patterns used by GitHub's MCP server and Atlassian's MCP server — a single-binary Go server with zero external dependencies, multi-transport support (stdio/SSE/WebSocket), tool chaining, structured output parsing, report generation, and a JSON plugin system.
 
-**Current state:** v0.5.0 — 277 registered tools across 32 toolsets, multi-transport (stdio/SSE/WebSocket), authentication (API key/mTLS), sequential workflow engine plus the multi-stage campaign engine (conditions, parallelism, goto recovery, checkpoint/resume, playbooks, engagement binding, target-database recording, MITRE ATT&CK tagging), managed daemon lifecycle for defense engines and C2/scanner servers, structured parsers, report generation, plugin system, Docker image with a verified tool subset.
+**Current state:** v0.5.0 — 294 registered tools across 36 toolsets, multi-transport (stdio/SSE/WebSocket), authentication (API key/mTLS), sequential workflow engine plus the multi-stage campaign engine (conditions, parallelism, goto recovery, checkpoint/resume, playbooks, engagement binding, target-database recording, MITRE ATT&CK tagging), managed daemon lifecycle for defense engines and C2/scanner servers, structured parsers, report generation, plugin system, Docker image with a verified tool subset.
 
 ---
 
@@ -47,7 +47,7 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 
 ---
 
-## Toolsets & Tools (277 registered across 32 toolsets)
+## Toolsets & Tools (294 registered across 36 toolsets)
 
 ### Toolset: `nmap` — Nmap Suite (4 tools)
 
@@ -295,7 +295,7 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 
 ### Default Toolsets
 
-When `REDHANDS_TOOLSETS` is unset: all toolsets are enabled. 270 tools are registered on default startup; the 5 GoPhish tools additionally require `REDHANDS_GOPHISH_URL`/`REDHANDS_GOPHISH_API_KEY` and the 2 credstore tools additionally require `REDHANDS_CREDSTORE_KEY`, for 277 registered tools in total.
+When `REDHANDS_TOOLSETS` is unset: all toolsets are enabled. 287 tools are registered on default startup; the 5 GoPhish tools additionally require `REDHANDS_GOPHISH_URL`/`REDHANDS_GOPHISH_API_KEY` and the 2 credstore tools additionally require `REDHANDS_CREDSTORE_KEY`, for 294 registered tools in total.
 
 ---
 
@@ -419,7 +419,7 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 - **New toolsets**: `telecom` (StaticZero — doctor, firmware analysis, SDR scan, defense API; 12 tools) and `aegis` (Aegis-Shadow analysis; 9 tools)
 - **Managed daemon lifecycle with secret redaction**: `kubedagger_server_{start,stop,status}` and `barzakh_server_{start,stop,status}` via the background process manager, which redacts secret-bearing flag values in all recorded argv
 - **Docker image**: `kubedagger-server` and `barzakh-server` installed via the checksum-verified dependency lock
-- **277 registered tools** across 32 toolsets
+- **294 registered tools** across 32 toolsets
 
 ### v0.4.0 — Offensive Security Platform Expansion
 
@@ -542,7 +542,7 @@ The health endpoint planned for this milestone is done: `GET /health` is availab
 | Concurrent scans supported | 10+ simultaneous without degradation |
 | Binary startup time | <100ms to first `tools/list` response |
 | Test coverage | >80% on pkg/ packages |
-| Supported tools | 277 registered (v0.6.x), expanding |
+| Supported tools | 294 registered (v0.6.x), expanding |
 | Container image size | <500MB with all tools installed |
 | Zero external Go dependencies | Maintained across all releases |
 
@@ -556,6 +556,6 @@ The health endpoint planned for this milestone is done: `GET /health` is availab
 | mcp-atlassian | Jira/Confluence | Different domain; Python, similar patterns |
 | PentestGPT | AI pentesting | Monolithic, no MCP, not composable |
 | HackerGPT | AI security chat | Chat-only, no tool protocol |
-| RedHands | Security tool MCP | Standardized MCP protocol, composable with any AI agent, 277 registered tools |
+| RedHands | Security tool MCP | Standardized MCP protocol, composable with any AI agent, 294 registered tools |
 
 RedHands is the first production-grade MCP server purpose-built for offensive security tooling.

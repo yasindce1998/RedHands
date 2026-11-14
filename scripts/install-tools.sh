@@ -48,6 +48,7 @@ Profiles:
   uefi       UEFI bootkit simulation (barzakh-adversary, barzakh-scanner, barzakh-server)
   telecom    Telecom research (staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge)
   aegis      Linux eBPF research (aegis-shadow-defense, aegis-shadow-offense, aegis-c2)
+  sbom       SBOM generation and vulnerability scanning (syft, grype)
   recon      Reconnaissance only (subfinder, amass, dns, wayback, gau, arjun)
   minimal    Just the essentials (nmap, nuclei, httpx, subfinder)
 
@@ -99,6 +100,7 @@ TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator kubedagger-server"
 TOOLS_BARZAKH="barzakh-adversary barzakh-scanner barzakh-server"
 TOOLS_TELECOM="staticzero-defense staticzero-offense modem-firmware sdr-bridge"
 TOOLS_AEGIS="aegis-shadow-defense aegis-shadow-offense aegis-c2"
+TOOLS_SBOM="syft grype"
 
 get_profile_tools() {
     case "$1" in
@@ -128,6 +130,9 @@ get_profile_tools() {
             ;;
         aegis)
             echo "$TOOLS_AEGIS"
+            ;;
+        sbom)
+            echo "$TOOLS_SBOM"
             ;;
         minimal)
             echo "nmap nuclei httpx subfinder"

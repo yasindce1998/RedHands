@@ -17,6 +17,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/ad/bloodhound"
 	"github.com/yasindce1998/redhands/tools/ad/coercion"
 	"github.com/yasindce1998/redhands/tools/ad/evilwinrm"
+	"github.com/yasindce1998/redhands/tools/ad/rubeus"
 	"github.com/yasindce1998/redhands/tools/ad/responder"
 	"github.com/yasindce1998/redhands/tools/aegis"
 	"github.com/yasindce1998/redhands/tools/analysis/tshark"
@@ -25,6 +26,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/campaign"
 	"github.com/yasindce1998/redhands/tools/cloud"
 	"github.com/yasindce1998/redhands/tools/crack/hashcat"
+	"github.com/yasindce1998/redhands/tools/crack/hydra"
 	"github.com/yasindce1998/redhands/tools/crack/john"
 	"github.com/yasindce1998/redhands/tools/exploit/certipy"
 	"github.com/yasindce1998/redhands/tools/exploit/crackmapexec"
@@ -45,12 +47,15 @@ import (
 	"github.com/yasindce1998/redhands/tools/recon/subfinder"
 	"github.com/yasindce1998/redhands/tools/recon/wayback"
 	"github.com/yasindce1998/redhands/tools/reporting"
+	"github.com/yasindce1998/redhands/tools/sbom"
 	"github.com/yasindce1998/redhands/tools/scan/masscan"
 	nmaptools "github.com/yasindce1998/redhands/tools/scan/nmap"
 	"github.com/yasindce1998/redhands/tools/scan/rustscan"
+	"github.com/yasindce1998/redhands/tools/searchsploit"
 	"github.com/yasindce1998/redhands/tools/social/phishing"
 	"github.com/yasindce1998/redhands/tools/system/health"
 	targetdbtools "github.com/yasindce1998/redhands/tools/targetdb"
+	"github.com/yasindce1998/redhands/tools/firmware"
 	"github.com/yasindce1998/redhands/tools/telecom"
 	"github.com/yasindce1998/redhands/tools/tunnel/chisel"
 	"github.com/yasindce1998/redhands/tools/tunnel/ligolo"
@@ -166,6 +171,7 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		register(john.NewCrack(d.Exec))
 		register(john.NewShow(d.Exec))
 		register(john.NewFormats(d.Exec))
+		register(hydra.NewAttack(d.Exec))
 	}
 
 	if d.Cfg.ToolsetEnabled("crackmapexec") {
@@ -296,6 +302,18 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		}
 	}
 
+	if d.Cfg.ToolsetEnabled("firmware") {
+		register(firmware.NewFirmwareScan(d.Exec))
+		register(firmware.NewFirmwareExtract(d.Exec))
+		register(firmware.NewFirmwareEntropy(d.Exec))
+	}
+
+	if d.Cfg.ToolsetEnabled("sbom") {
+		register(sbom.NewSbomGenerate(d.Exec))
+		register(sbom.NewVulnScanImage(d.Exec))
+		register(sbom.NewVulnScanSbom(d.Exec))
+	}
+
 	if d.Cfg.ToolsetEnabled("telecom") {
 		register(telecom.NewDoctor(d.Exec))
 		register(telecom.NewFirmwareAnalyze(d.Exec))
@@ -331,6 +349,13 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		register(msf.NewModuleInfo(d.Exec))
 		register(msf.NewModuleRun(d.Exec))
 		register(msf.NewResourceRun(d.Exec))
+	}
+
+	if d.Cfg.ToolsetEnabled("searchsploit") {
+		register(searchsploit.NewSearch(d.Exec))
+		register(searchsploit.NewCve(d.Exec))
+		register(searchsploit.NewEdb(d.Exec))
+		register(searchsploit.NewEnrich(d.Exec))
 	}
 
 	if d.Cfg.ToolsetEnabled("aegis") {
@@ -378,6 +403,15 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 		register(coercion.NewPrinterBug(d.Exec))
 		register(coercion.NewDFSCoerce(d.Exec))
 		register(coercion.NewCheck(d.Exec))
+	}
+
+	if d.Cfg.ToolsetEnabled("rubeus") {
+		register(rubeus.NewKerberoast(d.Exec))
+		register(rubeus.NewAskTgt(d.Exec))
+		register(rubeus.NewAsRepRoast(d.Exec))
+		register(rubeus.NewHarvest(d.Exec))
+		register(rubeus.NewDump(d.Exec))
+		register(rubeus.NewDescribe(d.Exec))
 	}
 
 	if d.Cfg.ToolsetEnabled("phishing") {

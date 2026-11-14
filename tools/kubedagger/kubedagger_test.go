@@ -276,6 +276,49 @@ func TestK8sDiscover_Execute(t *testing.T) {
 	assertExactArgs(t, call.Args, "k8s", "discover", "--namespace", "default")
 }
 
+// The pinned kubedagger-client binary exits 0 with empty stdout when
+// discovery fails, with the error text on stderr only (see
+// testdata/kubedagger/k8s-discover-no-kubeconfig.stderr). Empty stdout with
+// a non-empty stderr must surface as an error, while empty stdout with an
+// empty stderr is a genuinely empty result and stays a success.
+func TestK8sDiscover_EmptyOutputHandling(t *testing.T) {
+	t.Run("empty stdout and empty stderr is a successful empty result", func(t *testing.T) {
+		mock := executor.NewMock()
+		tool := NewK8sDiscover(mock)
+
+		result, err := tool.Execute(context.Background(), mustJSON(map[string]any{"namespace": "default"}))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.IsError {
+			t.Fatalf("empty stdout + empty stderr must stay a successful empty result: %s", result.Content[0].Text)
+		}
+		if !strings.Contains(result.Content[0].Text, "No resources found.") {
+			t.Errorf("expected empty-result shape, got: %s", result.Content[0].Text)
+		}
+	})
+
+	t.Run("whitespace stdout with stderr is an error", func(t *testing.T) {
+		mock := executor.NewMock()
+		mock.StdoutFn = func(_ string, _ []string) []byte { return []byte("  \n\t") }
+		mock.StderrFn = func(_ string, _ []string) []byte {
+			return []byte("Error: k8s client init failed: no configuration has been provided")
+		}
+		tool := NewK8sDiscover(mock)
+
+		result, err := tool.Execute(context.Background(), mustJSON(map[string]any{"namespace": "default"}))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !result.IsError {
+			t.Fatalf("whitespace-only stdout + stderr must be an error: %s", result.Content[0].Text)
+		}
+		if !strings.Contains(result.Content[0].Text, "k8s client init failed") {
+			t.Errorf("expected stderr text in error, got: %s", result.Content[0].Text)
+		}
+	})
+}
+
 func TestContainerEscape_Execute(t *testing.T) {
 	mock := executor.NewMock()
 	mock.StdoutFn = func(_ string, _ []string) []byte {

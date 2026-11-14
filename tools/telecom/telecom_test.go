@@ -336,6 +336,40 @@ func TestFirmwareAnalyze_Execute(t *testing.T) {
 	assertArgs(t, call.Args, "--report", report)
 }
 
+func TestFirmwareAnalyze_NormalizesSeveritiesToLowercase(t *testing.T) {
+	dir := t.TempDir()
+	target := tempFirmwareFile(t, "modem.mbn")
+	report := filepath.Join(dir, "fw_analysis.json")
+	if err := os.WriteFile(report, []byte(`{"firmware_path":"`+target+`","chipset":"Qualcomm","findings":[{"severity":"High","title":"Weak cipher support"},{"severity":"Info","title":"Debug interface"}]}`), 0o600); err != nil {
+		t.Fatalf("write report: %v", err)
+	}
+
+	mock := executor.NewMock()
+	tool := NewFirmwareAnalyze(mock)
+
+	result, err := tool.Execute(context.Background(), mustJSON(map[string]any{
+		"target":  target,
+		"chipset": "qualcomm",
+		"report":  report,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", result.Content[0].Text)
+	}
+
+	text := result.Content[0].Text
+	if strings.Contains(text, `"High"`) || strings.Contains(text, `"Info"`) {
+		t.Errorf("capitalized severities must be normalized to lowercase:\n%s", text)
+	}
+	for _, want := range []string{`"severity": "high"`, `"severity": "info"`} {
+		if !strings.Contains(text, want) {
+			t.Errorf("expected normalized severity %s in embedded report, got: %s", want, text)
+		}
+	}
+}
+
 func TestFirmwareAnalyze_FallsBackToStdout(t *testing.T) {
 	target := tempFirmwareFile(t, "modem.mbn")
 	mock := executor.NewMock()

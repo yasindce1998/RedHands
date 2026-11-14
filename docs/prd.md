@@ -2,9 +2,9 @@
 
 ## Overview
 
-RedHands is an MCP (Model Context Protocol) server that exposes offensive security tools to AI agents. It follows the same architecture patterns used by GitHub's MCP server and Atlassian's MCP server — a single-binary Go server with zero external dependencies, multi-transport support (stdio/SSE/WebSocket), tool chaining, structured output parsing, report generation, and a JSON plugin system.
+RedHands is an MCP (Model Context Protocol) server that exposes offensive security tools to AI agents. It follows the same architecture patterns used by GitHub's MCP server and Atlassian's MCP server — a single-binary Go server with zero external dependencies, multi-transport support (stdio/SSE/HTTP/WebSocket), tool chaining, structured output parsing, report generation, and a JSON plugin system.
 
-**Current state:** v0.5.0 — 294 registered tools across 36 toolsets, multi-transport (stdio/SSE/WebSocket), authentication (API key/mTLS), sequential workflow engine plus the multi-stage campaign engine (conditions, parallelism, goto recovery, checkpoint/resume, playbooks, engagement binding, target-database recording, MITRE ATT&CK tagging), managed daemon lifecycle for defense engines and C2/scanner servers, structured parsers, report generation, plugin system, Docker image with a verified tool subset.
+**Current state:** v0.6.3 — 294 registered tools across 36 toolsets, multi-transport (stdio/SSE/HTTP/WebSocket) with the dual-era MCP protocol handshake (modern `2026-07-28` plus legacy `2025-03-26`/`2024-11-05` clients), authentication (API key/mTLS), sequential workflow engine plus the multi-stage campaign engine (conditions, parallelism, goto recovery, checkpoint/resume, playbooks, engagement binding, target-database recording, MITRE ATT&CK tagging), Metasploit integration (validated `.rc` resource-file generation instead of `msfconsole -x`), operator approval gating via `REDHANDS_APPROVED_TOOLS`, managed daemon lifecycle for defense engines and C2/scanner servers, structured parsers, report generation, plugin system, Docker image with a verified tool subset, and a three-tier testing pyramid (Tier 1 `livecheck` CLI drift checks, Tier 2 golden fixtures in `testdata/`, Tier 3 live end-to-end suite in `tools/e2e`).
 
 ---
 
@@ -143,7 +143,7 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 | `ligolo_route` | ligolo-proxy | Add routes through tunnel |
 | `ligolo_listener` | ligolo-proxy | Manage listeners on agent |
 
-### Toolset: `crack` — Password Cracking (6 tools)
+### Toolset: `crack` — Password Cracking (7 tools)
 
 | Tool | Binary | Description |
 |------|--------|-------------|
@@ -153,6 +153,7 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 | `john_crack` | john | Crack passwords with John the Ripper |
 | `john_show` | john | Show cracked passwords |
 | `john_formats` | john | List supported hash formats |
+| `hydra_attack` | hydra | THC-Hydra online password attacks (dictionary or login-derived) against a network service |
 
 ### Toolset: `crackmapexec` — Network Protocol Attacks (5 tools)
 
@@ -192,19 +193,24 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 | 66 eBPF-powered CLI wrappers | kubedagger-client | Container escape, syscall hooking, network sniffing, process hiding, crypto mining, rootkit deployment, C2/disruption/evasion, operator tooling, and more |
 | `kubedagger_server_start/stop/status` | kubedagger-server | Managed C2 server daemon lifecycle (events feed `kubedagger_report`) |
 
-### Toolset: `barzakh` — UEFI Bootkit Adversary Simulation (13 tools)
+### Toolset: `barzakh` — UEFI Bootkit Adversary Simulation (24 tools)
 
 | Tool | Binary | Description |
 |------|--------|-------------|
 | `barzakh_list`, `barzakh_generate`, `barzakh_corpus`, `barzakh_scan`, `barzakh_validate`, `barzakh_scenario`, `barzakh_robustness`, `barzakh_detectors`, `barzakh_baseline`, `barzakh_intel` | barzakh-adversary | UEFI bootkit payload generation/corpus management and scanning with 138 detectors, scenario validation, robustness/detector/baseline/intel tooling |
+| `barzakh_inject`, `barzakh_esp_build`, `barzakh_qemu`, `barzakh_range`, `barzakh_fuzz` | barzakh-adversary | Adversary simulation: payload implantation into firmware images, bootable ESP generation, QEMU/OVMF emulation runs, cyber-range suites with assert-on-detection, protocol-aware firmware fuzzing |
+| `barzakh_history`, `barzakh_kb`, `barzakh_ml`, `barzakh_manifest_validate`, `barzakh_info`, `barzakh_report` | barzakh-scanner / barzakh-adversary | SQLite scan history queries, firmware knowledge base, ML anomaly model training/evaluation, labeled-corpus manifest validation, scanner metadata, multi-format report generation |
 | `barzakh_server_start/stop/status` | barzakh-server | Managed REST scanner-server daemon lifecycle |
 
 ### Toolset: `telecom` — StaticZero Telecom Defense (24 tools)
 
 | Tool | Binary | Description |
 |------|--------|-------------|
-| `telecom_doctor`, `telecom_firmware_analyze`, `telecom_firmware_extract`, `telecom_firmware_diff`, `telecom_firmware_nv_dump`, `telecom_sdr_scan` | staticzero-defense / modem-firmware / sdr-bridge | Defense preflight, baseband firmware static analysis, receive-only LTE scanning |
+| `telecom_doctor`, `telecom_firmware_analyze`, `telecom_firmware_extract`, `telecom_firmware_diff`, `telecom_firmware_nv_dump`, `telecom_firmware_patch`, `telecom_firmware_monitor` | staticzero-defense / modem-firmware | Defense preflight, baseband firmware static analysis/extraction/diffing, NV item dump, patching, and device protocol-stream monitoring |
+| `telecom_sdr_scan`, `telecom_sdr_capture`, `telecom_sdr_inject`, `telecom_sdr_relay`, `telecom_sdr_selftest` | sdr-bridge | Receive-only LTE scanning and IQ capture; regulated RF transmission, relay, and TX self-test (approval-gated) |
 | `telecom_threats`, `telecom_alerts`, `telecom_stats`, `telecom_defense_start/stop/status` | staticzero-defense | Defense-engine HTTP queries and managed defense-engine lifecycle |
+| `telecom_offense_start/stop/status` | staticzero-offense | Managed telecom interception research loader lifecycle (F89–F172; regulated; lab use only; approval-gated) |
+| `telecom_correlator_start/stop/status` | staticzero-defense | Managed protocol correlator daemon lifecycle (JSON-lines event ingest on loopback) |
 
 ### Toolset: `aegis` — Aegis-Shadow Analysis (13 tools)
 
@@ -212,6 +218,89 @@ RedHands is an MCP (Model Context Protocol) server that exposes offensive securi
 |------|--------|-------------|
 | `aegis_alerts_parse`, `aegis_alerts_tail`, `aegis_modules_list`, `aegis_defense_config_read`, `aegis_defense_config_write`, `aegis_offense_plan` | aegis-shadow | Read-only rootkit alert parsing/tailing, module catalog, defense config, offense planning (renders the manual command line instead of executing it) |
 | `aegis_defense_start/stop/status` | aegis-shadow-defense | Managed defense-engine lifecycle |
+| `aegis_offense_start/stop/status` | aegis-shadow-offense | Managed eBPF rootkit loader daemon lifecycle (destructive `deadman_switch`/`wipe_bytecode` opt-in; lab VM only; approval-gated) |
+| `aegis_c2_send` | aegis-c2 | Send a command to a running rootkit over its encrypted C2 channel (approval-gated) |
+
+### Toolset: `rubeus` — Kerberos Abuse (6 tools, Windows hosts)
+
+Wraps an operator-compiled `Rubeus.exe` allowlisted as `rubeus` (GhostPack ships no
+compiled releases; Linux execution is not possible — the tool P/Invokes Windows LSA APIs).
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `rubeus_kerberoast` | rubeus | Roast Kerberos service tickets (rc4/aes/rc4opsec; approval-gated) |
+| `rubeus_asktgt` | rubeus | Request a TGT (password / rc4 / aes256 credential forms) |
+| `rubeus_asreproast` | rubeus | Roast AS-REP accounts (john/hashcat output formats) |
+| `rubeus_harvest` | rubeus | Harvest/monitor tickets in memory |
+| `rubeus_dump` | rubeus | Dump Kerberos tickets (by LUID or filter) |
+| `rubeus_describe` | rubeus | Decode and describe a base64 ticket |
+
+### Toolset: `searchsploit` — ExploitDB / CVE Enrichment (4 tools)
+
+Connective tissue from scanner findings to Metasploit: nuclei finding → CVE →
+public exploits → `msf_module_run`. Requires the `searchsploit` binary plus its
+on-disk database (distro `exploitdb` package — manual install, not checksum-pinnable).
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `searchsploit_search` | searchsploit | Search the local ExploitDB database by keyword (JSON results) |
+| `searchsploit_cve` | searchsploit | Map a CVE ID to public exploits (EDB-IDs, paths) |
+| `searchsploit_edb` | searchsploit | Resolve an EDB-ID (exploit file path + copy hint) |
+| `cve_enrich` | searchsploit | Extract CVEs from scanner output text, map to exploits, and suggest Metasploit modules |
+
+### Toolset: `firmware` — Embedded Firmware / binwalk (3 tools)
+
+Generic embedded firmware analysis with binwalk v2 — completes the firmware
+story alongside UEFI (Barzakh) and baseband (modem-firmware). Requires `binwalk`
+(v2, Python — distro/pip manual install; not the v3 Rust rewrite).
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `firmware_scan` | binwalk | Signature scan with a structured JSON summary (signatures → record rules) |
+| `firmware_extract` | binwalk | Extract embedded filesystems/images into an output directory (approval-gated) |
+| `firmware_entropy` | binwalk | Entropy analysis (encrypted/compressed region detection) |
+
+### Toolset: `sbom` — SBOM / Vulnerability Scanning (3 tools)
+
+Anchore syft + grype, checksum-pinned releases installed by the `sbom` profile.
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `sbom_generate` | syft | Generate an SBOM (syft-json, CycloneDX, SPDX) from an image, directory, or file |
+| `vuln_scan_image` | grype | Vulnerability-scan an image or SBOM (exit-2-on-findings surfaced as a result with a severity summary) |
+| `vuln_scan_sbom` | grype | Scan an existing SBOM file with grype |
+
+### Toolset: `msf` — Metasploit Framework (5 tools)
+
+Wraps msfvenom + msfconsole. Console tools generate validated `.rc` resource
+files from structured parameters — never `msfconsole -x` — so console-command
+injection is structurally impossible. Metasploit is not checksum-pinnable;
+install it manually and the allowlist discovers `msfconsole`/`msfvenom` on PATH.
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `msf_payload_generate` | msfvenom | Generate Metasploit payloads (formats, encoders, platforms; reports SHA-256 of the artifact; approval-gated) |
+| `msf_payload_list` | msfvenom | List payloads, encoders, formats, platforms, or architectures (`--list`) |
+| `msf_module_info` | msfconsole | Show module documentation (exploit/auxiliary/post/payload/encoder/nop) |
+| `msf_module_run` | msfconsole | Run a module against targets via a generated `.rc` resource file (options map; scope-checked; approval-gated) |
+| `msf_resource_run` | msfconsole | Run an operator-authored `.rc` resource file (arbitrary console commands; approval-gated) |
+
+### Toolset: `campaign` — Campaign Lifecycle (8 tools)
+
+Lifecycle tools for the multi-stage campaign engine (see Tool Chaining /
+Workflow Engine below): every step runs through the same approval/scope/
+rate-limit middleware as a direct `tools/call`.
+
+| Tool | Binary | Description |
+|------|--------|-------------|
+| `campaign_start` | — | Launch a multi-step campaign (inline steps or a playbook template; async task creation when the Tasks extension is declared) |
+| `campaign_status` | — | Fetch persisted state for one campaign by workflow ID |
+| `campaign_list` | — | List every tracked campaign |
+| `campaign_resume` | — | Resume a paused or cancelled campaign from its last checkpoint |
+| `campaign_cancel` | — | Cancel a running campaign (already-running tool calls finish) |
+| `campaign_templates` | — | List saved playbook templates |
+| `campaign_template_get` | — | Fetch one playbook definition |
+| `campaign_template_save` | — | Validate and persist a playbook |
 
 ### Toolset: `bloodhound` — AD Graph Analysis (4 tools)
 
@@ -306,6 +395,7 @@ When `REDHANDS_TOOLSETS` is unset: all toolsets are enabled. 287 tools are regis
 | Transport | Protocol | Use Case |
 |-----------|----------|----------|
 | stdio (default) | Line-delimited JSON-RPC | Local dev with Claude Code/Cursor/VS Code |
+| HTTP (Streamable) | Modern MCP `2026-07-28`: stateless single-endpoint JSON-RPC (`/mcp`, POST-only) | Modern MCP clients |
 | SSE | HTTP + Server-Sent Events | Remote/team deployment, multiple clients |
 | WebSocket | Raw frames (stdlib, no deps) | Real-time bidirectional communication |
 
@@ -324,6 +414,11 @@ Sequential tool execution with variable substitution:
 - `$step[N].text` — Nth step's text output
 - Early abort on error
 - Combined results from all steps
+
+Multi-stage **campaigns** extend this with conditional steps, parallel fan-out,
+`goto:` failure recovery, checkpoint/resume, playbook templates, engagement
+binding, target-database recording, and MITRE ATT&CK tagging — exposed via the
+`campaign/run`-family server methods and the 8-tool `campaign` toolset.
 
 ### Structured Output Parsing
 
@@ -364,9 +459,14 @@ Non-Docker installation system for native usage:
 - `k8s` — nmap, kubedagger-client, kubedagger-operator, kubedagger-server
 - `uefi` — barzakh-adversary, barzakh-scanner, barzakh-server
 - `telecom` — staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge (Linux only)
-- `aegis` — aegis-shadow-defense (Linux only)
+- `aegis` — aegis-shadow-defense, aegis-shadow-offense, aegis-c2 (Linux only)
+- `sbom` — syft, grype (checksum-pinned releases)
 - `recon` — recon plus web sets (subfinder, amass, dig, waybackurls, gau, arjun, httpx, katana, nikto, whatweb, testssl.sh)
 - `all` — everything
+
+Sliver and Metasploit are deliberately not installed by any profile; install
+`sliver-client` and `metasploit-framework` (msfconsole/msfvenom) manually from a
+trusted release.
 
 **OS detection**: install-tools.sh detects Debian/Fedora/Arch/macOS and uses the correct package manager (apt/dnf/pacman/brew).
 
@@ -393,8 +493,10 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 | `REDHANDS_CACHE_SIZE` | `100` | Max cached results (LRU eviction) |
 | `REDHANDS_AUDIT_FILE` | `audit.jsonl` | Audit log file path |
 | `REDHANDS_TRANSPORT` | `stdio` | Transport: `stdio`, `sse`, or `ws` |
-| `REDHANDS_SSE_ADDR` | `:8080` | SSE HTTP listen address |
-| `REDHANDS_WS_ADDR` | `:8081` | WebSocket listen address |
+| `REDHANDS_SSE_ADDR` | `127.0.0.1:8080` | SSE HTTP listen address |
+| `REDHANDS_WS_ADDR` | `127.0.0.1:8081` | WebSocket listen address |
+| `REDHANDS_HTTP_ADDR` | `127.0.0.1:8082` | Streamable HTTP listen address (`REDHANDS_TRANSPORT=http`) |
+| `REDHANDS_HTTP_PATH` | `/mcp` | Streamable HTTP endpoint path |
 | `REDHANDS_AUTH` | `none` | Auth mode: `none`, `apikey`, or `mtls` |
 | `REDHANDS_API_KEY` | — | API key (required when auth=apikey) |
 | `REDHANDS_TLS_CERT` | — | TLS certificate path |
@@ -406,7 +508,18 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 
 ## Release History
 
-### v0.5.0 — Campaign Framework & Managed Servers (current)
+### v0.6.3 — Metasploit, Five New Toolsets & Testing Pyramid (current)
+
+- **Metasploit integration (toolset `msf`, 5 tools)**: payload generation via msfvenom, reference listings, module docs, and module execution — all msfconsole tooling generates validated `.rc` resource files from structured parameters (never `msfconsole -x`), so console-command injection is structurally impossible; msfvenom artifacts report SHA-256
+- **Campaign lifecycle toolset (8 tools)**: the campaign engine (shipped in v0.5.0 as server methods) is now also addressable as MCP tools — `campaign_start` (async via the Tasks extension), `campaign_status`, `campaign_list`, `campaign_resume`, `campaign_cancel`, `campaign_templates`, `campaign_template_get`, `campaign_template_save`
+- **Five new toolsets**: `searchsploit` (4 tools: ExploitDB search, CVE→exploit mapping, EDB lookup, `cve_enrich` that suggests Metasploit modules), `firmware` (3 binwalk v2 tools: scan/extract/entropy), `sbom` (3 tools: syft SBOM generation, grype vulnerability scanning of images and SBOMs), `rubeus` (6 Kerberos tools for Windows engagement hosts), and `crack` gains `hydra_attack` (7 tools total)
+- **New checksum-pinned binaries**: syft v1.57.1 and grype v0.121.3 (new `sbom` install profile); Barzakh binaries re-pinned to v0.7.1 and Aegis-Shadow to v0.2.0 (adding the `aegis-c2` CLI used by `aegis_c2_send`)
+- **Tier 1 drift checks**: `tools/livecheck` (`livebin` build tag, `make test-live`) runs real binaries and asserts the wrappers' flags/subcommands/enum values are still accepted
+- **Tier 3 live end-to-end suite**: `tools/e2e` (7 scenarios, `livee2e` build tag, `make test-e2e`) drives JSON-RPC `tools/call` and `campaign/run` requests into a fully wired in-process server against the real binaries, with deterministic localhost-only targets
+- **Dual-era MCP protocol**: modern `2026-07-28` revision plus legacy `2025-03-26`/`2024-11-05` negotiation on every transport, and a new Streamable HTTP transport (`REDHANDS_TRANSPORT=http`)
+- **294 registered tools** across 36 toolsets (287 on a default startup; 5 GoPhish + 2 credstore tools env-gated)
+
+### v0.5.0 — Campaign Framework & Managed Servers
 
 - **Multi-stage campaign engine wired at startup**: `campaign/run`, `status`, `list`, `resume`, `cancel`, `templates`, `template/get`, `template/save` — conditional steps (text and JSON-path operators), parallel fan-out with failure aggregation, `goto:` failure recovery with a bounded jump budget, per-step checkpoint/resume and cancellation; `REDHANDS_WORKFLOW_STATE_DIR`, `REDHANDS_WORKFLOW_TEMPLATES_DIR`, `REDHANDS_WORKFLOW_MAX_PARALLEL` now functional
 - **Structured dataflow**: `$prev.json.path`, `$step[N].json.path`, `${id.json.path}` extraction from raw or markdown-fenced JSON with native type preservation
@@ -419,7 +532,7 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 - **New toolsets**: `telecom` (StaticZero — doctor, firmware analysis, SDR scan, defense API; 12 tools) and `aegis` (Aegis-Shadow analysis; 9 tools)
 - **Managed daemon lifecycle with secret redaction**: `kubedagger_server_{start,stop,status}` and `barzakh_server_{start,stop,status}` via the background process manager, which redacts secret-bearing flag values in all recorded argv
 - **Docker image**: `kubedagger-server` and `barzakh-server` installed via the checksum-verified dependency lock
-- **294 registered tools** across 32 toolsets
+- **237 registered tools** across 30 toolsets
 
 ### v0.4.0 — Offensive Security Platform Expansion
 
@@ -500,7 +613,7 @@ The health endpoint planned for this milestone is done: `GET /health` is availab
 | BloodHound toolset | AD attack-path analysis | Shipped in v0.4.0 (4 tools) |
 | Responder toolset | LLMNR/NBT-NS poisoning | Shipped in v0.4.0 (4 tools) |
 | Evil-WinRM toolset | WinRM shell | Shipped in v0.4.0 (5 tools) |
-| Rubeus | Kerberos interaction toolkit | Not implemented |
+| Rubeus | Kerberos interaction toolkit | Shipped in v0.6.x (6 tools, Windows hosts) |
 
 ---
 

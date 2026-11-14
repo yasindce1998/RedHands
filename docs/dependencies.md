@@ -39,16 +39,19 @@ uses its PBKDF2 implementation rather than adding a cryptography dependency.
 
 ## Container image contents
 
-The Docker image installs every release binary in `scripts/dependencies.json`
-through the verified installer, including the KubeDagger server (C2 server for
-lab use) and the Barzakh server (REST scanner API). All three KubeDagger
-binaries (client, operator, server) are pinned to the same **v0.5.0** release,
-and all three Barzakh binaries (adversary, scanner, server) to **v0.7.0**.
+The Docker image installs its reviewed release binaries in
+`scripts/dependencies.json` through the verified installer, including the
+KubeDagger server (C2 server for lab use) and the Barzakh server (REST scanner
+API). All three KubeDagger binaries (client, operator, server) are pinned to the
+same **v0.5.0** release, and all three Barzakh binaries (adversary, scanner,
+server) to **v0.7.1**. The pinned SBOM tools (syft **v1.57.1**, grype
+**v0.121.3**) and the `aegis-c2` CLI are checksum-pinned for host installs via
+the `sbom` and `aegis` profiles, but are not bundled in the container image.
 
 The StaticZero and Aegis-Shadow defense engines also ship as verified release
 assets (Linux only, eBPF objects embedded): `staticzero-defense`,
 `modem-firmware`, and `sdr-bridge` (StaticZero v0.5.0) and
-`aegis-shadow-defense` (Aegis-Shadow v0.1.1) are installed into the image.
+`aegis-shadow-defense` (Aegis-Shadow v0.2.0) are installed into the image.
 The research **offense** binaries (`staticzero-offense`,
 `aegis-shadow-offense`) are pinned and installed by the `telecom` and `aegis`
 profiles on hosts, but are deliberately **not** bundled in the container

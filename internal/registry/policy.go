@@ -85,6 +85,11 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 	for _, name := range []string{"msf_payload_list", "msf_module_info"} {
 		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true}
 	}
+	// Searchsploit/CVE enrichment: read-only queries against the local
+	// exploitdb database.
+	for _, name := range []string{"searchsploit_search", "searchsploit_cve", "searchsploit_edb", "cve_enrich"} {
+		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true}
+	}
 	// Metasploit module execution and operator resource files launch
 	// exploits against targets; approval-gated, never auto-approved.
 	for _, name := range []string{"msf_module_run", "msf_resource_run"} {

@@ -67,6 +67,20 @@ func (t *K8sDiscoverTool) Execute(ctx context.Context, params json.RawMessage) (
 	}
 
 	output := strings.TrimSpace(string(result.Stdout))
+	// The pinned kubedagger-client v0.5.0 binary exits 0 with empty stdout
+	// when discovery fails (no kubeconfig, daemon down); the failure text
+	// goes to stderr only (real capture in
+	// testdata/kubedagger/k8s-discover-no-kubeconfig.stderr). An empty
+	// stdout combined with a non-empty stderr is therefore a failure, not a
+	// genuinely empty cluster. When stderr is also empty the result really
+	// is empty and stays a success below.
+	stderrText := strings.TrimSpace(string(result.Stderr))
+	if output == "" && stderrText != "" {
+		return errorResult(fmt.Sprintf(
+			"k8s discovery produced no output — the client reported:\n%s",
+			stderrText,
+		)), nil
+	}
 	var sb strings.Builder
 	sb.WriteString("## KubeDagger K8s Discovery\n\n")
 	fmt.Fprintf(&sb, "Namespace: %s\n\n", namespace)

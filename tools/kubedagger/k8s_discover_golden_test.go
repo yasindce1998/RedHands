@@ -159,15 +159,14 @@ func TestK8sDiscoverGolden_NonJSONOutputStaysPlainText(t *testing.T) {
 	}
 }
 
-// TestK8sDiscoverGolden_EmptyStdoutExitZeroIsTheRealFailureShape documents a
-// real quirk of the kubedagger-client binary: with no kubeconfig/daemon it
-// exits 0 with empty stdout and prints "Error: ..." to stderr (real capture
-// in testdata/kubedagger/k8s-discover-no-kubeconfig.stderr). The wrapper
-// keys failure off the exit code, so this real failure currently surfaces as
-// a successful "No resources found." result. The test pins that behavior so
-// any change (wrapper checking stderr, or the binary fixing its exit code)
-// is a conscious one.
-func TestK8sDiscoverGolden_EmptyStdoutExitZeroIsTheRealFailureShape(t *testing.T) {
+// TestK8sDiscoverGolden_EmptyStdoutWithStderrSurfacesFailure covers a real
+// quirk of the kubedagger-client binary: with no kubeconfig/daemon it exits 0
+// with empty stdout and prints "Error: ..." to stderr (real capture in
+// testdata/kubedagger/k8s-discover-no-kubeconfig.stderr). The wrapper keys
+// failure off the exit code, so this real failure used to surface as a
+// successful "No resources found." result; the wrapper now treats empty
+// stdout + non-empty stderr as a failure and surfaces the stderr text.
+func TestK8sDiscoverGolden_EmptyStdoutWithStderrSurfacesFailure(t *testing.T) {
 	stderr := loadGoldenFixture(t, "k8s-discover-no-kubeconfig.stderr")
 	mock := executor.NewMock()
 	mock.StderrFn = func(_ string, _ []string) []byte { return stderr }
@@ -178,12 +177,20 @@ func TestK8sDiscoverGolden_EmptyStdoutExitZeroIsTheRealFailureShape(t *testing.T
 	if err != nil {
 		t.Fatalf("Execute() returned error: %v", err)
 	}
-	if result.IsError {
-		t.Fatalf("binary exits 0, so the wrapper must produce a result (documented drift): %s", result.Content[0].Text)
+	if !result.IsError {
+		t.Fatalf("empty stdout + non-empty stderr is the real failure shape; the wrapper must surface it as an error: %s", result.Content[0].Text)
 	}
-	if !strings.Contains(result.Content[0].Text, "No resources found.") {
-		t.Errorf("empty-stdout result shape changed; re-check the real binary failure mode:\n%s", result.Content[0].Text)
+	text := result.Content[0].Text
+	if !strings.Contains(text, "k8s discovery produced no output") {
+		t.Errorf("error must explain the empty-stdout failure mode:\n%s", text)
 	}
+	if !strings.Contains(text, "Error: k8s client init failed") {
+		t.Errorf("real stderr text must be included in the error:\n%s", text)
+	}
+	if strings.Contains(text, "No resources found.") {
+		t.Errorf("a real failure must not be reported as a successful empty discovery:\n%s", text)
+	}
+	// Guard the fixture itself: it must keep carrying the real failure.
 	if !strings.Contains(string(stderr), "Error: k8s client init failed") {
 		t.Errorf("real failure fixture no longer carries the k8s client init error")
 	}

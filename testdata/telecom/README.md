@@ -46,6 +46,8 @@ modem-firmware nv-dump --image /tmp/synthetic-modem.bin --output nv_items.json
   `{firmware_path, chipset, findings: [{severity, category, title,
   description, offset, size, cve}, ...], attack_surfaces, protocol_handlers,
   nv_items_of_interest}`. Severity values are capitalized
-  (`High`/`Medium`/`Low`/`Info`).
+  (`High`/`Medium`/`Low`/`Info`); the `telecom_firmware_analyze` wrapper
+  lowercases them when embedding the report, so the fixture keeps the raw
+  capitalized capture while wrapper consumers see lowercase.
 - `modem-firmware nv-dump` writes a JSON array of NV items
   (`[{id, name, value, description, security_relevant}, ...]`).

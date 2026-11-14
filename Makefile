@@ -1,4 +1,4 @@
-.PHONY: build test test-live lint run clean docker docker-compose install install-tools check-deps
+.PHONY: build test test-live test-e2e lint run clean docker docker-compose install install-tools check-deps
 
 BINARY := redhands
 BUILD_DIR := bin
@@ -16,6 +16,9 @@ test:
 
 test-live:
 	go test -tags=livebin ./tools/livecheck/... -run TestLiveFlagSurface -v
+
+test-e2e:
+	go test -tags=livee2e ./tools/e2e/... -v
 
 lint:
 	golangci-lint run ./...

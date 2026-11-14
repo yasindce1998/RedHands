@@ -893,6 +893,72 @@ Notes:
 - When you change a wrapper's argv, update the matching entry in
   `tools/livecheck/table.go` so drift detection stays meaningful.
 
+### Live end-to-end tests
+
+Tier 1 (`tools/livecheck`) proves binaries still *accept* the wrappers' argv.
+Tier 2 (`testdata/` golden fixtures) proves output *shapes*. The
+`tools/e2e` suite (Tier 3) proves **real execution**: it drives JSON-RPC
+`tools/call` and `campaign/run` requests into a fully wired in-process
+server — the same `BinaryExecutor` (allowlist from `binaries.Discover()`),
+the same middleware chain (audit to a temp file, rate limits, engagement
+scope, approval gates, concurrency limiter), the same registry with builtin
+tool policies, and the same campaign recorder as `cmd/redhands` — and
+asserts on what the real binaries actually did.
+
+```sh
+make test-e2e
+# equivalent: go test -tags=livee2e ./tools/e2e/...
+```
+
+Scenarios (all skip cleanly when their binary is missing):
+
+- **Barzakh purple-team loop (offline, deterministic)** — `barzakh_corpus`
+  generates a corpus into a temp dir, `barzakh_scan` scans one malicious
+  sample (scanner exit 1 = bootkit detected must surface as a *result* with
+  the severity summary rendered), `barzakh_validate` validates the corpus.
+- **Campaign with real execution and record rules** — a `campaign/run`
+  whose steps execute the real corpus+scan tools through the middleware
+  chain; the scan step's finding record rule persists the scanner's real
+  `findings` array into the target database, asserted via the store.
+- **nmap against a test-owned listener** — the suite opens a
+  `127.0.0.1:0` listener and runs `nmap_port_scan` (connect scan; SYN
+  needs root) and `nmap_service_detect` against that exact port.
+- **nuclei with a test-authored template** — a minimal `http`-protocol
+  template (static word matcher on a body the local test server always
+  serves, severity `info`) is written to a temp file and passed via the
+  `templates` parameter; nothing is downloaded.
+- **telecom_doctor** — `staticzero-defense --doctor --json`: asserts the
+  DoctorReport renders with a checks array and the `ebpf_object` check
+  passes (the release binary embeds the eBPF object); privilege failures
+  are expected and fine.
+- **telecom_firmware_analyze** — a synthetic modem image (documented
+  fixture generator with a fixed seed for the padding) analyzed with
+  `modem-firmware analyze`; asserts the vulnerability report, its findings
+  (strcpy, weak ciphers, debug interfaces), and the written report file.
+- **kubedagger_k8s_discover against no cluster** — only asserts the call
+  returns a well-formed response without hanging (the wrapper's
+  empty-stdout handling is intentionally not pinned). `HOME` is redirected
+  so the client cannot pick up a developer's real kubeconfig.
+
+Safety rules enforced by the suite:
+
+- The only network targets are `127.0.0.1`/localhost listeners the test
+  itself owns; there is no network egress beyond the local binaries' own
+  startup.
+- Everything deterministic: `:0` listeners, fixed seeds for synthetic
+  inputs, temp dirs, bounded polling (no sleeps) for the async audit log.
+- Gated behind the `livee2e` build tag, so `go test ./...` and the normal
+  CI jobs are unaffected.
+- Executing tools are pre-approved in the harness config exactly like a
+  reviewed `REDHANDS_APPROVED_TOOLS` setup, so the approval middleware
+  itself is exercised (not bypassed).
+
+The `live-e2e` CI job installs the scenario binaries (nmap via apt; nuclei
+via the pinned `go install`; barzakh, StaticZero, and KubeDagger binaries
+via the checksum-verified pinned releases in `scripts/dependencies.json`)
+and runs `go test -tags=livee2e ./tools/e2e/...`. When you add a scenario
+that needs a new binary, add it to that job's install steps.
+
 ## Docker
 
 ```bash

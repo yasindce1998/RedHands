@@ -31,6 +31,8 @@ background-job system.
 - stdio is for trusted local clients and uses OS access controls. Use `REDHANDS_AUTH=none`.
 - SSE and WebSocket default to loopback. Non-loopback listeners require authentication
   **and TLS**. API keys must be provided in the `X-API-Key` header, never a query string.
+  The Streamable HTTP transport follows the same rule (`REDHANDS_HTTP_ADDR` defaults to
+  `127.0.0.1:8082`).
 - For API-key TLS, set `REDHANDS_TLS_CERT` and `REDHANDS_TLS_KEY`. For mTLS, also set
   `REDHANDS_TLS_CA` and `REDHANDS_AUTH=mtls`. Verified client certificates are required.
 - TCP supports local unauthenticated access or mTLS; API-key mode is rejected because
@@ -166,17 +168,21 @@ OS sandbox. Use dedicated environments and only authorized targets.
 
 ## Unsupported configuration and remaining work
 
-The multi-stage campaign engine (`campaign/run`, `status`, `list`, `resume`, `cancel`,
-`templates`) is wired into startup. `REDHANDS_WORKFLOW_STATE_DIR`,
+The multi-stage campaign engine (`campaign/run`, `campaign/start`, `status`,
+`list`, `resume`, `cancel`, `templates`, `template/get`, `template/save`) is
+wired into startup and also exposed as the 8-tool `campaign` toolset.
+`REDHANDS_WORKFLOW_STATE_DIR`,
 `REDHANDS_WORKFLOW_TEMPLATES_DIR`, and `REDHANDS_WORKFLOW_MAX_PARALLEL` are functional.
 The environment settings that are rejected as unsupported at startup (a configuration
 error rather than silent acceptance) are `REDHANDS_OPSEC_PROXIES`, `REDHANDS_OPERATOR_ID`,
 `REDHANDS_SYNC_PEERS`, `REDHANDS_WEBHOOK_URLS`, and `REDHANDS_WEBHOOK_EVENTS`. Remaining
-unsupported work: proxy profiles, multi-operator sync, webhook notifications, and the
-Streamable HTTP transport. Do not assume the underlying library prototypes for those
+unsupported work: proxy profiles, multi-operator sync, and webhook notifications. Do not
+assume the underlying library prototypes for those
 features are production features.
 
 See [dependency maintenance](dependencies.md) for lock/checksum coverage and its limits.
-Engagement data isolation, durable job scheduling, complete real-binary compatibility
-coverage, and Streamable HTTP remain separate work. The SSE client/server path is the
-existing legacy implementation; it does not claim modern MCP transport support.
+Engagement data isolation, durable job scheduling, and complete real-binary compatibility
+coverage remain separate work. The SSE client/server path is the
+existing legacy implementation; the modern MCP spec is served by the Streamable HTTP
+transport (`REDHANDS_TRANSPORT=http`), which is shipped and validates the
+`MCP-Protocol-Version`/`Mcp-Method` request headers.

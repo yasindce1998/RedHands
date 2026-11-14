@@ -66,7 +66,7 @@ curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/
 curl -fsSL https://raw.githubusercontent.com/yasindce1998/redhands/main/scripts/install.sh | bash -s -- --with-tools --profile=web
 ```
 
-Available profiles: `minimal`, `web`, `network`, `ad`, `k8s`, `uefi`, `telecom`, `aegis`, `recon`, `all`
+Available profiles: `minimal`, `web`, `network`, `ad`, `k8s`, `uefi`, `telecom`, `aegis`, `sbom`, `recon`, `all`
 
 #### Build from Source
 
@@ -77,7 +77,7 @@ make build
 sudo make install
 
 # Install security tool dependencies
-sudo make install-tools PROFILE=web    # or: minimal, network, ad, k8s, uefi, telecom, aegis, recon, all
+sudo make install-tools PROFILE=web    # or: minimal, network, ad, k8s, uefi, telecom, aegis, sbom, recon, all
 
 # Check which tools are available
 make check-deps
@@ -179,6 +179,25 @@ REDHANDS_TRANSPORT=sse REDHANDS_SSE_ADDR=127.0.0.1:8080 ./redhands
 
 **Best for:** Remote access, team shared servers, web-based clients.
 
+### HTTP (Streamable)
+
+The modern MCP transport: a stateless, single-endpoint JSON-RPC server for
+`2026-07-28`-protocol clients.
+
+```bash
+REDHANDS_TRANSPORT=http ./redhands
+# defaults: REDHANDS_HTTP_ADDR=127.0.0.1:8082, REDHANDS_HTTP_PATH=/mcp
+```
+
+Clients POST JSON-RPC requests to `/mcp`. The server validates the required
+`MCP-Protocol-Version`/`Mcp-Method` headers (and `Mcp-Name` for `tools/call`)
+against the body, answers `405` for GET/DELETE, `404`+`-32601` for unknown
+methods, and `202` for notifications. Legacy clients that open with
+`initialize` are served by the dual-era handshake on every transport
+(modern `2026-07-28`, legacy `2025-03-26` and `2024-11-05`).
+
+**Best for:** Modern MCP clients and programmatic integrations.
+
 ### WebSocket
 
 Full-duplex communication over WebSocket (RFC 6455).
@@ -252,7 +271,7 @@ REDHANDS_TOOLSETS=nmap,recon,web ./redhands
 | `impacket` | 8 | Active Directory |
 | `sliver` | 9 | Command & Control |
 | `tunnel` | 5 | Tunneling/Pivoting |
-| `crack` | 6 | Password Cracking |
+| `crack` | 7 | Password Cracking |
 | `crackmapexec` | 5 | Network Exploitation |
 | `certipy` | 6 | AD Certificate Services |
 | `tshark` | 5 | Packet Analysis |
@@ -829,6 +848,36 @@ Params: { "pfx": "/tmp/forged.pfx", "domain": "corp.local", "dc_ip": "192.168.1.
 Tool: certipy_shadow
 Params: { "target": "dc01.corp.local", "username": "user", "password": "pass", "domain": "corp.local", "account": "victim_user" }
 ```
+
+#### Scenario: From Scanner Finding to Metasploit (searchsploit + msf)
+
+**Objective:** Turn a scanner finding into a Metasploit run, staying inside the
+engagement scope.
+
+```
+Step 1: Enrich the finding (extract CVEs from scanner text, map to public exploits)
+Tool: cve_enrich
+Params: { "cve": "CVE-2021-44228" }
+
+Step 2: Inspect the matching Metasploit module
+Tool: msf_module_info
+Params: { "module": "exploit/multi/http/log4shell_header_injection", "work_dir": "/tmp/msf-info" }
+
+Step 3: Run the module (generates a validated .rc resource file; approval-gated)
+Tool: msf_module_run
+Params: { "module": "exploit/multi/http/log4shell_header_injection",
+          "options": { "RHOSTS": "192.0.2.10", "SRVHOST": "192.0.2.1" },
+          "work_dir": "/tmp/msf-run" }
+```
+
+The msfconsole tools never build `-x` command strings: every console run is a
+generated, validated `.rc` resource file (`msfconsole -q -r`), so
+console-command injection is structurally impossible. For advanced
+multi-module sessions an operator can author their own resource file and run
+it through `msf_resource_run` (approval-gated). `msf_payload_generate` wraps
+msfvenom and reports the SHA-256 of the produced artifact. Metasploit must be
+installed manually (e.g. `apt install metasploit-framework` on Kali/Parrot);
+msfconsole startup takes 10–60s and runs are bounded by `REDHANDS_TIMEOUT`.
 
 ---
 
@@ -1566,9 +1615,9 @@ docker compose --profile secure up redhands-secure
 | Go-based | subfinder, httpx, nuclei, ffuf, katana, gobuster, gau, waybackurls |
 | Tunneling | chisel v1.11.5, ligolo-ng v0.8.3 |
 | KubeDagger | kubedagger-client, kubedagger-operator, kubedagger-server (all v0.5.0) |
-| Barzakh | barzakh-adversary, barzakh-scanner, barzakh-server (all v0.7.0) |
+| Barzakh | barzakh-adversary, barzakh-scanner, barzakh-server (all v0.7.1) |
 | StaticZero | staticzero-defense, modem-firmware, sdr-bridge (v0.5.0, eBPF embedded; offense binary not bundled) |
-| Aegis-Shadow | aegis-shadow-defense (v0.1.1, eBPF embedded; offense binary not bundled) |
+| Aegis-Shadow | aegis-shadow-defense (v0.2.0, eBPF embedded; offense binary not bundled) |
 
 ### Custom Plugins with Docker
 
@@ -1584,6 +1633,22 @@ docker compose run --rm -i \
 # The secure compose profile enforces API key auth + TLS on 127.0.0.1:8443
 REDHANDS_API_KEY=your-secret-key docker compose --profile secure up redhands-secure
 ```
+
+---
+
+## Testing Pyramid
+
+The wrapper and campaign behavior are pinned at three levels, each gated behind
+its own build tag so normal `go test ./...` and CI are unaffected:
+
+| Tier | Suite | Command | Proves |
+|------|-------|---------|--------|
+| Tier 1 | `tools/livecheck` (`livebin` tag) | `make test-live` | Real binaries still *accept* the wrappers' argv (flags, subcommands, enum values); safe help-text/dry-parse assertions only |
+| Tier 2 | `testdata/` golden fixtures | `go test ./...` | Output *shapes*: parser and wrapper results against pinned sample output |
+| Tier 3 | `tools/e2e` (`livee2e` tag) | `make test-e2e` | Real *execution*: 7 scenarios driving JSON-RPC `tools/call` and `campaign/run` into a fully wired in-process server against the real binaries (offline, localhost-only, deterministic) |
+
+All tiers skip cleanly (never fail) when their binary is not installed; see the
+[README](README.md) for the Docker-in-container recipe and CI job details.
 
 ---
 

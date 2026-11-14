@@ -58,7 +58,7 @@ sudo make install-tools PROFILE=k8s       # Kubernetes offensive tools
 sudo make install-tools PROFILE=uefi      # UEFI bootkit simulation
 sudo make install-tools PROFILE=telecom   # StaticZero telecom research (Linux only)
 sudo make install-tools PROFILE=aegis     # Aegis-Shadow eBPF research (Linux only)
-sudo make install-tools PROFILE=sbom     # SBOM + vulnerability scanning (syft, grype)
+sudo make install-tools PROFILE=sbom      # SBOM + vulnerability scanning (syft, grype)
 sudo make install-tools PROFILE=recon     # deep reconnaissance tools
 sudo make install-tools PROFILE=all       # everything
 
@@ -807,7 +807,7 @@ All settings via environment variables:
 | `REDHANDS_DRY_RUN` | `false` | Preview executions without running tools |
 | `REDHANDS_OPSEC_PROFILE` | — | OPSEC profile name (parsed; proxy routing not yet wired) |
 | `REDHANDS_IOC_FILE` | — | Indicator-of-compromise list file (parsed; matching not yet wired) |
-| `REDHANDS_TCP_ADDR` | — | TCP transport listen address; requires `REDHANDS_AUTH=apikey` (e.g. 127.0.0.1:8082) |
+| `REDHANDS_TCP_ADDR` | — | TCP transport listen address; mTLS only (API-key headers are not supported over TCP) |
 | `REDHANDS_DASHBOARD_ADDR` | — | Dashboard HTTP listen address (parsed; dashboard not yet wired) |
 | `REDHANDS_GOPHISH_URL` | — | GoPhish API base URL (enables the phishing toolset) |
 | `REDHANDS_GOPHISH_API_KEY` | — | GoPhish API key |
@@ -1036,7 +1036,7 @@ before use; some tools require additional installation or privileges):
 - **apt/source**: nmap, masscan, tshark, hashcat, john, nikto, whatweb
 - **pip**: impacket, certipy-ad
 - **Go tools**: subfinder, httpx, nuclei, ffuf, katana, gobuster, gau, waybackurls
-- **Releases**: chisel, ligolo-ng, kubedagger (client, operator, server v0.5.0), barzakh (adversary, scanner, server v0.7.0), staticzero (defense, modem-firmware, sdr-bridge v0.5.0), aegis-shadow-defense (v0.1.1)
+- **Releases**: chisel, ligolo-ng, kubedagger (client, operator, server v0.5.0), barzakh (adversary, scanner, server v0.7.1), staticzero (defense, modem-firmware, sdr-bridge v0.5.0), aegis-shadow-defense (v0.2.0)
 
 ## License
 

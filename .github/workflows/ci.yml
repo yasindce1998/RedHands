@@ -121,10 +121,23 @@ jobs:
           for tool in chisel ligolo-proxy feroxbuster \
                       kubedagger-client kubedagger-operator kubedagger-server \
                       barzakh-scanner barzakh-adversary barzakh-server \
-                      staticzero-defense staticzero-offense modem-firmware sdr-bridge \
+                      staticzero \
                       aegis-shadow-defense aegis-shadow-offense aegis-c2; do
             python3 scripts/dependencies.py install "$tool" --output "$HOME/.local/bin"
           done
+          # StaticZero v0.7.0 is one multi-call binary; the legacy per-tool
+          # names are argv[0]-dispatched symlinks to it.
+          for link in staticzero-defense staticzero-offense modem-firmware sdr-bridge protocol-correlator; do
+            ln -sf "$HOME/.local/bin/staticzero" "$HOME/.local/bin/$link"
+          done
+          # BlockTack release tree (CLI + Rust engines + taxonomy +
+          # playbooks), symlinked onto PATH like the installer does.
+          python3 scripts/dependencies.py fetch blocktack-root --output /tmp/blocktack.tar.gz
+          mkdir -p "$HOME/blocktack"
+          tar -xzf /tmp/blocktack.tar.gz -C "$HOME/blocktack" --strip-components=1
+          ln -sf "$HOME/blocktack/bin/blocktack" "$HOME/.local/bin/blocktack"
+          ln -sf "$HOME/blocktack/engines/blocktack-evm" "$HOME/.local/bin/blocktack-evm"
+          ln -sf "$HOME/blocktack/engines/blocktack-solana" "$HOME/.local/bin/blocktack-solana"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install pinned Python tools
@@ -168,9 +181,20 @@ jobs:
         run: |
           mkdir -p "$HOME/.local/bin"
           for tool in barzakh-scanner barzakh-adversary \
-                      staticzero-defense modem-firmware kubedagger-client; do
+                      staticzero kubedagger-client; do
             python3 scripts/dependencies.py install "$tool" --output "$HOME/.local/bin"
           done
+          # StaticZero v0.7.0 multi-call binary: legacy-name symlinks.
+          for link in staticzero-defense modem-firmware sdr-bridge; do
+            ln -sf "$HOME/.local/bin/staticzero" "$HOME/.local/bin/$link"
+          done
+          # BlockTack release tree for the blocktack e2e scenarios.
+          python3 scripts/dependencies.py fetch blocktack-root --output /tmp/blocktack.tar.gz
+          mkdir -p "$HOME/blocktack"
+          tar -xzf /tmp/blocktack.tar.gz -C "$HOME/blocktack" --strip-components=1
+          ln -sf "$HOME/blocktack/bin/blocktack" "$HOME/.local/bin/blocktack"
+          ln -sf "$HOME/blocktack/engines/blocktack-evm" "$HOME/.local/bin/blocktack-evm"
+          ln -sf "$HOME/blocktack/engines/blocktack-solana" "$HOME/.local/bin/blocktack-solana"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Install pinned Go tools

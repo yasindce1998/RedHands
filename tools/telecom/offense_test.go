@@ -97,7 +97,7 @@ func TestOffenseLifecycleTools_NameDescriptionSchema(t *testing.T) {
 	}
 
 	startDesc := NewOffenseStart(mgr).Description()
-	for _, want := range []string{"root", "5.15", "F89-F172", "regulated", "Approval-gated", "high-impact"} {
+	for _, want := range []string{"root", "5.15", "F89-F200", "regulated", "Approval-gated", "high-impact"} {
 		if !strings.Contains(startDesc, want) {
 			t.Errorf("telecom_offense_start description must mention %q", want)
 		}
@@ -237,6 +237,31 @@ func TestOffenseStart_SuccessLifecycle(t *testing.T) {
 	result, _ = stop.Execute(context.Background(), mustJSON(map[string]any{"process_id": st.ID}))
 	if result.IsError {
 		t.Errorf("double stop should be a no-op, got: %s", result.Content[0].Text)
+	}
+
+	// v0.7.0 next-gen feature groups map to their --enable-* flags.
+	result, err = start.Execute(context.Background(), mustJSON(map[string]any{
+		"groups":   []string{"nextgen-wifi", "d2c", "secure-ranging", "nextgen-iot", "6g"},
+		"logs_dir": t.TempDir(),
+	}))
+	if err != nil {
+		t.Fatalf("unexpected Go error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", result.Content[0].Text)
+	}
+	st = firstProcess(t, mgr)
+	args = strings.Join(st.Args, " ")
+	for _, want := range []string{
+		"--enable-nextgen-wifi", "--enable-d2c", "--enable-secure-ranging",
+		"--enable-nextgen-iot", "--enable-6g",
+	} {
+		if !strings.Contains(args, want) {
+			t.Errorf("expected %q in daemon args, got: %s", want, args)
+		}
+	}
+	if _, err := stop.Execute(context.Background(), mustJSON(map[string]any{"process_id": st.ID})); err != nil {
+		t.Errorf("cleanup stop failed: %v", err)
 	}
 }
 

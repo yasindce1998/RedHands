@@ -49,9 +49,13 @@ server) to **v0.7.1**. The pinned SBOM tools (syft **v1.57.1**, grype
 the `sbom` and `aegis` profiles, but are not bundled in the container image.
 
 The StaticZero and Aegis-Shadow defense engines also ship as verified release
-assets (Linux only, eBPF objects embedded): `staticzero-defense`,
-`modem-firmware`, and `sdr-bridge` (StaticZero v0.5.0) and
-`aegis-shadow-defense` (Aegis-Shadow v0.2.0) are installed into the image.
+assets (Linux only, eBPF objects embedded). Since StaticZero **v0.7.0** the
+release is a single multi-call binary (`staticzero`); the legacy names
+(`staticzero-defense`, `staticzero-offense`, `modem-firmware`, `sdr-bridge`,
+`protocol-correlator`) are argv[0]-dispatched symlinks to it, created by the
+installer. The image bundles the `staticzero` binary with its
+`staticzero-defense`, `modem-firmware`, and `sdr-bridge` symlinks.
+`aegis-shadow-defense` (Aegis-Shadow v0.2.0) is installed into the image.
 The research **offense** binaries (`staticzero-offense`,
 `aegis-shadow-offense`) are pinned and installed by the `telecom` and `aegis`
 profiles on hosts, but are deliberately **not** bundled in the container
@@ -69,6 +73,35 @@ The binary allowlist resolves tools by name on `PATH` at startup, so mounted
 binaries are discovered automatically; a missing binary is reported as missing
 rather than replaced with an unverified download. Any other server binary that
 is not published in a reviewed release must be provided the same way.
+
+## BlockTack
+
+The `blocktack` toolset (blockchain adversary simulation) installs the
+BlockTack **v0.1.0** release tree — one `linux-amd64` tarball containing the
+Go CLI (`bin/blocktack`), both Rust engines (`engines/blocktack-evm`,
+`engines/blocktack-solana`), the weakness taxonomy, adapters, playbooks, and
+the exploit corpus. The installer verifies the tarball's SHA-256, extracts it
+to `/opt/blocktack`, and symlinks the CLI and engines onto `PATH`:
+
+```
+/opt/blocktack/bin/blocktack      → /usr/local/bin/blocktack
+/opt/blocktack/engines/blocktack-evm   → /usr/local/bin/blocktack-evm
+/opt/blocktack/engines/blocktack-solana → /usr/local/bin/blocktack-solana
+```
+
+The wrappers set `BLOCKTACK_ROOT=/opt/blocktack` (plus
+`BLOCKTACK_ENGINES=<root>/engines` when present) for every child process, so
+the CLI resolves its taxonomy, adapters, and engines regardless of the server
+working directory. Point `REDHANDS_BLOCKTACK_ROOT` at an alternative tree
+(for example a source checkout) when needed; in a checkout without an
+`engines/` directory, BlockTack falls back to its own
+`engine-*/target/release` resolution.
+
+Optional external dependencies, installed manually when needed: Foundry
+(`forge`, `anvil` — campaign playbooks and the foundry adapter) and Slither
+(`pip install slither-analyzer` — the slither adapter). Historical
+incident-replay campaigns additionally need an archive-capable Ethereum RPC
+endpoint (playbooks read `FORK_URL`, defaulting to a public archive RPC).
 
 ## Known gaps
 

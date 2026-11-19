@@ -21,14 +21,30 @@ const defenseBinary = "staticzero-defense"
 const maxCorrelationWindow = 86400
 
 // defenseGroupFlags maps the group parameter to the corresponding daemon CLI
-// flag. The empty group defaults to telecom-detect.
+// flag (staticzero v0.7.0). The empty group defaults to telecom-detect.
 var defenseGroupFlags = map[string]string{
-	"all":                "--all",
-	"telecom-detect":     "--telecom-detect",
-	"telecom-advanced":   "--telecom-advanced",
-	"telecom-5g-defense": "--telecom-5g-defense",
-	"satellite-defense":  "--satellite-defense",
-	"rf-defense":         "--rf-defense",
+	"all":                    "--all",
+	"telecom-detect":         "--telecom-detect",
+	"telecom-advanced":       "--telecom-advanced",
+	"telecom-5g-defense":     "--telecom-5g-defense",
+	"satellite-defense":      "--satellite-defense",
+	"rf-defense":             "--rf-defense",
+	"nextgen-wifi-defense":   "--nextgen-wifi-defense",
+	"d2c-defense":            "--d2c-defense",
+	"secure-ranging-defense": "--secure-ranging-defense",
+	"nextgen-iot-defense":    "--nextgen-iot-defense",
+	"6g-defense":             "--sixg-defense",
+}
+
+// defenseToolInputKinds mirrors the KIND values accepted by the daemon's
+// --tool-input flag (defense/src/daemon.rs, staticzero v0.6.0+).
+var defenseToolInputKinds = map[string]bool{
+	"mlo":     true,
+	"d2c":     true,
+	"osnma":   true,
+	"airan":   true,
+	"pqc":     true,
+	"noncred": true,
 }
 
 // DefenseStartTool starts the StaticZero defense daemon
@@ -47,7 +63,7 @@ func NewDefenseStart(mgr *executor.BackgroundManager) *DefenseStartTool {
 func (t *DefenseStartTool) Name() string { return "telecom_defense_start" }
 
 func (t *DefenseStartTool) Description() string {
-	return "Start the StaticZero defense engine daemon (staticzero-defense) as a managed background process with a detection module group (telecom-detect default, or telecom-advanced / telecom-5g-defense / satellite-defense / rf-defense / all), optional explicit module IDs, config file, and correlation window. SIEM JSON-lines alerts stream to <logs_dir>/staticzero-defense-<id>.jsonl (--json); logs go to <logs_dir>/staticzero-defense-<id>.err. Wraps StaticZero (eBPF telecom security research); authorized lab use only. Requires root and kernel >= 5.15 (BPF); high-impact: runs a privileged eBPF detection daemon until telecom_defense_stop is called. Startup failures (missing privileges, unsupported kernel) are written to the stderr log; use telecom_defense_status to check whether the daemon survived startup."
+	return "Start the StaticZero defense engine daemon (staticzero-defense) as a managed background process with a detection module group (telecom-detect default, or telecom-advanced / telecom-5g-defense / satellite-defense / rf-defense / nextgen-wifi-defense / d2c-defense / secure-ranging-defense / nextgen-iot-defense / 6g-defense / all), optional explicit module IDs, optional next-gen tool verdict input files (--tool-input KIND=PATH), config file, and correlation window. SIEM JSON-lines alerts stream to <logs_dir>/staticzero-defense-<id>.jsonl (--json); logs go to <logs_dir>/staticzero-defense-<id>.err. Wraps StaticZero (eBPF telecom security research); authorized lab use only. Requires root and kernel >= 5.15 (BPF); high-impact: runs a privileged eBPF detection daemon until telecom_defense_stop is called. Startup failures (missing privileges, unsupported kernel) are written to the stderr log; use telecom_defense_status to check whether the daemon survived startup."
 }
 
 func (t *DefenseStartTool) InputSchema() json.RawMessage {
@@ -60,8 +76,14 @@ func (t *DefenseStartTool) InputSchema() json.RawMessage {
 			},
 			"group": {
 				"type": "string",
-				"enum": ["all", "telecom-detect", "telecom-advanced", "telecom-5g-defense", "satellite-defense", "rf-defense"],
+				"enum": ["all", "telecom-detect", "telecom-advanced", "telecom-5g-defense", "satellite-defense", "rf-defense", "nextgen-wifi-defense", "d2c-defense", "secure-ranging-defense", "nextgen-iot-defense", "6g-defense"],
 				"description": "Detection module group (default: telecom-detect)"
+			},
+			"tool_inputs": {
+				"type": "array",
+				"items": {"type": "string"},
+				"maxItems": 8,
+				"description": "Next-gen tool verdict input files as KIND=PATH pairs for the --tool-input flag; KIND is one of mlo, d2c, osnma, airan, pqc, noncred and PATH must be an existing JSON-lines file (stdin (-) is not supported by this wrapper)"
 			},
 			"config": {
 				"type": "string",
@@ -84,11 +106,12 @@ func (t *DefenseStartTool) InputSchema() json.RawMessage {
 
 func (t *DefenseStartTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.ToolResult, error) {
 	var input struct {
-		Modules           string `json:"modules"`
-		Group             string `json:"group"`
-		Config            string `json:"config"`
-		CorrelationWindow *int   `json:"correlation_window"`
-		LogsDir           string `json:"logs_dir"`
+		Modules           string   `json:"modules"`
+		Group             string   `json:"group"`
+		ToolInputs        []string `json:"tool_inputs"`
+		Config            string   `json:"config"`
+		CorrelationWindow *int     `json:"correlation_window"`
+		LogsDir           string   `json:"logs_dir"`
 	}
 	if err := json.Unmarshal(params, &input); err != nil {
 		return errorResult("invalid input: " + err.Error()), nil
@@ -99,7 +122,25 @@ func (t *DefenseStartTool) Execute(ctx context.Context, params json.RawMessage) 
 	}
 	groupFlag, ok := defenseGroupFlags[input.Group]
 	if !ok {
-		return errorResult(fmt.Sprintf("invalid group %q: must be all, telecom-detect, telecom-advanced, telecom-5g-defense, satellite-defense or rf-defense", input.Group)), nil
+		return errorResult(fmt.Sprintf("invalid group %q: must be all, telecom-detect, telecom-advanced, telecom-5g-defense, satellite-defense, rf-defense, nextgen-wifi-defense, d2c-defense, secure-ranging-defense, nextgen-iot-defense or 6g-defense", input.Group)), nil
+	}
+	if len(input.ToolInputs) > 8 {
+		return errorResult("tool_inputs accepts at most 8 entries"), nil
+	}
+	for _, ti := range input.ToolInputs {
+		kind, path, found := strings.Cut(ti, "=")
+		if !found {
+			return errorResult(fmt.Sprintf("invalid tool_inputs entry %q: must be KIND=PATH", ti)), nil
+		}
+		if !defenseToolInputKinds[kind] {
+			return errorResult(fmt.Sprintf("invalid tool_inputs kind %q: must be one of mlo, d2c, osnma, airan, pqc, noncred", kind)), nil
+		}
+		if path == "-" {
+			return errorResult("tool_inputs PATH must be a file; stdin (-) is not supported by this wrapper"), nil
+		}
+		if err := validateInputFile(path, "tool_inputs path for "+kind); err != nil {
+			return errorResult(err.Error()), nil
+		}
 	}
 	if err := validateSafeString(input.Modules, "modules"); err != nil {
 		return errorResult(err.Error()), nil
@@ -121,6 +162,9 @@ func (t *DefenseStartTool) Execute(ctx context.Context, params json.RawMessage) 
 	args := []string{groupFlag, "--json"}
 	if input.Modules != "" {
 		args = append(args, "--modules", input.Modules)
+	}
+	for _, ti := range input.ToolInputs {
+		args = append(args, "--tool-input", ti)
 	}
 	if input.Config != "" {
 		args = append(args, "--config", input.Config)

@@ -508,7 +508,16 @@ All configuration via environment variables (`REDHANDS_*` prefix):
 
 ## Release History
 
-### v0.6.3 — Metasploit, Five New Toolsets & Testing Pyramid (current)
+### v0.6.4 — BlockTack Toolset & StaticZero v0.7.0 (current)
+
+- **BlockTack integration (toolset `blocktack`, 12 tools — first Web3 domain)**: wraps the BlockTack blockchain adversary-simulation platform — `blocktack_capabilities` (live engine/adapter inventory), `blocktack_matrix` (53-weakness taxonomy with filters), `blocktack_validate_target` (dry authorization + safe-mode verdict), `blocktack_recon`, `blocktack_scan` (slither/foundry adapters), `blocktack_node_audit` (cve/rpc-fuzz/mempool/peer/web-audit/p2p-eclipse), `blocktack_engine_call` (direct Rust engine invocation over stdin JSON; loopback RPC enforced in the wrapper), and the managed background campaign lifecycle `blocktack_campaign_{start,stop,status,results}` plus `blocktack_report`. Guardrail refusals (BlockTack exit code 3) render as distinct refusals; `--unsafe` is never passed or exposed; campaign start pre-validates the target and enforces single-concurrency (anvil port collisions)
+- **Executor environment/stdin support**: additive `EnvExecutor` extension (`RunEnv` with `RunOptions{Env, Stdin}`) on the binary executor, mock, and `BackgroundManager.StartEnv` — the base `Executor` interface is unchanged. BlockTack wrappers use it to set `BLOCKTACK_ROOT`/`BLOCKTACK_ENGINES` per child process
+- **StaticZero v0.5.0 → v0.7.0**: the release is now one multi-call binary (`staticzero`) with argv[0]-dispatched legacy-name symlinks (`staticzero-defense`, `staticzero-offense`, `modem-firmware`, `sdr-bridge`, `protocol-correlator`) created by the installer and Dockerfile; telecom wrappers expose the five new defense module groups (`nextgen-wifi`, `d2c`, `secure-ranging`, `nextgen-iot`, `6g`), five new offense feature groups (F173–F200), and `--tool-input KIND=PATH` verdict feeds
+- **BlockTack install profile**: checksum-verified v0.1.0 release tree extracted to `/opt/blocktack` with CLI/engines symlinked onto `PATH`; `sudo make install-tools PROFILE=blocktack`
+- **Tier 1/3 coverage**: livecheck entries for `blocktack`, both engines, and the `staticzero` multi-call dispatch (including v0.7.0's help-exits-1 convention); three new livee2e scenarios (capabilities/matrix, validate-target positive + guardrail paths, engine-call loopback refusal)
+- **299 registered tools** across 37 toolsets on a default startup (306 with the env-gated GoPhish and credstore tools)
+
+### v0.6.3 — Metasploit, Five New Toolsets & Testing Pyramid
 
 - **Metasploit integration (toolset `msf`, 5 tools)**: payload generation via msfvenom, reference listings, module docs, and module execution — all msfconsole tooling generates validated `.rc` resource files from structured parameters (never `msfconsole -x`), so console-command injection is structurally impossible; msfvenom artifacts report SHA-256
 - **Campaign lifecycle toolset (8 tools)**: the campaign engine (shipped in v0.5.0 as server methods) is now also addressable as MCP tools — `campaign_start` (async via the Tasks extension), `campaign_status`, `campaign_list`, `campaign_resume`, `campaign_cancel`, `campaign_templates`, `campaign_template_get`, `campaign_template_save`

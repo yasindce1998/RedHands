@@ -22,6 +22,7 @@ import (
 	"github.com/yasindce1998/redhands/tools/aegis"
 	"github.com/yasindce1998/redhands/tools/analysis/tshark"
 	"github.com/yasindce1998/redhands/tools/barzakh"
+	"github.com/yasindce1998/redhands/tools/blocktack"
 	"github.com/yasindce1998/redhands/tools/c2/sliver"
 	"github.com/yasindce1998/redhands/tools/campaign"
 	"github.com/yasindce1998/redhands/tools/cloud"
@@ -340,6 +341,23 @@ func RegisterAll(srv *mcp.Server, d *Deps) {
 			register(telecom.NewCorrelatorStart(d.ProcMgr))
 			register(telecom.NewCorrelatorStop(d.ProcMgr))
 			register(telecom.NewCorrelatorStatus(d.ProcMgr))
+		}
+	}
+
+	if d.Cfg.ToolsetEnabled("blocktack") {
+		register(blocktack.NewCapabilities(d.Exec))
+		register(blocktack.NewMatrix(d.Exec))
+		register(blocktack.NewValidateTarget(d.Exec))
+		register(blocktack.NewRecon(d.Exec))
+		register(blocktack.NewScan(d.Exec))
+		register(blocktack.NewNodeAudit(d.Exec))
+		register(blocktack.NewEngineCall(d.Exec))
+		register(blocktack.NewCampaignResults())
+		register(blocktack.NewReport(d.Exec))
+		if d.ProcMgr != nil {
+			register(blocktack.NewCampaignStart(d.ProcMgr, d.Exec))
+			register(blocktack.NewCampaignStop(d.ProcMgr))
+			register(blocktack.NewCampaignStatus(d.ProcMgr))
 		}
 	}
 

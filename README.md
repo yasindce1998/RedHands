@@ -119,9 +119,10 @@ docker compose run --rm -i redhands
 | `ad` | nmap, impacket, certipy, crackmapexec, hashcat, john | Active Directory attacks |
 | `k8s` | nmap, kubedagger-client, kubedagger-operator, kubedagger-server | Kubernetes offensive (eBPF) |
 | `uefi` | barzakh-adversary, barzakh-scanner, barzakh-server | UEFI bootkit adversary simulation |
-| `telecom` | staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge | Telecom security research (eBPF, Linux only) |
+| `telecom` | staticzero multi-call binary (defense, offense, modem-firmware, sdr-bridge) | Telecom security research (eBPF, Linux only) |
 | `aegis` | aegis-shadow-defense, aegis-shadow-offense, aegis-c2 | Linux eBPF security research (Aegis-Shadow) |
 | `sbom` | syft, grype | SBOM generation and vulnerability scanning |
+| `blocktack` | blocktack CLI + blocktack-evm + blocktack-solana (release tree at /opt/blocktack) | Blockchain adversary simulation (Linux only) |
 | `recon` | recon set (subfinder, amass, dig, waybackurls, gau, arjun) + web set (httpx, katana, nikto, whatweb, testssl.sh) | Deep reconnaissance |
 | `all` | Everything | Full offensive toolkit |
 
@@ -383,15 +384,17 @@ baseband firmware). Authorized lab use only.
 | `telecom_defense_start` | Start the StaticZero defense engine as a managed background daemon (JSON alerts stream to a file) |
 | `telecom_defense_stop` | Stop a managed defense engine daemon |
 | `telecom_defense_status` | Status of managed defense engine daemons |
-| `telecom_offense_start` | ⚠️ Launch the StaticZero telecom interception research loader as a managed daemon (F89–F172; regulated; lab use only) |
+| `telecom_offense_start` | ⚠️ Launch the StaticZero telecom interception research loader as a managed daemon (F89–F200; regulated; lab use only) |
 | `telecom_offense_stop` | Stop a managed offense loader daemon |
 | `telecom_offense_status` | Status of managed offense loader daemons |
 | `telecom_correlator_start` | Start the protocol correlator as a managed daemon (JSON-lines event ingest on loopback) |
 | `telecom_correlator_stop` | Stop a managed correlator daemon |
 | `telecom_correlator_status` | Status of managed correlator daemons |
 
-StaticZero binaries ship as checksum-verified release assets (v0.5.0, Linux
-only, eBPF embedded) and install via the `telecom` profile:
+StaticZero ships as a checksum-verified multi-call release binary (v0.7.0,
+Linux only, eBPF embedded; `staticzero-defense`, `modem-firmware`, and
+`sdr-bridge` are argv[0]-dispatched symlinks created by the installer) and
+installs via the `telecom` profile:
 `sudo make install-tools PROFILE=telecom`.
 
 ### Aegis-Shadow (toolset: `aegis`)
@@ -427,6 +430,39 @@ offense rootkit loader can each be started as a managed background daemon
 | `aegis_offense_stop` | Stop a managed offense loader daemon |
 | `aegis_offense_status` | Status of managed offense loader daemons |
 | `aegis_c2_send` | ☠️ Send a command to a running rootkit over its encrypted C2 channel (hide/unhide pid, obfuscate file, exfil, kill-switch; fire-and-forget; requires the `aegis-c2` CLI from Aegis-Shadow ≥ v0.2.0) |
+
+### BlockTack (toolset: `blocktack`)
+
+Wraps [BlockTack](https://github.com/yasindce1998/BlockTack), the adversary-simulation
+platform for blockchain systems (recon, contract analysis, node audits, zero-footprint
+revm exploit simulation, playbook-driven campaigns against historical incidents).
+RedHands supplies the planning; BlockTack enforces its own guardrails in code: every
+command refuses targets whose YAML lacks an unexpired **authorization block**, and
+safe mode confines endpoints to loopback or `authorization.liveTargets`. Guardrail
+refusals exit with code 3 and are reported as distinct refusals, and the wrappers
+**never pass `--unsafe`**.
+
+| Tool | Description |
+|------|-------------|
+| `blocktack_capabilities` | Machine-readable platform inventory: version, engine presence, adapters, node-audit modules, taxonomy summary |
+| `blocktack_matrix` | The 53-weakness taxonomy (six layers L0–L5) with remediation guidance; optional weakness/layer filters |
+| `blocktack_validate_target` | Dry target validation: authorization block + safe-mode verdict as JSON, no endpoint contact (call before anything else) |
+| `blocktack_recon` | L0/L1 endpoint probing against safe-mode-confined endpoints (findings JSON) |
+| `blocktack_scan` | Static analysis adapters (slither, foundry; foundry `test_poc_*` passes count as confirmed findings) |
+| `blocktack_node_audit` | Node attack-surface modules: cve-check, rpc-fuzz, mempool/peer analysis, web-audit, p2p-eclipse |
+| `blocktack_engine_call` | Direct Rust engine invocation (stdin JSON job → findings): simulate-call, simulate-tx-sequence, map-oracles, hook-audit, oracle-staleness, … — loopback RPC only |
+| `blocktack_campaign_start` | Launch a playbook campaign as a managed background process (pre-validates the target; single concurrent campaign; JSON-lines progress; `--progress-json`) |
+| `blocktack_campaign_status` | Live campaign state: process status, step progress events, crash-resilient status.json |
+| `blocktack_campaign_results` | Findings.json + killchains.json + status.json from a run directory (fenced JSON, recordable) |
+| `blocktack_campaign_stop` | Stop a running campaign (SIGTERM to the process group; anvil forks die with it) |
+| `blocktack_report` | Merge findings JSON into a markdown report; `engagement=true` renders the client-ready deliverable with kill chains and financial blast radius |
+
+BlockTack ships as a self-contained release tree (v0.1.0, Linux: Go CLI + `blocktack-evm`
++ `blocktack-solana` Rust engines + taxonomy + playbooks + corpus), installed by the
+`blocktack` profile to `/opt/blocktack` with CLI/engines symlinked onto `PATH`:
+`sudo make install-tools PROFILE=blocktack`. Playbook shell steps run real commands
+(anvil forks, geth swarms) — only run playbooks from a reviewed source. Optional
+external adapters: Foundry (`forge`) and Slither (`pip install slither-analyzer`).
 
 ### Searchsploit (toolset: `searchsploit`)
 
@@ -867,6 +903,9 @@ export REDHANDS_TOOLSETS=nmap,scan,tshark,tunnel
 # Firmware + telecom research
 export REDHANDS_TOOLSETS=barzakh,telecom,aegis
 
+# Blockchain adversary simulation
+export REDHANDS_TOOLSETS=blocktack
+
 # All tools (default when unset)
 export REDHANDS_TOOLSETS=
 ```
@@ -1036,7 +1075,7 @@ before use; some tools require additional installation or privileges):
 - **apt/source**: nmap, masscan, tshark, hashcat, john, nikto, whatweb
 - **pip**: impacket, certipy-ad
 - **Go tools**: subfinder, httpx, nuclei, ffuf, katana, gobuster, gau, waybackurls
-- **Releases**: chisel, ligolo-ng, kubedagger (client, operator, server v0.5.0), barzakh (adversary, scanner, server v0.7.1), staticzero (defense, modem-firmware, sdr-bridge v0.5.0), aegis-shadow-defense (v0.2.0)
+- **Releases**: chisel, ligolo-ng, kubedagger (client, operator, server v0.5.0), barzakh (adversary, scanner, server v0.7.1), staticzero (multi-call binary v0.7.0: defense, offense, modem-firmware, sdr-bridge), aegis-shadow-defense (v0.2.0)
 
 ## License
 

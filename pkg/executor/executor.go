@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -27,6 +28,27 @@ type Executor interface {
 	Run(ctx context.Context, binary string, args ...string) (*Result, error)
 }
 
+// RunOptions carries optional child-process settings that plain Run cannot
+// express. The zero value reproduces Run behavior exactly.
+type RunOptions struct {
+	// Env entries (KEY=VALUE) are appended to the parent environment for
+	// this call only. They override same-named parent entries.
+	Env []string
+	// Stdin, when non-nil, is written to the child's standard input and
+	// the pipe is closed after writing.
+	Stdin []byte
+}
+
+// EnvExecutor is the optional extension implemented by executors that can
+// pass environment variables and stdin to the child process. Wrappers that
+// need these capabilities (for CLIs that resolve resources via environment
+// variables, or speak JSON on stdin) type-assert against it; the base
+// Executor interface is unchanged so every existing implementation and
+// test mock keeps compiling.
+type EnvExecutor interface {
+	RunEnv(ctx context.Context, opts RunOptions, binary string, args ...string) (*Result, error)
+}
+
 type BinaryExecutor struct {
 	cfg Config
 }
@@ -36,6 +58,10 @@ func New(cfg Config) *BinaryExecutor {
 }
 
 func (e *BinaryExecutor) Run(ctx context.Context, binary string, args ...string) (*Result, error) {
+	return e.RunEnv(ctx, RunOptions{}, binary, args...)
+}
+
+func (e *BinaryExecutor) RunEnv(ctx context.Context, opts RunOptions, binary string, args ...string) (*Result, error) {
 	binPath, ok := e.cfg.AllowedBinaries[binary]
 	if !ok {
 		return nil, fmt.Errorf("binary not allowed: %s", binary)
@@ -51,6 +77,12 @@ func (e *BinaryExecutor) Run(ctx context.Context, binary string, args ...string)
 	cmd := exec.CommandContext(ctx, binPath, args...)
 	applySandbox(cmd)
 	cmd.WaitDelay = 2 * time.Second
+	if opts.Env != nil {
+		cmd.Env = append(os.Environ(), opts.Env...)
+	}
+	if opts.Stdin != nil {
+		cmd.Stdin = bytes.NewReader(opts.Stdin)
+	}
 
 	var stdout, stderr bytes.Buffer
 	budget := &outputBudget{remaining: e.cfg.MaxOutputBytes}

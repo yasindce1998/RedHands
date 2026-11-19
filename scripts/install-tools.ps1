@@ -6,7 +6,7 @@
     Installs security tool dependencies for RedHands MCP server.
     Supports: Chocolatey, Scoop, and direct downloads.
 .PARAMETER Profile
-    Installation profile: all, web, network, ad, k8s, uefi, telecom, aegis, sbom, recon, minimal
+    Installation profile: all, web, network, ad, k8s, uefi, telecom, aegis, sbom, blocktack, recon, minimal
 .PARAMETER Check
     Only check which tools are installed (no installation)
 .PARAMETER List
@@ -20,7 +20,7 @@
 #>
 
 param(
-    [ValidateSet("all", "web", "network", "ad", "k8s", "uefi", "telecom", "aegis", "sbom", "recon", "minimal")]
+    [ValidateSet("all", "web", "network", "ad", "k8s", "uefi", "telecom", "aegis", "sbom", "blocktack", "recon", "minimal")]
     [string]$Profile = "all",
     [switch]$Check,
     [switch]$List,
@@ -58,9 +58,10 @@ $ToolProfiles = @{
     ad      = @("nmap", "impacket-secretsdump", "crackmapexec", "certipy", "hashcat", "john")
     k8s     = @("nmap", "kubedagger-client", "kubedagger-operator", "kubedagger-server")
     uefi    = @("barzakh-adversary", "barzakh-scanner", "barzakh-server")
-    telecom = @("staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge")
+    telecom = @("staticzero", "staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge")
     aegis   = @("aegis-shadow-defense", "aegis-shadow-offense", "aegis-c2")
     sbom    = @("syft", "grype")
+    blocktack = @("blocktack", "blocktack-evm", "blocktack-solana")
     recon   = @("subfinder", "httpx", "katana", "whatweb", "arjun", "gau", "waybackurls", "amass")
     minimal = @("nmap", "nuclei", "httpx", "subfinder")
 }
@@ -267,7 +268,7 @@ function Install-BinaryReleases {
     $python = if (Test-Tool "python") { "python" } elseif (Test-Tool "python3") { "python3" } else { $null }
     if (-not $python) { throw "Python 3 is required for verified binary installation" }
     $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } elseif ([Environment]::Is64BitOperatingSystem) { "amd64" } else { "386" }
-    foreach ($name in @("chisel", "ligolo-proxy", "kubedagger-client", "kubedagger-operator", "kubedagger-server", "barzakh-adversary", "barzakh-scanner", "barzakh-server", "staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge", "aegis-shadow-defense", "aegis-shadow-offense", "aegis-c2", "syft", "grype", "feroxbuster")) {
+    foreach ($name in @("chisel", "ligolo-proxy", "kubedagger-client", "kubedagger-operator", "kubedagger-server", "barzakh-adversary", "barzakh-scanner", "barzakh-server", "staticzero", "aegis-shadow-defense", "aegis-shadow-offense", "aegis-c2", "syft", "grype", "feroxbuster")) {
         if (($tools -contains $name) -and -not (Test-Tool $name)) {
             $variants = $DependencyLock.artifacts.$name
             if (-not $variants."windows-$arch") {
@@ -276,6 +277,15 @@ function Install-BinaryReleases {
             }
             & $python (Join-Path $PSScriptRoot "dependencies.py") install $name --platform "windows-$arch" --output "$env:ProgramFiles\RedHands\bin"
             if ($LASTEXITCODE -ne 0) { throw "Verified installation failed for $name" }
+        }
+    }
+    # StaticZero v0.7.0 is one multi-call binary (Linux only); the legacy
+    # per-tool names are argv[0]-dispatched symlinks to it.
+    if (($tools -contains "staticzero") -and (Test-Tool "staticzero")) {
+        $szPath = (Get-Command "staticzero").Source
+        $szDir = Split-Path -Parent $szPath
+        foreach ($link in @("staticzero-defense", "staticzero-offense", "modem-firmware", "sdr-bridge", "protocol-correlator")) {
+            New-Item -ItemType SymbolicLink -Path (Join-Path $szDir $link) -Target $szPath -Force | Out-Null
         }
     }
     $env:Path = "$env:ProgramFiles\RedHands\bin;" + $env:Path

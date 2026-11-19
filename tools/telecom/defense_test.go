@@ -257,6 +257,80 @@ func TestDefenseStart_DefaultsAndGroups(t *testing.T) {
 	if _, err := NewDefenseStop(mgr).Execute(context.Background(), mustJSON(map[string]any{"process_id": st.ID})); err != nil {
 		t.Errorf("cleanup stop failed: %v", err)
 	}
+
+	// v0.7.0 next-gen groups map to their --*-defense flags.
+	result, err = tool.Execute(context.Background(), mustJSON(map[string]any{"group": "6g-defense", "logs_dir": t.TempDir()}))
+	if err != nil {
+		t.Fatalf("unexpected Go error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", result.Content[0].Text)
+	}
+	st = firstProcess(t, mgr)
+	args = strings.Join(st.Args, " ")
+	if !strings.Contains(args, "--sixg-defense") || !strings.Contains(args, "--json") {
+		t.Errorf("expected --sixg-defense --json for group=6g-defense, got: %s", args)
+	}
+	if _, err := NewDefenseStop(mgr).Execute(context.Background(), mustJSON(map[string]any{"process_id": st.ID})); err != nil {
+		t.Errorf("cleanup stop failed: %v", err)
+	}
+	for group, flag := range map[string]string{
+		"nextgen-wifi-defense":   "--nextgen-wifi-defense",
+		"d2c-defense":            "--d2c-defense",
+		"secure-ranging-defense": "--secure-ranging-defense",
+		"nextgen-iot-defense":    "--nextgen-iot-defense",
+	} {
+		if defenseGroupFlags[group] != flag {
+			t.Errorf("group %q must map to %s", group, flag)
+		}
+	}
+}
+
+func TestDefenseStart_ToolInputs(t *testing.T) {
+	mgr := newTestManager(t)
+	tool := NewDefenseStart(mgr)
+	dir := t.TempDir()
+	verdicts := filepath.Join(dir, "mlo.jsonl")
+	if err := os.WriteFile(verdicts, []byte("{}\n"), 0o600); err != nil {
+		t.Fatalf("write verdict file: %v", err)
+	}
+
+	// Valid KIND=PATH pairs are forwarded to --tool-input.
+	result, err := tool.Execute(context.Background(), mustJSON(map[string]any{
+		"group":       "nextgen-iot-defense",
+		"tool_inputs": []string{"mlo=" + verdicts, "osnma=" + verdicts},
+		"logs_dir":    dir,
+	}))
+	if err != nil {
+		t.Fatalf("unexpected Go error: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("unexpected tool error: %s", result.Content[0].Text)
+	}
+	st := firstProcess(t, mgr)
+	args := strings.Join(st.Args, " ")
+	if !strings.Contains(args, "--tool-input mlo="+verdicts) || !strings.Contains(args, "--tool-input osnma="+verdicts) {
+		t.Errorf("expected both --tool-input flags, got: %s", args)
+	}
+	if _, err := NewDefenseStop(mgr).Execute(context.Background(), mustJSON(map[string]any{"process_id": st.ID})); err != nil {
+		t.Errorf("cleanup stop failed: %v", err)
+	}
+
+	// Invalid kind, missing '=' and stdin '-' are rejected.
+	for name, params := range map[string]string{
+		"bad kind":     `{"logs_dir":"` + dir + `","tool_inputs":["quantum=` + verdicts + `"]}`,
+		"missing pair": `{"logs_dir":"` + dir + `","tool_inputs":["mlo"]}`,
+		"stdin dash":   `{"logs_dir":"` + dir + `","tool_inputs":["mlo=-"]}`,
+		"missing file": `{"logs_dir":"` + dir + `","tool_inputs":["mlo=` + filepath.Join(dir, "missing.jsonl") + `"]}`,
+	} {
+		result, err := tool.Execute(context.Background(), json.RawMessage(params))
+		if err != nil {
+			t.Fatalf("%s: unexpected Go error: %v", name, err)
+		}
+		if !result.IsError {
+			t.Errorf("%s: expected tool error", name)
+		}
+	}
 }
 
 func TestDefenseStatus_ListsAllProcesses(t *testing.T) {

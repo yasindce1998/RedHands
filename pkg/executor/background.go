@@ -95,6 +95,13 @@ func redactArgs(args []string) []string {
 // created or truncated with 0600 permissions. The process runs in its own
 // process group and is killed (SIGKILL) when the server exits.
 func (m *BackgroundManager) Start(ctx context.Context, binary string, args []string, stdoutPath, stderrPath string) (*BackgroundProcess, error) {
+	return m.StartEnv(ctx, nil, binary, args, stdoutPath, stderrPath)
+}
+
+// StartEnv launches a background process with additional environment
+// entries (KEY=VALUE, appended to the parent environment). Used for
+// engines that resolve their resources via environment variables.
+func (m *BackgroundManager) StartEnv(ctx context.Context, env []string, binary string, args []string, stdoutPath, stderrPath string) (*BackgroundProcess, error) {
 	binPath, ok := m.cfg.AllowedBinaries[binary]
 	if !ok {
 		return nil, fmt.Errorf("binary not allowed: %s", binary)
@@ -125,6 +132,9 @@ func (m *BackgroundManager) Start(ctx context.Context, binary string, args []str
 
 	cmd := exec.Command(binPath, args...)
 	applySandbox(cmd)
+	if env != nil {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	// applySandboxOS sets cmd.Cancel for context-driven kills, which is only
 	// valid for CommandContext and would tie the daemon's life to the RPC
 	// request. Background processes outlive their starting request; Stop()

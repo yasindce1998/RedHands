@@ -118,5 +118,27 @@ func builtinPolicies() map[string]mcp.ToolPolicy {
 		policies[name] = mcp.ToolPolicy{NetworkAccess: true}
 	}
 	policies["campaign_cancel"] = mcp.ToolPolicy{RetrySafe: true}
+	// BlockTack: introspection, validation, and campaign state are
+	// read-only; findings lookups are cacheable like the MITRE vocabulary.
+	for _, name := range []string{
+		"blocktack_capabilities", "blocktack_matrix", "blocktack_validate_target",
+		"blocktack_campaign_status", "blocktack_campaign_results",
+	} {
+		policies[name] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true}
+	}
+	policies["blocktack_capabilities"] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true, Cacheable: true}
+	policies["blocktack_matrix"] = mcp.ToolPolicy{ReadOnly: true, RetrySafe: true, Cacheable: true}
+	// Target-facing probes and audits contact the (safe-mode-confined)
+	// endpoints; campaigns execute operator-authored playbooks and spawn
+	// local chains. All remain approval-eligible and never receive --unsafe.
+	for _, name := range []string{"blocktack_recon", "blocktack_node_audit", "blocktack_engine_call", "blocktack_campaign_start"} {
+		policies[name] = mcp.ToolPolicy{NetworkAccess: true}
+	}
+	// Static analysis runs locally in a temp directory (barzakh_scan
+	// precedent); report generation writes exactly one markdown file.
+	policies["blocktack_scan"] = mcp.ToolPolicy{}
+	policies["blocktack_report"] = mcp.ToolPolicy{}
+	// Stopping a campaign mutates operator state but is not target-facing.
+	policies["blocktack_campaign_stop"] = mcp.ToolPolicy{RetrySafe: true}
 	return policies
 }

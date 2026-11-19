@@ -78,21 +78,12 @@
       "darwin-arm64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-server-aarch64-apple-darwin", "452e354fdaa1adf47a630fbdf4f3f75e3403af7e6e23c0eba3240e7ad2ff8531"],
       "windows-amd64": ["https://github.com/yasindce1998/Barzakh/releases/download/v0.7.1/barzakh-server-x86_64-pc-windows-msvc.exe", "dc3e6842b81ab04af3b435c633ff16c500a488c5fd7ff596088379d9c9fed18d"]
     },
-    "staticzero-defense": {
-      "linux-amd64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.5.0/staticzero-defense-linux-amd64", "521cd61a48b07e08972f5a2643352510108661c44c36d934c45448214ac29413"],
-      "linux-arm64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.5.0/staticzero-defense-linux-arm64", "baa19c510f417ebc9f64cdb84c149c4ca73b8adfbde88e39dbdf29ef638f5fb1"]
+    "staticzero": {
+      "linux-amd64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.7.0/staticzero-linux-amd64", "69547cd6ccfe86c073afcc6add7cbfcd56e8dcb5c2cf9cc3f140958226754590"],
+      "linux-arm64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.7.0/staticzero-linux-arm64", "a68e496ba1e01a331a05d10602c3c6166ad82c3a910edc6a33789f8c34fb04a0"]
     },
-    "staticzero-offense": {
-      "linux-amd64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.5.0/staticzero-offense-linux-amd64", "d8fd7a91e55ea32f036273f59b441ff340b7e73d0656b6e8ffd5db560b610566"],
-      "linux-arm64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.5.0/staticzero-offense-linux-arm64", "e99e70a6eff4a056e44e59144faa8483896e2cd8a8eb30c6a8420e0868829d9a"]
-    },
-    "modem-firmware": {
-      "linux-amd64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.5.0/modem-firmware-linux-amd64", "79464c0bd3ec480295cd0324093b8f49bb900959ba6d706cc1c4edc624b93342"],
-      "linux-arm64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.5.0/modem-firmware-linux-arm64", "6fe85745269cc06731e6a0cf1044bb3b4c0d8e81ccf8890623c37b2eb9809db1"]
-    },
-    "sdr-bridge": {
-      "linux-amd64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.5.0/sdr-bridge-linux-amd64", "ff261e9705dda6013f37979df666bb91f54880c6338d0efa5eec0da2e0bc6363"],
-      "linux-arm64": ["https://github.com/yasindce1998/StaticZero/releases/download/v0.5.0/sdr-bridge-linux-arm64", "d9e48f1e292936db88899b686c986bdb80a5cf7ace7e287cd9f9336237195d5c"]
+    "blocktack-root": {
+      "linux-amd64": ["https://github.com/yasindce1998/BlockTack/releases/download/v0.1.0/blocktack-v0.1.0-linux-amd64.tar.gz", "090ea2e541fbea728456baf2bdc94ffda7471bf157ae254d5733511ce312f569"]
     },
     "aegis-shadow-defense": {
       "linux-amd64": ["https://github.com/yasindce1998/Aegis-Shadow/releases/download/v0.2.0/aegis_x86_64", "4634a1c5a161f29f6534e16e5fbc5881671294f523ac5e2edc3ff1ec666095a0"],

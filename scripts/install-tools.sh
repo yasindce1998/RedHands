@@ -46,7 +46,10 @@ Profiles:
   ad         Active Directory (nmap, impacket, crackmapexec, certipy, crack)
   k8s        Kubernetes (nmap, kubedagger-client, kubedagger-operator, kubedagger-server)
   uefi       UEFI bootkit simulation (barzakh-adversary, barzakh-scanner, barzakh-server)
-  telecom    Telecom research (staticzero-defense, staticzero-offense, modem-firmware, sdr-bridge)
+  telecom    Telecom research (staticzero multi-call binary: staticzero-defense,
+             staticzero-offense, modem-firmware, sdr-bridge)
+  blocktack  Blockchain adversary simulation (blocktack CLI + Rust engines,
+             Linux only)
   aegis      Linux eBPF research (aegis-shadow-defense, aegis-shadow-offense, aegis-c2)
   sbom       SBOM generation and vulnerability scanning (syft, grype)
   recon      Reconnaissance only (subfinder, amass, dns, wayback, gau, arjun)
@@ -98,9 +101,10 @@ TOOLS_CERTIPY="certipy"
 TOOLS_TSHARK="tshark"
 TOOLS_KUBEDAGGER="kubedagger-client kubedagger-operator kubedagger-server"
 TOOLS_BARZAKH="barzakh-adversary barzakh-scanner barzakh-server"
-TOOLS_TELECOM="staticzero-defense staticzero-offense modem-firmware sdr-bridge"
+TOOLS_TELECOM="staticzero staticzero-defense staticzero-offense modem-firmware sdr-bridge"
 TOOLS_AEGIS="aegis-shadow-defense aegis-shadow-offense aegis-c2"
 TOOLS_SBOM="syft grype"
+TOOLS_BLOCKTACK="blocktack blocktack-evm blocktack-solana"
 
 get_profile_tools() {
     case "$1" in
@@ -133,6 +137,9 @@ get_profile_tools() {
             ;;
         sbom)
             echo "$TOOLS_SBOM"
+            ;;
+        blocktack)
+            echo "$TOOLS_BLOCKTACK"
             ;;
         minimal)
             echo "nmap nuclei httpx subfinder"
@@ -168,14 +175,18 @@ list_profiles() {
     echo "             barzakh-adversary, barzakh-scanner, barzakh-server"
     echo ""
     echo -e "  ${GREEN}telecom${NC}    Telecom security research (eBPF, Linux only)"
-    echo "             staticzero-defense, staticzero-offense,"
-    echo "             modem-firmware, sdr-bridge"
+    echo "             staticzero multi-call binary (staticzero-defense,"
+    echo "             staticzero-offense, modem-firmware, sdr-bridge)"
     echo ""
     echo -e "  ${GREEN}aegis${NC}      Linux eBPF security research"
     echo "             aegis-shadow-defense, aegis-shadow-offense, aegis-c2"
     echo ""
     echo -e "  ${GREEN}sbom${NC}       SBOM generation and vulnerability scanning"
     echo "             syft, grype"
+    echo ""
+    echo -e "  ${GREEN}blocktack${NC}  Blockchain adversary simulation (Linux only)"
+    echo "             blocktack CLI + blocktack-evm + blocktack-solana"
+    echo "             (release tree at /opt/blocktack; foundry/slither optional)"
     echo ""
     echo -e "  ${GREEN}recon${NC}      Reconnaissance"
     echo "             subfinder, amass, dig, waybackurls, gau, arjun, httpx,"
@@ -466,12 +477,49 @@ install_go_tools() {
 
 install_binary_releases() {
     local tool
-    for tool in chisel ligolo-proxy kubedagger-client kubedagger-operator kubedagger-server barzakh-adversary barzakh-scanner barzakh-server staticzero-defense staticzero-offense modem-firmware sdr-bridge aegis-shadow-defense feroxbuster; do
+    for tool in chisel ligolo-proxy kubedagger-client kubedagger-operator kubedagger-server barzakh-adversary barzakh-scanner barzakh-server aegis-shadow-defense feroxbuster; do
         if [[ "$TOOLS" == *"$tool"* ]] && ! check_tool "$tool"; then
             log_step "Installing checksum-verified $tool..."
             python3 "$DEPENDENCIES" install "$tool" --output /usr/local/bin
         fi
     done
+    # StaticZero v0.7.0 ships one multi-call binary; the legacy per-tool
+    # names are argv[0]-dispatched symlinks (cli legacy_subcommand), so a
+    # single verified download provides every telecom wrapper binary.
+    if [[ "$TOOLS" == *"staticzero"* ]]; then
+        if ! check_tool staticzero; then
+            log_step "Installing checksum-verified staticzero (multi-call binary)..."
+            python3 "$DEPENDENCIES" install staticzero --output /usr/local/bin
+        fi
+        if [[ -x /usr/local/bin/staticzero ]]; then
+            for link in staticzero-defense staticzero-offense modem-firmware sdr-bridge protocol-correlator; do
+                ln -sfn /usr/local/bin/staticzero "/usr/local/bin/$link"
+            done
+            log_ok "staticzero legacy-name symlinks refreshed"
+        fi
+    fi
+    # BlockTack ships as a self-contained release tree (CLI + Rust engines
+    # + taxonomy + adapters + playbooks + corpus). The tree is extracted to
+    # /opt/blocktack after checksum verification; the CLI and engines are
+    # exposed on PATH via symlinks, and the RedHands wrappers point
+    # BLOCKTACK_ROOT at the tree (override with REDHANDS_BLOCKTACK_ROOT).
+    if [[ "$TOOLS" == *"blocktack"* ]] && [[ "$OS" != "macos" ]]; then
+        if [[ ! -x /opt/blocktack/bin/blocktack ]]; then
+            log_step "Installing checksum-verified BlockTack release tree..."
+            tmp=$(mktemp -d)
+            python3 "$DEPENDENCIES" fetch blocktack-root --output "$tmp/blocktack.tar.gz"
+            mkdir -p /opt/blocktack
+            tar -xzf "$tmp/blocktack.tar.gz" -C /opt/blocktack --strip-components=1
+            rm -rf "$tmp"
+            log_ok "BlockTack release tree installed at /opt/blocktack"
+        fi
+        if [[ -x /opt/blocktack/bin/blocktack ]]; then
+            ln -sfn /opt/blocktack/bin/blocktack /usr/local/bin/blocktack
+            ln -sfn /opt/blocktack/engines/blocktack-evm /usr/local/bin/blocktack-evm
+            ln -sfn /opt/blocktack/engines/blocktack-solana /usr/local/bin/blocktack-solana
+            log_ok "blocktack CLI and engine symlinks refreshed"
+        fi
+    fi
     if [[ "$TOOLS" == *"nikto"* ]] && ! check_tool nikto; then
         if [[ -e /opt/nikto ]]; then
             log_warn "Existing /opt/nikto left untouched; configure its executable manually."

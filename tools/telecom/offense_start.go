@@ -16,13 +16,18 @@ import (
 const offenseBinary = "staticzero-offense"
 
 // offenseGroupFlags maps the groups parameter entries to the corresponding
-// --enable-* CLI flags of the staticzero-offense release binary (v0.5.0).
+// --enable-* CLI flags of the staticzero-offense release binary (v0.7.0).
 var offenseGroupFlags = map[string]string{
 	"telecom":          "--enable-telecom",
 	"telecom-advanced": "--enable-telecom-advanced",
 	"5g-advanced":      "--enable-5g-advanced",
 	"satellite":        "--enable-satellite",
 	"rf":               "--enable-rf",
+	"nextgen-wifi":     "--enable-nextgen-wifi",
+	"d2c":              "--enable-d2c",
+	"secure-ranging":   "--enable-secure-ranging",
+	"nextgen-iot":      "--enable-nextgen-iot",
+	"6g":               "--enable-6g",
 }
 
 // offenseIfaceRegex accepts plain interface names (letters, digits, dash,
@@ -60,7 +65,7 @@ func NewOffenseStart(mgr *executor.BackgroundManager) *OffenseStartTool {
 func (t *OffenseStartTool) Name() string { return "telecom_offense_start" }
 
 func (t *OffenseStartTool) Description() string {
-	return "Launch the StaticZero telecom exploitation research loader (staticzero-offense, interception features F89-F172) as a managed background process in an authorized lab: one or more feature groups (telecom, telecom-advanced, 5g-advanced, satellite, rf) or all, optional target IMSI, optional BPF object override, and per-domain interfaces. Loader output streams to <logs_dir>/staticzero-offense-<id>.log; logs go to <logs_dir>/staticzero-offense-<id>.err. Telecom interception is regulated in many jurisdictions even in labs — authorized, isolated lab environments only. Wraps StaticZero (eBPF telecom security research); requires root and kernel >= 5.15 (BPF); high-impact: runs a privileged offense daemon until telecom_offense_stop is called. Approval-gated. If the daemon exits immediately (missing privileges, unsupported kernel), check the stderr log via telecom_offense_status."
+	return "Launch the StaticZero telecom exploitation research loader (staticzero-offense, interception features F89-F200) as a managed background process in an authorized lab: one or more feature groups (telecom, telecom-advanced, 5g-advanced, satellite, rf, nextgen-wifi, d2c, secure-ranging, nextgen-iot, 6g) or all, optional target IMSI, optional BPF object override, and per-domain interfaces. Loader output streams to <logs_dir>/staticzero-offense-<id>.log; logs go to <logs_dir>/staticzero-offense-<id>.err. Telecom interception is regulated in many jurisdictions even in labs — authorized, isolated lab environments only. Wraps StaticZero (eBPF telecom security research); requires root and kernel >= 5.15 (BPF); high-impact: runs a privileged offense daemon until telecom_offense_stop is called. Approval-gated. If the daemon exits immediately (missing privileges, unsupported kernel), check the stderr log via telecom_offense_status."
 }
 
 func (t *OffenseStartTool) InputSchema() json.RawMessage {
@@ -75,10 +80,10 @@ func (t *OffenseStartTool) InputSchema() json.RawMessage {
 				"type": "array",
 				"items": {
 					"type": "string",
-					"enum": ["telecom", "telecom-advanced", "5g-advanced", "satellite", "rf"]
+					"enum": ["telecom", "telecom-advanced", "5g-advanced", "satellite", "rf", "nextgen-wifi", "d2c", "secure-ranging", "nextgen-iot", "6g"]
 				},
-				"maxItems": 5,
-				"description": "Feature groups to enable (mapped to --enable-telecom, --enable-telecom-advanced, --enable-5g-advanced, --enable-satellite, --enable-rf). Either groups or all is required"
+				"maxItems": 10,
+				"description": "Feature groups to enable (mapped to --enable-telecom, --enable-telecom-advanced, --enable-5g-advanced, --enable-satellite, --enable-rf, --enable-nextgen-wifi, --enable-d2c, --enable-secure-ranging, --enable-nextgen-iot, --enable-6g). Either groups or all is required"
 			},
 			"all": {
 				"type": "boolean",
@@ -159,7 +164,7 @@ func (t *OffenseStartTool) Execute(ctx context.Context, params json.RawMessage) 
 	groups := make([]string, 0, len(input.Groups))
 	for _, g := range input.Groups {
 		if _, ok := offenseGroupFlags[g]; !ok {
-			return errorResult(fmt.Sprintf("invalid group %q: must be telecom, telecom-advanced, 5g-advanced, satellite or rf", g)), nil
+			return errorResult(fmt.Sprintf("invalid group %q: must be telecom, telecom-advanced, 5g-advanced, satellite, rf, nextgen-wifi, d2c, secure-ranging, nextgen-iot or 6g", g)), nil
 		}
 		if !seenGroups[g] {
 			seenGroups[g] = true

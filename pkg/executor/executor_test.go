@@ -190,3 +190,42 @@ func TestRunOutputTruncation(t *testing.T) {
 		t.Fatalf("truncation not reported: %+v %v", r, err)
 	}
 }
+
+func TestRunEnv_EnvAndStdin(t *testing.T) {
+	// "env" echoes the environment; "cat" echoes stdin. Both verify the
+	// RunOptions plumbing end to end through the real executor.
+	e := New(Config{
+		Timeout:         5,
+		AllowedBinaries: map[string]string{"env": "/usr/bin/env", "cat": "/bin/cat"},
+		MaxOutputBytes:  1024 * 1024,
+	})
+
+	result, err := e.RunEnv(context.Background(), RunOptions{
+		Env: []string{"REDHANDS_TEST_MARKER=42ea"},
+	}, "env")
+	if err != nil {
+		t.Fatalf("RunEnv(env) error: %v", err)
+	}
+	if !bytes.Contains(result.Stdout, []byte("REDHANDS_TEST_MARKER=42ea")) {
+		t.Errorf("env output missing injected variable:\n%s", result.Stdout)
+	}
+
+	result, err = e.RunEnv(context.Background(), RunOptions{
+		Stdin: []byte(`{"action":"ping"}`),
+	}, "cat")
+	if err != nil {
+		t.Fatalf("RunEnv(cat) error: %v", err)
+	}
+	if got := string(bytes.TrimSpace(result.Stdout)); got != `{"action":"ping"}` {
+		t.Errorf("stdin round trip = %q", got)
+	}
+
+	// The plain Run path must not leak RunOptions state.
+	result, err = e.Run(context.Background(), "env")
+	if err != nil {
+		t.Fatalf("Run(env) error: %v", err)
+	}
+	if bytes.Contains(result.Stdout, []byte("REDHANDS_TEST_MARKER")) {
+		t.Errorf("plain Run must not inherit previous env overrides")
+	}
+}

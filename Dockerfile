@@ -36,8 +36,13 @@ RUN python3 -m pip install --break-system-packages \
     "$(python3 /opt/redhands/install/dependencies.py python certipy)"
 
 COPY --from=go-tools /out/ /usr/local/bin/
-RUN for tool in chisel ligolo-proxy kubedagger-client kubedagger-operator kubedagger-server barzakh-adversary barzakh-scanner barzakh-server staticzero-defense modem-firmware sdr-bridge aegis-shadow-defense; do \
+# StaticZero v0.7.0 is one multi-call binary; the legacy defense/tool names
+# are argv[0]-dispatched symlinks to it.
+RUN for tool in chisel ligolo-proxy kubedagger-client kubedagger-operator kubedagger-server barzakh-adversary barzakh-scanner barzakh-server staticzero aegis-shadow-defense; do \
       python3 /opt/redhands/install/dependencies.py install "$tool" --output /usr/local/bin || exit 1; \
+    done && \
+    for link in staticzero-defense modem-firmware sdr-bridge protocol-correlator; do \
+      ln -s /usr/local/bin/staticzero "/usr/local/bin/$link"; \
     done
 
 COPY --from=builder /redhands /redhands-cli /redhands-creds /usr/local/bin/

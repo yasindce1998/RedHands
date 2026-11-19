@@ -79,23 +79,48 @@ func (t *DoctorTool) InputSchema() json.RawMessage {
 			"rf_defense": {
 				"type": "boolean",
 				"description": "Enable RF protocol domain defense modules 40-55"
+			},
+			"nextgen_wifi_defense": {
+				"type": "boolean",
+				"description": "Enable next-gen Wi-Fi defense modules 56, 64, 69 (MLO integrity, 802.11bf sensing, MAPC/HaLow)"
+			},
+			"d2c_defense": {
+				"type": "boolean",
+				"description": "Enable satellite direct-to-cell / PNT defense modules 61-63, 68"
+			},
+			"secure_ranging_defense": {
+				"type": "boolean",
+				"description": "Enable secure ranging defense module 57 (UWB / BT channel sounding)"
+			},
+			"nextgen_iot_defense": {
+				"type": "boolean",
+				"description": "Enable next-gen IoT defense modules 58-60, 65 (Matter, Ambient IoT, DECT-2020, FRMCS/LDACS)"
+			},
+			"sixg_defense": {
+				"type": "boolean",
+				"description": "Enable 6G horizon defense modules 66-67, 70 (AI-RAN, PQC downgrade, network-of-networks); emits --sixg-defense"
 			}
 		}
 	}`)
 }
 
 type doctorInput struct {
-	BpfPath          string  `json:"bpf_path,omitempty"`
-	Config           string  `json:"config,omitempty"`
-	ModemPath        string  `json:"modem_path,omitempty"`
-	Modules          []int   `json:"modules,omitempty"`
-	AllowModemPID    []int64 `json:"allow_modem_pid,omitempty"`
-	All              bool    `json:"all,omitempty"`
-	TelecomDetect    *bool   `json:"telecom_detect,omitempty"`
-	TelecomAdvanced  bool    `json:"telecom_advanced,omitempty"`
-	Telecom5GDefense bool    `json:"telecom_5g_defense,omitempty"`
-	SatelliteDefense bool    `json:"satellite_defense,omitempty"`
-	RfDefense        bool    `json:"rf_defense,omitempty"`
+	BpfPath              string  `json:"bpf_path,omitempty"`
+	Config               string  `json:"config,omitempty"`
+	ModemPath            string  `json:"modem_path,omitempty"`
+	Modules              []int   `json:"modules,omitempty"`
+	AllowModemPID        []int64 `json:"allow_modem_pid,omitempty"`
+	All                  bool    `json:"all,omitempty"`
+	TelecomDetect        *bool   `json:"telecom_detect,omitempty"`
+	TelecomAdvanced      bool    `json:"telecom_advanced,omitempty"`
+	Telecom5GDefense     bool    `json:"telecom_5g_defense,omitempty"`
+	SatelliteDefense     bool    `json:"satellite_defense,omitempty"`
+	RfDefense            bool    `json:"rf_defense,omitempty"`
+	NextgenWifiDefense   bool    `json:"nextgen_wifi_defense,omitempty"`
+	D2CDefense           bool    `json:"d2c_defense,omitempty"`
+	SecureRangingDefense bool    `json:"secure_ranging_defense,omitempty"`
+	NextgenIotDefense    bool    `json:"nextgen_iot_defense,omitempty"`
+	SixgDefense          bool    `json:"sixg_defense,omitempty"`
 }
 
 func (t *DoctorTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.ToolResult, error) {
@@ -176,6 +201,21 @@ func (t *DoctorTool) Execute(ctx context.Context, params json.RawMessage) (*mcp.
 	}
 	if input.RfDefense {
 		args = append(args, "--rf-defense")
+	}
+	if input.NextgenWifiDefense {
+		args = append(args, "--nextgen-wifi-defense")
+	}
+	if input.D2CDefense {
+		args = append(args, "--d2c-defense")
+	}
+	if input.SecureRangingDefense {
+		args = append(args, "--secure-ranging-defense")
+	}
+	if input.NextgenIotDefense {
+		args = append(args, "--nextgen-iot-defense")
+	}
+	if input.SixgDefense {
+		args = append(args, "--sixg-defense")
 	}
 
 	result, err := t.exec.Run(ctx, "staticzero-defense", args...)

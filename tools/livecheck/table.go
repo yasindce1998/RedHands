@@ -268,21 +268,52 @@ var flagSurfaceTable = []binaryChecks{
 	},
 
 	// -------------------------------------------------------------------
-	// Telecom / StaticZero (tools/telecom) — pinned release v0.5.0.
+	// Telecom / StaticZero (tools/telecom) — pinned release v0.7.0.
+	// v0.7.0 ships ONE multi-call binary; staticzero-defense/-offense,
+	// modem-firmware and sdr-bridge are argv[0]-dispatched symlinks to it
+	// (see the "staticzero" entry below), so the legacy-name checks double
+	// as symlink-dispatch verification.
 	// -------------------------------------------------------------------
+	{
+		binary:   "staticzero",
+		wrappers: []string{"telecom"},
+		help: []helpCheck{
+			{
+				name:       "multi-call subcommands",
+				helpArgs:   []string{"--help"},
+				acceptExit: []int{0, 1},
+				want: []string{
+					"defense", "offense", "sdr-bridge", "modem-firmware",
+					"protocol-correlator", "osnma-verify", "d2c-monitor",
+					"mlo-analyzer", "6g-sim",
+				},
+			},
+		},
+		parse: []parseCheck{
+			// Subcommand form of the same argvs the wrappers emit via
+			// legacy-name symlinks.
+			{name: "defense doctor via subcommand", argv: []string{"defense", "--doctor", "--json"}},
+			{name: "offense nextgen groups via subcommand", argv: []string{"offense", "--enable-nextgen-wifi", "--enable-6g"}},
+		},
+	},
 	{
 		binary:   "staticzero-defense",
 		wrappers: []string{"telecom"},
 		help: []helpCheck{
 			{
-				name:     "defense flags",
-				helpArgs: []string{"--help"},
+				name:       "defense flags",
+				helpArgs:   []string{"--help"},
+				acceptExit: []int{0, 1},
 				want: []string{
 					"--bpf-path", "--config", "--doctor", "--modules",
 					"--telecom-detect", "--telecom-advanced",
 					"--telecom-5g-defense", "--satellite-defense",
 					"--rf-defense", "--all", "--json",
 					"--correlation-window",
+					// v0.6.0/v0.7.0 next-gen module groups and tool input.
+					"--nextgen-wifi-defense", "--d2c-defense",
+					"--secure-ranging-defense", "--nextgen-iot-defense",
+					"--sixg-defense", "--tool-input",
 				},
 			},
 		},
@@ -290,13 +321,19 @@ var flagSurfaceTable = []binaryChecks{
 			// doctor.go: --doctor --json [--bpf-path].
 			{name: "doctor", argv: []string{"--doctor", "--json"}},
 			// defense_start.go: group flag + --json [--modules] [--config]
-			// [--correlation-window].
+			// [--correlation-window] [--tool-input KIND=PATH].
 			{name: "defense all", argv: []string{"--all", "--json", "--modules", "1,2", "--correlation-window", "30"}},
 			{name: "defense telecom-detect", argv: []string{"--telecom-detect", "--json"}},
 			{name: "defense telecom-advanced", argv: []string{"--telecom-advanced", "--json"}},
 			{name: "defense telecom-5g-defense", argv: []string{"--telecom-5g-defense", "--json"}},
 			{name: "defense satellite-defense", argv: []string{"--satellite-defense", "--json"}},
 			{name: "defense rf-defense", argv: []string{"--rf-defense", "--json"}},
+			{name: "defense nextgen-wifi-defense", argv: []string{"--nextgen-wifi-defense", "--json"}},
+			{name: "defense d2c-defense", argv: []string{"--d2c-defense", "--json"}},
+			{name: "defense secure-ranging-defense", argv: []string{"--secure-ranging-defense", "--json"}},
+			{name: "defense nextgen-iot-defense", argv: []string{"--nextgen-iot-defense", "--json"}},
+			{name: "defense sixg-defense", argv: []string{"--sixg-defense", "--json"}},
+			{name: "defense tool-input", argv: []string{"--nextgen-iot-defense", "--json", "--tool-input", "mlo=/dev/null"}},
 		},
 	},
 	{
@@ -304,11 +341,16 @@ var flagSurfaceTable = []binaryChecks{
 		wrappers: []string{"telecom"},
 		help: []helpCheck{
 			{
-				name:     "offense flags",
-				helpArgs: []string{"--help"},
+				name:       "offense flags",
+				helpArgs:   []string{"--help"},
+				acceptExit: []int{0, 1},
 				want: []string{
 					"--bpf-path", "--enable-telecom", "--enable-telecom-advanced",
 					"--enable-5g-advanced", "--enable-satellite", "--enable-rf",
+					// v0.6.0/v0.7.0 next-gen feature groups.
+					"--enable-nextgen-wifi", "--enable-d2c",
+					"--enable-secure-ranging", "--enable-nextgen-iot",
+					"--enable-6g",
 					"--all", "--target-imsi", "--gtp-iface", "--ims-iface",
 					"--wifi-iface", "--sbi-iface", "--sdr-iface", "--sat-iface",
 					"--uav-iface", "--wpan-iface", "--fronthaul-iface",
@@ -319,6 +361,7 @@ var flagSurfaceTable = []binaryChecks{
 			// offense_start.go: group flags + --all + iface/target flags.
 			{name: "offense telecom", argv: []string{"--enable-telecom", "--gtp-iface", "eth0", "--target-imsi", "001011234567891"}},
 			{name: "offense all", argv: []string{"--all", "--bpf-path", "/dev/null", "--wifi-iface", "wlan0"}},
+			{name: "offense nextgen groups", argv: []string{"--enable-nextgen-wifi", "--enable-d2c", "--enable-secure-ranging", "--enable-nextgen-iot", "--enable-6g"}},
 		},
 	},
 	{
@@ -326,29 +369,34 @@ var flagSurfaceTable = []binaryChecks{
 		wrappers: []string{"telecom"},
 		help: []helpCheck{
 			{
-				name:     "subcommands",
-				helpArgs: []string{"--help"},
-				want:     []string{"extract", "analyze", "patch", "diff", "nv-dump", "monitor"},
+				name:       "subcommands",
+				helpArgs:   []string{"--help"},
+				acceptExit: []int{0, 1},
+				want:       []string{"extract", "analyze", "patch", "diff", "nv-dump", "monitor"},
 			},
 			{
-				name:     "analyze flags",
-				helpArgs: []string{"analyze", "--help"},
-				want:     []string{"--target", "--chipset", "--report"},
+				name:       "analyze flags",
+				helpArgs:   []string{"analyze", "--help"},
+				acceptExit: []int{0, 1},
+				want:       []string{"--target", "--chipset", "--report"},
 			},
 			{
-				name:     "extract flags",
-				helpArgs: []string{"extract", "--help"},
-				want:     []string{"--image", "--chipset", "--output"},
+				name:       "extract flags",
+				helpArgs:   []string{"extract", "--help"},
+				acceptExit: []int{0, 1},
+				want:       []string{"--image", "--chipset", "--output"},
 			},
 			{
-				name:     "patch flags",
-				helpArgs: []string{"patch", "--help"},
-				want:     []string{"--image", "--patchfile", "--output"},
+				name:       "patch flags",
+				helpArgs:   []string{"patch", "--help"},
+				acceptExit: []int{0, 1},
+				want:       []string{"--image", "--patchfile", "--output"},
 			},
 			{
-				name:     "monitor flags",
-				helpArgs: []string{"monitor", "--help"},
-				want:     []string{"--device", "--protocol"},
+				name:       "monitor flags",
+				helpArgs:   []string{"monitor", "--help"},
+				acceptExit: []int{0, 1},
+				want:       []string{"--device", "--protocol"},
 			},
 		},
 		parse: []parseCheck{
@@ -366,22 +414,25 @@ var flagSurfaceTable = []binaryChecks{
 		wrappers: []string{"telecom"},
 		help: []helpCheck{
 			{
-				name:     "sdr flags",
-				helpArgs: []string{"--help"},
+				name:       "sdr flags",
+				helpArgs:   []string{"--help"},
+				acceptExit: []int{0, 1},
 				want: []string{
 					"--sdr-type", "--device-id", "--frequency", "--sample-rate",
 					"--gain", "--bandwidth", "--mode", "--scan-bands",
 				},
 			},
 			{
-				name:     "sdr-type enum",
-				helpArgs: []string{"--help"},
-				want:     []string{"hackrf", "bladerf", "usrp", "rtlsdr", "limesdr"},
+				name:       "sdr-type enum",
+				helpArgs:   []string{"--help"},
+				acceptExit: []int{0, 1},
+				want:       []string{"hackrf", "bladerf", "usrp", "rtlsdr", "limesdr"},
 			},
 			{
-				name:     "mode enum",
-				helpArgs: []string{"--help"},
-				want:     []string{"scan", "capture", "inject", "relay", "selftest-tx"},
+				name:       "mode enum",
+				helpArgs:   []string{"--help"},
+				acceptExit: []int{0, 1},
+				want:       []string{"scan", "capture", "inject", "relay", "selftest-tx"},
 			},
 		},
 		parse: []parseCheck{
@@ -1091,6 +1142,67 @@ var flagSurfaceTable = []binaryChecks{
 			{name: "extract fields", argv: []string{"-r", "/nonexistent.pcap", "-T", "fields", "-e", "ip.src"}, terminator: "-v"},
 			{name: "stats", argv: []string{"-r", "/nonexistent.pcap", "-q", "-z", "conv,ip", "-Y", "ip"}, terminator: "-v"},
 			{name: "follow tcp", argv: []string{"-r", "/nonexistent.pcap", "-q", "-z", "follow,tcp,ascii,0"}, terminator: "-v"},
+		},
+	},
+
+	// -------------------------------------------------------------------
+	// BlockTack (tools/blocktack) — pinned release v0.1.0.
+	// Go stdlib flag CLI: unknown flags print "flag provided but not
+	// defined" and exit 1; --help prints usage and exits 0 (root) or 1
+	// (subcommands, ContinueOnError + ErrHelp). Every subcommand's flags
+	// are dry-parsed with a --help terminator before any target is
+	// loaded, so no endpoint is ever contacted.
+	// -------------------------------------------------------------------
+	{
+		binary:   "blocktack",
+		wrappers: []string{"blocktack"},
+		help: []helpCheck{
+			{
+				name:     "root subcommands",
+				helpArgs: []string{"--help"},
+				want: []string{
+					"matrix", "capabilities", "validate-target", "recon",
+					"scan", "campaign", "node-audit", "report",
+				},
+			},
+		},
+		parse: []parseCheck{
+			// matrix.go: matrix --json.
+			{name: "matrix json", argv: []string{"matrix", "--json"}},
+			// capabilities.go: no flags beyond --taxonomy.
+			{name: "capabilities", argv: []string{"capabilities"}},
+			// validate_target.go / campaign_start.go pre-flight.
+			{name: "validate-target", argv: []string{"validate-target", "--target", "/dev/null"}},
+			// recon.go: --target + --emit findings-json.
+			{name: "recon findings-json", argv: []string{"recon", "--target", "/dev/null", "--emit", "findings-json"}},
+			// scan.go: --adapters slither,foundry.
+			{name: "scan adapters", argv: []string{"scan", "--target", "/dev/null", "--adapters", "slither,foundry", "--emit", "findings-json"}},
+			// node_audit.go: every module enum value.
+			{name: "node-audit all", argv: []string{"node-audit", "--target", "/dev/null", "--module", "all"}},
+			{name: "node-audit web-audit", argv: []string{"node-audit", "--target", "/dev/null", "--module", "web-audit"}},
+			{name: "node-audit p2p-eclipse", argv: []string{"node-audit", "--target", "/dev/null", "--module", "p2p-eclipse"}},
+			// campaign_start.go: campaign flags incl. --progress-json.
+			{name: "campaign", argv: []string{"campaign", "--target", "/dev/null", "--playbook", "/dev/null", "--out-dir", "/tmp", "--progress-json"}},
+			// report.go: findings/out/engagement/title.
+			{name: "report", argv: []string{"report", "--findings", "/dev/null", "--out", "/dev/null", "--engagement", "--title", "t"}},
+		},
+	},
+	{
+		// Rust engines (engine_call.go) take no CLI flags: a JSON job
+		// arrives on stdin and findings leave on stdout. With no stdin
+		// attached they exit 1 with "invalid job JSON" — no unknown-flag
+		// vocabulary — which still verifies the engine binary executes.
+		binary:   "blocktack-evm",
+		wrappers: []string{"blocktack"},
+		parse: []parseCheck{
+			{name: "engine contract", argv: []string{}},
+		},
+	},
+	{
+		binary:   "blocktack-solana",
+		wrappers: []string{"blocktack"},
+		parse: []parseCheck{
+			{name: "engine contract", argv: []string{}},
 		},
 	},
 }
